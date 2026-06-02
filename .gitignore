@@ -5,6 +5,7 @@
 # Keep repository metadata and the two core project directories.
 !/.gitignore
 !/.env.example
+!/langgraph.json
 !/DCF-builder/
 !/DCF-builder/**
 !/industry-ananlysis/

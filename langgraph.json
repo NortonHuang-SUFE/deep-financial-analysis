@@ -1,0 +1,20 @@
+{
+  "graphs": {
+    "dcf_builder": "./DCF-builder/src/dcf_builder/graph.py:graph",
+    "market_researcher": "./industry-ananlysis/src/market_researcher/graph.py:graph",
+    "morning_note": "./morning-note/src/morning_note_agent/graph.py:graph",
+    "stock_screen": "./screen/src/stock_screen_agent/graph.py:graph",
+    "sector_research": "./sector/src/sector_research_agent/graph.py:graph",
+    "thesis_tracker": "./thesis/src/thesis_tracker_agent/graph.py:graph"
+  },
+  "python_version": "3.11",
+  "env": "./.env",
+  "dependencies": [
+    "./DCF-builder",
+    "./industry-ananlysis",
+    "./morning-note",
+    "./screen",
+    "./sector",
+    "./thesis"
+  ]
+}
