@@ -18,11 +18,11 @@ IFIND_MCP_TOKEN=...
 IFIND_MCP_AUTHORIZATION="Bearer ..."
 ```
 
-iFind 支持全局鉴权，也支持单 server 覆盖，例如：
+iFind 鉴权只支持全局共享 key；单 server 可覆盖 URL/transport，例如：
 
 ```bash
-IFIND_STOCK_MCP_TOKEN=...
-IFIND_NEWS_MCP_AUTHORIZATION="Bearer ..."
+IFIND_STOCK_MCP_URL=https://example.test/mcp
+IFIND_STOCK_MCP_TRANSPORT=streamable_http
 ```
 
 调试开关：

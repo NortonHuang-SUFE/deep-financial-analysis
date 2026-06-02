@@ -23,10 +23,6 @@ def _clear_env(monkeypatch):
         "ALIBABA_API_KEY",
         "IFIND_MCP_AUTHORIZATION",
         "IFIND_MCP_TOKEN",
-        "IFIND_STOCK_MCP_AUTHORIZATION",
-        "IFIND_STOCK_MCP_TOKEN",
-        "IFIND_NEWS_MCP_AUTHORIZATION",
-        "IFIND_NEWS_MCP_TOKEN",
         "SECTOR_RESEARCH_DISABLE_MCP",
         "SECTOR_RESEARCH_OUTPUT_TIMESTAMP",
     ]:
@@ -62,13 +58,9 @@ mcp:
   ifind-stock:
     url: "https://example.test/stock"
     transport: "streamable_http"
-    token: ""
-    headers: {}
   ifind-news:
     url: "https://example.test/news"
     transport: "streamable_http"
-    token: ""
-    headers: {}
 """,
         encoding="utf-8",
     )
@@ -81,7 +73,6 @@ mcp:
     }
 
     monkeypatch.setenv("IFIND_MCP_AUTHORIZATION", "from-process-env")
-    monkeypatch.setenv("IFIND_NEWS_MCP_AUTHORIZATION", "from-news-env")
     cfg = load_config(str(config_path))
     server_configs = enabled_mcp_server_configs(cfg)
 
@@ -89,7 +80,7 @@ mcp:
         "Authorization": "from-process-env"
     }
     assert server_configs["ifind-news"]["headers"] == {
-        "Authorization": "from-news-env"
+        "Authorization": "from-process-env"
     }
 
 

@@ -56,14 +56,12 @@ MODEL_NAME=env-model
         encoding="utf-8",
     )
     monkeypatch.setattr("morning_note_agent.config.WORKSPACE_ENV_PATH", workspace_env)
-    monkeypatch.setenv("IFIND_STOCK_MCP_AUTHORIZATION", "raw-stock-auth")
 
     cfg = load_config(str(config_path))
     server_configs = enabled_mcp_server_configs(cfg)
 
     assert cfg.model.default == "env-model"
-    assert cfg.mcp["ifind-stock"].headers["Authorization"] == "raw-stock-auth"
-    assert cfg.mcp["ifind-news"].token == "shared-token"
+    assert server_configs["ifind-stock"]["headers"]["Authorization"] == "Bearer shared-token"
     assert server_configs["ifind-news"]["headers"]["Authorization"] == "Bearer shared-token"
 
 
@@ -100,4 +98,3 @@ def test_write_artifacts_share_timestamp(monkeypatch):
     assert json_path == "out/20260602-084500/source-log.json"
     assert (WORKSPACE_ROOT / markdown_path).exists()
     assert (WORKSPACE_ROOT / json_path).exists()
-

@@ -1,11 +1,11 @@
 """Configuration loader for Market Researcher.
 
 Merge order (highest priority last overrides):
-  config.yaml  <  .env / process environment
+  config.yaml  <  workspace .env / process environment
 
-`config.yaml` and `.env` are resolved from the project root by default, so the
-agent uses the same config whether it is launched from this directory or from a
-parent workspace.
+`config.yaml` is resolved from the project root. Secrets are read from the
+parent workspace `.env`, so sibling agents share one model and iFind credential
+source.
 """
 
 from __future__ import annotations
@@ -21,15 +21,16 @@ from pydantic import BaseModel, Field
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
+WORKSPACE_ENV_PATH = WORKSPACE_ROOT / ".env"
 
 
 # ── Sub-models ────────────────────────────────────────────────────────────────
 
 
 class ModelConfig(BaseModel):
-    default: str = "MiniMax-M2.7"
+    default: str = "qwen-3.7-max"
     max_tokens: int = 16000
-    base_url: str = "https://api.minimaxi.com"
+    base_url: str = "https://dashscope.aliyuncs.com/compatible-mode"
     api_key: str = ""
     thinking: Literal["auto", "enabled", "disabled"] = "auto"
 
@@ -37,10 +38,6 @@ class ModelConfig(BaseModel):
 class MCPServerConfig(BaseModel):
     url: str = ""
     transport: Literal["streamable_http", "sse", "stdio"] = "streamable_http"
-    token: str = ""
-    # Full headers dict — takes priority over token when both are set.
-    # Use this when your MCP server needs a raw Authorization value (not Bearer).
-    headers: Dict[str, str] = Field(default_factory=dict)
 
 
 class SearchConfig(BaseModel):
@@ -50,7 +47,6 @@ class SearchConfig(BaseModel):
     # ifind-news MCP 搜索配置
     ifind_news_url: str = ""
     ifind_news_transport: str = "streamable_http"
-    ifind_news_headers: Dict[str, str] = Field(default_factory=dict)
 
 
 class OutputConfig(BaseModel):
@@ -88,8 +84,7 @@ class Config(BaseModel):
         try:
             from dotenv import load_dotenv
 
-            load_dotenv(PROJECT_ROOT / ".env")
-            load_dotenv()
+            load_dotenv(WORKSPACE_ENV_PATH, override=False)
         except ImportError:
             pass
 
@@ -97,8 +92,18 @@ class Config(BaseModel):
 
         # Model overrides
         cfg.model.default = os.getenv("MODEL_NAME") or cfg.model.default
-        cfg.model.base_url = os.getenv("MODEL_BASE_URL") or cfg.model.base_url
-        cfg.model.api_key = os.getenv("MODEL_API_KEY") or cfg.model.api_key
+        cfg.model.base_url = (
+            os.getenv("MODEL_GATEWAY_BASE_URL")
+            or os.getenv("MODEL_RELAY_BASE_URL")
+            or os.getenv("MODEL_BASE_URL")
+            or cfg.model.base_url
+        )
+        cfg.model.api_key = (
+            os.getenv("MODEL_GATEWAY_API_KEY")
+            or os.getenv("MODEL_RELAY_API_KEY")
+            or os.getenv("MODEL_API_KEY")
+            or cfg.model.api_key
+        )
         cfg.model.thinking = os.getenv("MODEL_THINKING") or cfg.model.thinking
         model_max_tokens = os.getenv("MODEL_MAX_TOKENS")
         if model_max_tokens:
@@ -110,7 +115,7 @@ class Config(BaseModel):
                 if cfg.model.api_key:
                     break
 
-        # MCP overrides
+        # MCP URL/transport overrides plus one shared iFind credential.
         for server_name in list(cfg.mcp.keys()):
             server_cfg = cfg.mcp[server_name]
             for prefix in _server_env_prefixes(server_name):
@@ -121,16 +126,6 @@ class Config(BaseModel):
                 transport_val = os.getenv(f"{prefix}_MCP_TRANSPORT")
                 if transport_val:
                     server_cfg.transport = transport_val
-
-                auth_val = os.getenv(f"{prefix}_MCP_AUTHORIZATION")
-                if auth_val:
-                    server_cfg.headers["Authorization"] = auth_val
-
-                token_val = os.getenv(f"{prefix}_MCP_TOKEN")
-                if token_val:
-                    server_cfg.token = token_val
-                    if not auth_val:
-                        server_cfg.headers.pop("Authorization", None)
 
         # Search API key override
         if not cfg.search.api_key:
@@ -145,6 +140,35 @@ class Config(BaseModel):
 def load_config(path: str = "config.yaml") -> Config:
     """Convenience wrapper used by graph.py and tools.py."""
     return Config.load(path)
+
+
+def enabled_mcp_server_configs(cfg: Config) -> dict[str, dict]:
+    """Return MultiServerMCPClient-ready server configs."""
+    server_configs: dict[str, dict] = {}
+    for name, srv in cfg.mcp.items():
+        if not srv.url:
+            continue
+        entry: dict = {
+            "url": srv.url.rstrip("/"),
+            "transport": srv.transport,
+        }
+        if name.startswith("ifind-"):
+            headers = ifind_auth_headers()
+            if headers:
+                entry["headers"] = headers
+        server_configs[name] = entry
+    return server_configs
+
+
+def ifind_auth_headers() -> dict[str, str]:
+    """Return the shared iFind MCP Authorization header from environment."""
+    shared_auth = os.getenv("IFIND_MCP_AUTHORIZATION")
+    if shared_auth:
+        return {"Authorization": shared_auth}
+    shared_token = os.getenv("IFIND_MCP_TOKEN")
+    if shared_token:
+        return {"Authorization": f"Bearer {shared_token}"}
+    return {}
 
 
 def _resolve_project_path(path: str) -> Path:

@@ -20,7 +20,13 @@ from urllib.parse import urlparse
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import ToolMessage
 
-from market_researcher.config import PROJECT_ROOT, WORKSPACE_ROOT, load_config
+from market_researcher.config import (
+    PROJECT_ROOT,
+    WORKSPACE_ROOT,
+    enabled_mcp_server_configs,
+    ifind_auth_headers,
+    load_config,
+)
 from market_researcher.tools import build_comps_excel, build_pptx
 
 
@@ -103,8 +109,9 @@ def _get_ifind_news_tools_sync(search_cfg) -> list:
             "transport": search_cfg.ifind_news_transport,
         }
     }
-    if search_cfg.ifind_news_headers:
-        server_config["ifind-news"]["headers"] = dict(search_cfg.ifind_news_headers)
+    headers = ifind_auth_headers()
+    if headers:
+        server_config["ifind-news"]["headers"] = headers
 
     async def _load():
         tools = await _load_mcp_tools_from_config(server_config)
@@ -182,24 +189,9 @@ def _get_search_tools(cfg):
 
 async def _get_mcp_tools(cfg) -> list:
     """Load MCP tools from all configured servers that have a non-empty URL."""
-    enabled_servers = {
-        name: srv for name, srv in cfg.mcp.items() if srv.url
-    }
-    if not enabled_servers:
+    server_configs = enabled_mcp_server_configs(cfg)
+    if not server_configs:
         return []
-
-    server_configs = {}
-    for name, srv in enabled_servers.items():
-        entry: dict = {
-            "url": srv.url.rstrip("/"),
-            "transport": srv.transport,
-        }
-        if srv.headers:
-            entry["headers"] = dict(srv.headers)
-        elif srv.token:
-            entry["headers"] = {"Authorization": f"Bearer {srv.token}"}
-        server_configs[name] = entry
-
     tools = await _load_mcp_tools_from_config(server_configs)
     if tools:
         print(f"INFO: Loaded {len(tools)} MCP tool(s) from: {list(server_configs.keys())}")

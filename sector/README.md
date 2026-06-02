@@ -20,12 +20,11 @@ IFIND_MCP_TOKEN=...
 IFIND_MCP_AUTHORIZATION=...
 ```
 
-iFind 支持 per-server 覆盖，例如：
+iFind 鉴权只支持共享 key；单 server 只允许覆盖 URL/transport，例如：
 
 ```bash
-IFIND_STOCK_MCP_AUTHORIZATION=...
-IFIND_NEWS_MCP_TOKEN=...
 IFIND_EDB_MCP_URL=https://example.test/mcp
+IFIND_EDB_MCP_TRANSPORT=streamable_http
 ```
 
 ## MCP
@@ -85,4 +84,3 @@ Agent 至少提供三个本地工具：
 - `create_task_output_dir`
 - `write_markdown_report`
 - `write_json_artifact`
-

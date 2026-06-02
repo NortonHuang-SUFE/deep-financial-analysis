@@ -20,11 +20,9 @@ IFIND_MCP_TOKEN=
 IFIND_MCP_AUTHORIZATION=
 ```
 
-每个 iFind server 也支持单独覆盖：
+每个 iFind server 支持单独覆盖 URL/transport，但不支持单独 key：
 
 ```bash
-IFIND_STOCK_MCP_TOKEN=...
-IFIND_STOCK_MCP_AUTHORIZATION=...
 IFIND_NEWS_MCP_URL=...
 IFIND_NEWS_MCP_TRANSPORT=streamable_http
 ```

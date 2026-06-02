@@ -34,8 +34,6 @@ class ModelConfig(BaseModel):
 class MCPServerConfig(BaseModel):
     url: str = ""
     transport: Literal["streamable_http", "sse", "stdio"] = "streamable_http"
-    token: str = ""
-    headers: Dict[str, str] = Field(default_factory=dict)
 
 
 class OutputConfig(BaseModel):
@@ -103,15 +101,6 @@ class Config(BaseModel):
                 server.url = ""
 
         for server_name, server_cfg in cfg.mcp.items():
-            if server_name.startswith("ifind-"):
-                shared_auth = os.getenv("IFIND_MCP_AUTHORIZATION")
-                shared_token = os.getenv("IFIND_MCP_TOKEN")
-                if shared_auth:
-                    server_cfg.headers["Authorization"] = shared_auth
-                elif shared_token:
-                    server_cfg.token = shared_token
-                    server_cfg.headers.pop("Authorization", None)
-
             prefix = _env_slug(server_name)
             url_val = os.getenv(f"{prefix}_MCP_URL")
             if url_val:
@@ -120,16 +109,6 @@ class Config(BaseModel):
             transport_val = os.getenv(f"{prefix}_MCP_TRANSPORT")
             if transport_val:
                 server_cfg.transport = transport_val
-
-            auth_val = os.getenv(f"{prefix}_MCP_AUTHORIZATION")
-            if auth_val:
-                server_cfg.headers["Authorization"] = auth_val
-
-            token_val = os.getenv(f"{prefix}_MCP_TOKEN")
-            if token_val:
-                server_cfg.token = token_val
-                if not auth_val:
-                    server_cfg.headers.pop("Authorization", None)
 
         return cfg
 
@@ -148,12 +127,23 @@ def enabled_mcp_server_configs(cfg: Config) -> dict[str, dict]:
             "url": srv.url.rstrip("/"),
             "transport": srv.transport,
         }
-        if srv.headers:
-            entry["headers"] = dict(srv.headers)
-        elif srv.token:
-            entry["headers"] = {"Authorization": f"Bearer {srv.token}"}
+        if name.startswith("ifind-"):
+            headers = ifind_auth_headers()
+            if headers:
+                entry["headers"] = headers
         server_configs[name] = entry
     return server_configs
+
+
+def ifind_auth_headers() -> dict[str, str]:
+    """Return the shared iFind MCP Authorization header from environment."""
+    shared_auth = os.getenv("IFIND_MCP_AUTHORIZATION")
+    if shared_auth:
+        return {"Authorization": shared_auth}
+    shared_token = os.getenv("IFIND_MCP_TOKEN")
+    if shared_token:
+        return {"Authorization": f"Bearer {shared_token}"}
+    return {}
 
 
 def _resolve_project_path(path: str) -> Path:
@@ -178,4 +168,3 @@ def _model_api_key_env_names(base_url: str) -> list[str]:
     if host.endswith("deepseek.com"):
         return ["DEEPSEEK_API_KEY"]
     return []
-

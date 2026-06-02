@@ -5,24 +5,25 @@ LangGraph DCF valuation agent. The graph entry is `dcf_builder` in
 
 ## Model Gateway
 
-All model calls use one OpenAI-compatible gateway / relay. Configure the relay
-once in `.env`:
+All model calls default to Alibaba DashScope's OpenAI-compatible gateway.
+Configure live values once in the workspace root `../.env`:
 
 ```bash
-MODEL_GATEWAY_BASE_URL=https://api.babelark.com
-MODEL_GATEWAY_API_KEY=...
+MODEL_GATEWAY_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode
+MODEL_GATEWAY_API_KEY=
+# or DASHSCOPE_API_KEY=
 ```
 
 Choose which model to use with `MODEL_PROFILE`. It can be a configured preset:
 
 ```bash
-MODEL_PROFILE=minimax
+MODEL_PROFILE=qwen
 ```
 
 Or a direct model ID that is not listed in `config.yaml`:
 
 ```bash
-MODEL_PROFILE=qwen3.6-max-preview
+MODEL_PROFILE=qwen-3.7-max
 ```
 
 Profiles live in `config.yaml` under `model.profiles` only for shared defaults
@@ -31,19 +32,11 @@ named preset; direct model IDs do not need registration or code changes:
 
 ```yaml
 model:
-  active: "minimax"
+  active: "qwen"
   profiles:
-    minimax:
-      name: "MiniMax-M2.7"
-      max_tokens: 16000
-      thinking: "auto"
     qwen:
-      name: "qwen3-max"
-      max_tokens: 32000
-      thinking: "auto"
-    qwen3.6-max-preview:
-      name: "qwen3.6-max-preview"
-      max_tokens: 32000
+      name: "qwen-3.7-max"
+      max_tokens: 16000
       thinking: "auto"
 ```
 
@@ -53,10 +46,10 @@ overrides when you need a one-off run.
 ## iFind MCP Key
 
 iFind uses the same key across all configured iFind MCP servers. Put it once in
-`.env`:
+the workspace root `../.env`:
 
 ```bash
-IFIND_MCP_TOKEN=...
+IFIND_MCP_TOKEN=
 ```
 
 That is sent as `Authorization: Bearer <token>` to every `ifind-*` server.
@@ -64,11 +57,11 @@ That is sent as `Authorization: Bearer <token>` to every `ifind-*` server.
 If iFind gives you the full raw Authorization header value instead, use:
 
 ```bash
-IFIND_MCP_AUTHORIZATION=...
+IFIND_MCP_AUTHORIZATION=
 ```
 
-Per-server overrides like `IFIND_STOCK_MCP_TOKEN` still work, but they are no
-longer the recommended path.
+Do not put iFind keys in `config.yaml`; it contains only safe MCP URLs and
+non-secret defaults.
 
 ## Test
 

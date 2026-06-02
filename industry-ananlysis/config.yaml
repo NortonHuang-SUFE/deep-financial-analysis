@@ -1,81 +1,44 @@
-# Market Researcher — Configuration
-# Fill in your credentials. Never commit tokens or API keys to git.
-# Environment variables always override values set here (see .env.example).
+# Market Researcher - Configuration
+# Safe defaults only. Put model keys and the single shared iFind credential in
+# the workspace root ../.env, never in this file.
 
 model:
-  # You can override all of this from .env with:
-  #   MODEL_BASE_URL, MODEL_NAME, MODEL_API_KEY, MODEL_MAX_TOKENS
-  #
-  # Only these OpenAI-compatible gateways are intended for this project:
-  #   BabelArk: base_url "https://api.babelark.com", key env BABELARK_API_KEY
-  #   MiniMax:  base_url "https://api.minimaxi.com", key env MINIMAX_API_KEY
-  #   DeepSeek: base_url "https://api.deepseek.com", key env DEEPSEEK_API_KEY
-  #   Alibaba:  base_url "https://dashscope.aliyuncs.com/compatible-mode/v1", key env DASHSCOPE_API_KEY
-  #
-  # Model examples:
-  #   BabelArk: "claude-sonnet-4.6"
-  #   MiniMax:  "MiniMax-M2.7"
-  #   DeepSeek: "deepseek-chat"
-  #   Alibaba:  "qwen3.7-max-preview" or "qwen3-max"
-  default: "MiniMax-M2.7"
+  default: "qwen-3.7-max"
   max_tokens: 16000
-  # The code appends /v1 automatically when needed.
-  base_url: "https://api.minimaxi.com"
-  # Prefer setting the matching env var in .env. Direct value here also works.
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode"
   api_key: ""
-  # For DeepSeek V4 + agent tool calling, "disabled" avoids reasoning_content
-  # pass-back errors in multi-turn tool loops. Env override: MODEL_THINKING.
   thinking: "auto"
 
 mcp:
-  # 同花顺 iFind MCP 数据服务（股票、基金、宏观经济、新闻、债券、全球股票、指数）
-  # headers 直接传递给 MCP 客户端（不会自动加 Bearer 前缀）
-  # 如果需要添加其他 MCP 服务器，按同样格式添加即可；url 留空则跳过该服务器
   ifind-stock:
     url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-stock-mcp"
     transport: "streamable_http"
-    headers:
-      Authorization: "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0.DB55S8QFHZkCpqUQbeKXwRoGfWDOOZiXl76LUIq_eEj-lh5jztz0cIXiH4EnN03YM5_JokQ5HxeG2TspQMg0S8g86MP7XviNJd67Ztnd_Qfb81oKBZJDzUf37zzAuseA07QXdnpplFcjSx4fMWT-FCst_Qh8wbelVk4UgmJrNWM-Z1h0aTuQqs3msAy20q9pN-QCsTt2lYT1_yZZN5QshHesvUPHAuVEm0aYTJQLxtwU14_IVDTsNJu1bzTUkTHoh-jOgVEKThV_0s5WvrjN5aJWamwtTSSSz5DmAR89gyLFNkB4R6Yim0QvTpQkQX499Sn_jmbbnTCPSGZvnbiYxQ.Qib5J-85G7Pukd7e.eaP6Eak50Kyj5WFE6YqagbMLE_dq-fz2u_22GO5zCFKPb0uXCplE8y_Y_es_TBGISWv45W2bs2yHJdeLN0vzjtXPQ4QrhaiiBxt6vuBufhlGGB6Mqk17WlQHefz8_cr91nzrdGsdo8dKQQWmaJxMBiSWkmRAgbr5JWqAC7vCvsma5yf_wwC43uTP51P6mY5o4ZQ5hMdyKtCE7sKh3R60lM0tAzlQClt8bRQNVSJ3NkfD97mTiTvEtZs2O1dnBGAXaHot-nk1USGMXdhyGC05qrvx1f4ZUueBJ2IJpY8cgxBW8oEWLcl70AEjNJtZ8axEg2ZuzvDfSu9V_dLcR3Juqemj61t5IOo8sv8YjxQMquhB9aHYSXj0LQfgaQcEkMp36Sos7ZTIq-qSdJUqWnyL7XJugAtOWg.vght1sI7DRqnpcpCalN7Kg"
   ifind-fund:
     url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-fund-mcp"
     transport: "streamable_http"
-    headers:
-      Authorization: "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0.DB55S8QFHZkCpqUQbeKXwRoGfWDOOZiXl76LUIq_eEj-lh5jztz0cIXiH4EnN03YM5_JokQ5HxeG2TspQMg0S8g86MP7XviNJd67Ztnd_Qfb81oKBZJDzUf37zzAuseA07QXdnpplFcjSx4fMWT-FCst_Qh8wbelVk4UgmJrNWM-Z1h0aTuQqs3msAy20q9pN-QCsTt2lYT1_yZZN5QshHesvUPHAuVEm0aYTJQLxtwU14_IVDTsNJu1bzTUkTHoh-jOgVEKThV_0s5WvrjN5aJWamwtTSSSz5DmAR89gyLFNkB4R6Yim0QvTpQkQX499Sn_jmbbnTCPSGZvnbiYxQ.Qib5J-85G7Pukd7e.eaP6Eak50Kyj5WFE6YqagbMLE_dq-fz2u_22GO5zCFKPb0uXCplE8y_Y_es_TBGISWv45W2bs2yHJdeLN0vzjtXPQ4QrhaiiBxt6vuBufhlGGB6Mqk17WlQHefz8_cr91nzrdGsdo8dKQQWmaJxMBiSWkmRAgbr5JWqAC7vCvsma5yf_wwC43uTP51P6mY5o4ZQ5hMdyKtCE7sKh3R60lM0tAzlQClt8bRQNVSJ3NkfD97mTiTvEtZs2O1dnBGAXaHot-nk1USGMXdhyGC05qrvx1f4ZUueBJ2IJpY8cgxBW8oEWLcl70AEjNJtZ8axEg2ZuzvDfSu9V_dLcR3Juqemj61t5IOo8sv8YjxQMquhB9aHYSXj0LQfgaQcEkMp36Sos7ZTIq-qSdJUqWnyL7XJugAtOWg.vght1sI7DRqnpcpCalN7Kg"
   ifind-edb:
     url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-edb-mcp"
     transport: "streamable_http"
-    headers:
-      Authorization: "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0.DB55S8QFHZkCpqUQbeKXwRoGfWDOOZiXl76LUIq_eEj-lh5jztz0cIXiH4EnN03YM5_JokQ5HxeG2TspQMg0S8g86MP7XviNJd67Ztnd_Qfb81oKBZJDzUf37zzAuseA07QXdnpplFcjSx4fMWT-FCst_Qh8wbelVk4UgmJrNWM-Z1h0aTuQqs3msAy20q9pN-QCsTt2lYT1_yZZN5QshHesvUPHAuVEm0aYTJQLxtwU14_IVDTsNJu1bzTUkTHoh-jOgVEKThV_0s5WvrjN5aJWamwtTSSSz5DmAR89gyLFNkB4R6Yim0QvTpQkQX499Sn_jmbbnTCPSGZvnbiYxQ.Qib5J-85G7Pukd7e.eaP6Eak50Kyj5WFE6YqagbMLE_dq-fz2u_22GO5zCFKPb0uXCplE8y_Y_es_TBGISWv45W2bs2yHJdeLN0vzjtXPQ4QrhaiiBxt6vuBufhlGGB6Mqk17WlQHefz8_cr91nzrdGsdo8dKQQWmaJxMBiSWkmRAgbr5JWqAC7vCvsma5yf_wwC43uTP51P6mY5o4ZQ5hMdyKtCE7sKh3R60lM0tAzlQClt8bRQNVSJ3NkfD97mTiTvEtZs2O1dnBGAXaHot-nk1USGMXdhyGC05qrvx1f4ZUueBJ2IJpY8cgxBW8oEWLcl70AEjNJtZ8axEg2ZuzvDfSu9V_dLcR3Juqemj61t5IOo8sv8YjxQMquhB9aHYSXj0LQfgaQcEkMp36Sos7ZTIq-qSdJUqWnyL7XJugAtOWg.vght1sI7DRqnpcpCalN7Kg"
   ifind-news:
     url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-news-mcp"
     transport: "streamable_http"
-    headers:
-      Authorization: "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0.DB55S8QFHZkCpqUQbeKXwRoGfWDOOZiXl76LUIq_eEj-lh5jztz0cIXiH4EnN03YM5_JokQ5HxeG2TspQMg0S8g86MP7XviNJd67Ztnd_Qfb81oKBZJDzUf37zzAuseA07QXdnpplFcjSx4fMWT-FCst_Qh8wbelVk4UgmJrNWM-Z1h0aTuQqs3msAy20q9pN-QCsTt2lYT1_yZZN5QshHesvUPHAuVEm0aYTJQLxtwU14_IVDTsNJu1bzTUkTHoh-jOgVEKThV_0s5WvrjN5aJWamwtTSSSz5DmAR89gyLFNkB4R6Yim0QvTpQkQX499Sn_jmbbnTCPSGZvnbiYxQ.Qib5J-85G7Pukd7e.eaP6Eak50Kyj5WFE6YqagbMLE_dq-fz2u_22GO5zCFKPb0uXCplE8y_Y_es_TBGISWv45W2bs2yHJdeLN0vzjtXPQ4QrhaiiBxt6vuBufhlGGB6Mqk17WlQHefz8_cr91nzrdGsdo8dKQQWmaJxMBiSWkmRAgbr5JWqAC7vCvsma5yf_wwC43uTP51P6mY5o4ZQ5hMdyKtCE7sKh3R60lM0tAzlQClt8bRQNVSJ3NkfD97mTiTvEtZs2O1dnBGAXaHot-nk1USGMXdhyGC05qrvx1f4ZUueBJ2IJpY8cgxBW8oEWLcl70AEjNJtZ8axEg2ZuzvDfSu9V_dLcR3Juqemj61t5IOo8sv8YjxQMquhB9aHYSXj0LQfgaQcEkMp36Sos7ZTIq-qSdJUqWnyL7XJugAtOWg.vght1sI7DRqnpcpCalN7Kg"
   ifind-bond:
     url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-bond-mcp"
     transport: "streamable_http"
-    headers:
-      Authorization: "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0.DB55S8QFHZkCpqUQbeKXwRoGfWDOOZiXl76LUIq_eEj-lh5jztz0cIXiH4EnN03YM5_JokQ5HxeG2TspQMg0S8g86MP7XviNJd67Ztnd_Qfb81oKBZJDzUf37zzAuseA07QXdnpplFcjSx4fMWT-FCst_Qh8wbelVk4UgmJrNWM-Z1h0aTuQqs3msAy20q9pN-QCsTt2lYT1_yZZN5QshHesvUPHAuVEm0aYTJQLxtwU14_IVDTsNJu1bzTUkTHoh-jOgVEKThV_0s5WvrjN5aJWamwtTSSSz5DmAR89gyLFNkB4R6Yim0QvTpQkQX499Sn_jmbbnTCPSGZvnbiYxQ.Qib5J-85G7Pukd7e.eaP6Eak50Kyj5WFE6YqagbMLE_dq-fz2u_22GO5zCFKPb0uXCplE8y_Y_es_TBGISWv45W2bs2yHJdeLN0vzjtXPQ4QrhaiiBxt6vuBufhlGGB6Mqk17WlQHefz8_cr91nzrdGsdo8dKQQWmaJxMBiSWkmRAgbr5JWqAC7vCvsma5yf_wwC43uTP51P6mY5o4ZQ5hMdyKtCE7sKh3R60lM0tAzlQClt8bRQNVSJ3NkfD97mTiTvEtZs2O1dnBGAXaHot-nk1USGMXdhyGC05qrvx1f4ZUueBJ2IJpY8cgxBW8oEWLcl70AEjNJtZ8axEg2ZuzvDfSu9V_dLcR3Juqemj61t5IOo8sv8YjxQMquhB9aHYSXj0LQfgaQcEkMp36Sos7ZTIq-qSdJUqWnyL7XJugAtOWg.vght1sI7DRqnpcpCalN7Kg"
   ifind-global-stock:
     url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-global-stock-mcp"
     transport: "streamable_http"
-    headers:
-      Authorization: "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0.DB55S8QFHZkCpqUQbeKXwRoGfWDOOZiXl76LUIq_eEj-lh5jztz0cIXiH4EnN03YM5_JokQ5HxeG2TspQMg0S8g86MP7XviNJd67Ztnd_Qfb81oKBZJDzUf37zzAuseA07QXdnpplFcjSx4fMWT-FCst_Qh8wbelVk4UgmJrNWM-Z1h0aTuQqs3msAy20q9pN-QCsTt2lYT1_yZZN5QshHesvUPHAuVEm0aYTJQLxtwU14_IVDTsNJu1bzTUkTHoh-jOgVEKThV_0s5WvrjN5aJWamwtTSSSz5DmAR89gyLFNkB4R6Yim0QvTpQkQX499Sn_jmbbnTCPSGZvnbiYxQ.Qib5J-85G7Pukd7e.eaP6Eak50Kyj5WFE6YqagbMLE_dq-fz2u_22GO5zCFKPb0uXCplE8y_Y_es_TBGISWv45W2bs2yHJdeLN0vzjtXPQ4QrhaiiBxt6vuBufhlGGB6Mqk17WlQHefz8_cr91nzrdGsdo8dKQQWmaJxMBiSWkmRAgbr5JWqAC7vCvsma5yf_wwC43uTP51P6mY5o4ZQ5hMdyKtCE7sKh3R60lM0tAzlQClt8bRQNVSJ3NkfD97mTiTvEtZs2O1dnBGAXaHot-nk1USGMXdhyGC05qrvx1f4ZUueBJ2IJpY8cgxBW8oEWLcl70AEjNJtZ8axEg2ZuzvDfSu9V_dLcR3Juqemj61t5IOo8sv8YjxQMquhB9aHYSXj0LQfgaQcEkMp36Sos7ZTIq-qSdJUqWnyL7XJugAtOWg.vght1sI7DRqnpcpCalN7Kg"
   ifind-index:
     url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-index-mcp"
     transport: "streamable_http"
-    headers:
-      Authorization: "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0.DB55S8QFHZkCpqUQbeKXwRoGfWDOOZiXl76LUIq_eEj-lh5jztz0cIXiH4EnN03YM5_JokQ5HxeG2TspQMg0S8g86MP7XviNJd67Ztnd_Qfb81oKBZJDzUf37zzAuseA07QXdnpplFcjSx4fMWT-FCst_Qh8wbelVk4UgmJrNWM-Z1h0aTuQqs3msAy20q9pN-QCsTt2lYT1_yZZN5QshHesvUPHAuVEm0aYTJQLxtwU14_IVDTsNJu1bzTUkTHoh-jOgVEKThV_0s5WvrjN5aJWamwtTSSSz5DmAR89gyLFNkB4R6Yim0QvTpQkQX499Sn_jmbbnTCPSGZvnbiYxQ.Qib5J-85G7Pukd7e.eaP6Eak50Kyj5WFE6YqagbMLE_dq-fz2u_22GO5zCFKPb0uXCplE8y_Y_es_TBGISWv45W2bs2yHJdeLN0vzjtXPQ4QrhaiiBxt6vuBufhlGGB6Mqk17WlQHefz8_cr91nzrdGsdo8dKQQWmaJxMBiSWkmRAgbr5JWqAC7vCvsma5yf_wwC43uTP51P6mY5o4ZQ5hMdyKtCE7sKh3R60lM0tAzlQClt8bRQNVSJ3NkfD97mTiTvEtZs2O1dnBGAXaHot-nk1USGMXdhyGC05qrvx1f4ZUueBJ2IJpY8cgxBW8oEWLcl70AEjNJtZ8axEg2ZuzvDfSu9V_dLcR3Juqemj61t5IOo8sv8YjxQMquhB9aHYSXj0LQfgaQcEkMp36Sos7ZTIq-qSdJUqWnyL7XJugAtOWg.vght1sI7DRqnpcpCalN7Kg"
 
 search:
-  # ifind-news 已在 mcp 区配置，agent 可直接使用其搜索工具
-  # 如需额外的 web 搜索（tavily/serper/duckduckgo），配置 provider 和 api_key
   provider: "none"
   api_key: ""
   max_results: 5
 
 output:
-  # Directory where Excel and PPTX artifacts are written, relative to the top-level workspace.
+  # Directory where artifacts are written, relative to the top-level workspace.
   dir: "./out"
   # Optional: path to a .pptx firm template. Leave blank to use blank layout.
   pptx_template: "./templates/firm-template.pptx"

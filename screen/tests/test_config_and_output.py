@@ -29,7 +29,7 @@ def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
     assert "ifind-index" in cfg.mcp
 
 
-def test_env_overrides_ifind_shared_and_per_server_auth(monkeypatch, tmp_path):
+def test_shared_ifind_credential_applies_to_all_ifind_servers(monkeypatch, tmp_path):
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         """
@@ -44,13 +44,12 @@ mcp:
         encoding="utf-8",
     )
     monkeypatch.setenv("IFIND_MCP_TOKEN", "shared-token")
-    monkeypatch.setenv("IFIND_NEWS_MCP_AUTHORIZATION", "news-auth")
 
     cfg = load_config(str(config_path))
     server_configs = enabled_mcp_server_configs(cfg)
 
     assert server_configs["ifind-stock"]["headers"]["Authorization"] == "Bearer shared-token"
-    assert server_configs["ifind-news"]["headers"]["Authorization"] == "news-auth"
+    assert server_configs["ifind-news"]["headers"]["Authorization"] == "Bearer shared-token"
 
 
 def test_workspace_root_env_file_is_loaded(monkeypatch, tmp_path):

@@ -24,11 +24,9 @@ IFIND_MCP_TOKEN=...
 IFIND_MCP_AUTHORIZATION="Bearer ..."
 ```
 
-支持按 server 覆盖：
+支持按 server 覆盖 URL/transport，但 iFind 鉴权仍只使用上面的共享 key：
 
 ```bash
-IFIND_STOCK_MCP_TOKEN=...
-IFIND_STOCK_MCP_AUTHORIZATION="Bearer ..."
 IFIND_NEWS_MCP_URL=https://...
 IFIND_NEWS_MCP_TRANSPORT=streamable_http
 ```
@@ -107,4 +105,3 @@ MORNING_NOTE_OUTPUT_TIMESTAMP=20260602-083000
 ```bash
 .venv/bin/python -m pytest morning-note/tests
 ```
-

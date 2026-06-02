@@ -1,10 +1,11 @@
 """Configuration loader for DCF Builder.
 
 Merge order:
-  config.yaml < .env / process environment
+  config.yaml < workspace .env / process environment
 
 Default config paths are resolved from the DCF-builder project root, so graph
 loading works the same from this directory or from a parent workspace.
+Secrets are read from the parent workspace `.env`, not from project config.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from pydantic import BaseModel, Field
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
+WORKSPACE_ENV_PATH = WORKSPACE_ROOT / ".env"
 
 
 class ModelProfile(BaseModel):
@@ -29,10 +31,10 @@ class ModelProfile(BaseModel):
 
 
 class ModelConfig(BaseModel):
-    active: str = "default"
-    default: str = "MiniMax-M2.7"
+    active: str = "qwen"
+    default: str = "qwen-3.7-max"
     max_tokens: int = 16000
-    base_url: str = "https://api.minimaxi.com"
+    base_url: str = "https://dashscope.aliyuncs.com/compatible-mode"
     api_key: str = ""
     thinking: Literal["auto", "enabled", "disabled"] = "auto"
     profiles: Dict[str, ModelProfile] = Field(default_factory=dict)
@@ -41,8 +43,6 @@ class ModelConfig(BaseModel):
 class MCPServerConfig(BaseModel):
     url: str = ""
     transport: Literal["streamable_http", "sse", "stdio"] = "streamable_http"
-    token: str = ""
-    headers: Dict[str, str] = Field(default_factory=dict)
 
 
 class SearchConfig(BaseModel):
@@ -51,7 +51,6 @@ class SearchConfig(BaseModel):
     max_results: int = 5
     ifind_news_url: str = ""
     ifind_news_transport: str = "streamable_http"
-    ifind_news_headers: Dict[str, str] = Field(default_factory=dict)
 
 
 class OutputConfig(BaseModel):
@@ -85,8 +84,7 @@ class Config(BaseModel):
         try:
             from dotenv import load_dotenv
 
-            load_dotenv(PROJECT_ROOT / ".env")
-            load_dotenv()
+            load_dotenv(WORKSPACE_ENV_PATH, override=False)
         except ImportError:
             pass
 
@@ -125,15 +123,6 @@ class Config(BaseModel):
 
         for server_name in list(cfg.mcp.keys()):
             server_cfg = cfg.mcp[server_name]
-            if server_name.startswith("ifind-"):
-                shared_auth = os.getenv("IFIND_MCP_AUTHORIZATION")
-                shared_token = os.getenv("IFIND_MCP_TOKEN")
-                if shared_auth:
-                    server_cfg.headers["Authorization"] = shared_auth
-                elif shared_token:
-                    server_cfg.token = shared_token
-                    server_cfg.headers.pop("Authorization", None)
-
             prefix = _env_slug(server_name)
             url_val = os.getenv(f"{prefix}_MCP_URL")
             if url_val:
@@ -142,16 +131,6 @@ class Config(BaseModel):
             transport_val = os.getenv(f"{prefix}_MCP_TRANSPORT")
             if transport_val:
                 server_cfg.transport = transport_val
-
-            auth_val = os.getenv(f"{prefix}_MCP_AUTHORIZATION")
-            if auth_val:
-                server_cfg.headers["Authorization"] = auth_val
-
-            token_val = os.getenv(f"{prefix}_MCP_TOKEN")
-            if token_val:
-                server_cfg.token = token_val
-                if not auth_val:
-                    server_cfg.headers.pop("Authorization", None)
 
         if not cfg.search.api_key:
             if cfg.search.provider == "tavily":
@@ -201,12 +180,23 @@ def enabled_mcp_server_configs(cfg: Config) -> dict[str, dict]:
             "url": srv.url.rstrip("/"),
             "transport": srv.transport,
         }
-        if srv.headers:
-            entry["headers"] = dict(srv.headers)
-        elif srv.token:
-            entry["headers"] = {"Authorization": f"Bearer {srv.token}"}
+        if name.startswith("ifind-"):
+            headers = ifind_auth_headers()
+            if headers:
+                entry["headers"] = headers
         server_configs[name] = entry
     return server_configs
+
+
+def ifind_auth_headers() -> dict[str, str]:
+    """Return the shared iFind MCP Authorization header from environment."""
+    shared_auth = os.getenv("IFIND_MCP_AUTHORIZATION")
+    if shared_auth:
+        return {"Authorization": shared_auth}
+    shared_token = os.getenv("IFIND_MCP_TOKEN")
+    if shared_token:
+        return {"Authorization": f"Bearer {shared_token}"}
+    return {}
 
 
 def _env_slug(server_name: str) -> str:
