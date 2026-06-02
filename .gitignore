@@ -18,6 +18,8 @@
 !/sector/**
 !/thesis/
 !/thesis/**
+!/orchestrator/
+!/orchestrator/**
 
 # Secrets and local overrides.
 **/.env
@@ -45,6 +47,8 @@
 !/sector/tests/**
 !/thesis/tests/
 !/thesis/tests/**
+!/orchestrator/tests/
+!/orchestrator/tests/**
 
 # Python and tool caches.
 **/__pycache__/

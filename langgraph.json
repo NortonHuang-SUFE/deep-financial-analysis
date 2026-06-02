@@ -5,7 +5,8 @@
     "morning_note": "./morning-note/src/morning_note_agent/graph.py:graph",
     "stock_screen": "./screen/src/stock_screen_agent/graph.py:graph",
     "sector_research": "./sector/src/sector_research_agent/graph.py:graph",
-    "thesis_tracker": "./thesis/src/thesis_tracker_agent/graph.py:graph"
+    "thesis_tracker": "./thesis/src/thesis_tracker_agent/graph.py:graph",
+    "deep_orchestrator": "./orchestrator/src/deep_orchestrator/graph.py:graph"
   },
   "python_version": "3.11",
   "env": "./.env",
@@ -15,6 +16,7 @@
     "./morning-note",
     "./screen",
     "./sector",
-    "./thesis"
+    "./thesis",
+    "./orchestrator"
   ]
 }
