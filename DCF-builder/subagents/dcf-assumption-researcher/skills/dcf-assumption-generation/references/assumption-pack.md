@@ -7,8 +7,8 @@ Use this reference when drafting the final DCF assumption pack.
 Return one Markdown document with exactly these top-level sections:
 
 1. `## 假设背景`
-2. `## 假设逻辑`
-3. `## 假设结果`
+2. `## 假设结果`
+3. `## 假设逻辑`
 
 ## 假设背景
 
@@ -19,18 +19,7 @@ Summarize:
 - Comparable companies and useful peer ranges.
 - Industry, macro, rate, news, and announcement context from iFind.
 - Important sourced data and `[UNSOURCED]` gaps.
-
-## 假设逻辑
-
-Explain:
-
-- Revenue segmentation by products, segments, regions, channels, or customers.
-- Segment-level Bear/Base/Bull logic and how segment assumptions aggregate into
-  total revenue assumptions.
-- Logic for EBIT margin, tax rate, D&A/revenue, CapEx/revenue, NWC/delta
-  revenue, WACC, and terminal growth.
-- How assumptions reconcile with target history, peers, market data, and
-  industry evidence.
+- Assumption analysis artifact path, if `write_assumption_analysis` was called.
 
 ## 假设结果
 
@@ -53,3 +42,15 @@ Include Bear/Base/Bull assumption data for:
 Use decimals such as `0.055` or clearly labeled percentages such as `5.5%`.
 Keep terminal growth lower than WACC. If any field is not directly sourced,
 state the assumption and mark it `[UNSOURCED]`.
+
+## 假设逻辑
+
+This must be the final and most important section. Explain:
+
+- Revenue segmentation by products, segments, regions, channels, or customers.
+- Segment-level Bear/Base/Bull logic and how segment assumptions aggregate into
+  total revenue assumptions.
+- Logic for EBIT margin, tax rate, D&A/revenue, CapEx/revenue, NWC/delta
+  revenue, WACC, and terminal growth.
+- How assumptions reconcile with target history, peers, market data, and
+  industry evidence.

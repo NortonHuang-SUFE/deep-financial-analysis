@@ -245,13 +245,13 @@ async def _create_agent():
         build_comps_excel,
         build_dcf_model,
         validate_dcf_model,
-        write_assumption_analysis,
         write_valuation_summary,
     ]
     backend = FilesystemBackend(root_dir=str(WORKSPACE_ROOT), virtual_mode=False)
+    assumption_tools = assumption_mcp_tools + search_tools + [write_assumption_analysis]
     assumption_subagent = create_assumption_research_subagent_spec(
         model=model,
-        tools=assumption_mcp_tools + search_tools,
+        tools=assumption_tools,
         middleware=[_make_tool_error_middleware()],
         backend=backend,
     )

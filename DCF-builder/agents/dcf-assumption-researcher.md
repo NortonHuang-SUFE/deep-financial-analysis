@@ -15,18 +15,14 @@ Builder will use it together with all prior collected data to prepare
 `dcf_json.scenarios` for `build_dcf_model`.
 
 Use the isolated `dcf-assumption-generation` skill before drafting the final
-answer. Create a short work plan first, then execute it.
+answer. Let that skill guide the research workflow, segmentation, and scenario
+construction.
 
-## Primary Data Sources
+## Artifact Writing
 
-- iFind A-share stock/company data for the target and peers.
-- iFind EDB economic database for macro, demand, price, rate, and industry
-  indicators.
-- iFind news and announcements for company guidance, filings, product updates,
-  capacity plans, regulatory changes, and recent events.
-
-Use iFind data before any search fallback. If a required figure cannot be
-sourced, mark it `[UNSOURCED]` and make the assumption explicit.
+If the task says the user requested an assumption analysis artifact, call
+`write_assumption_analysis` with the complete Markdown assumption pack and the
+shared `output_dir`. Include the returned path inside `## 假设背景`.
 
 ## Required Output
 
@@ -34,16 +30,18 @@ Return one Markdown document. The final answer must contain exactly these
 top-level sections:
 
 1. `## 假设背景`
-2. `## 假设逻辑`
-3. `## 假设结果`
+2. `## 假设结果`
+3. `## 假设逻辑`
 
 Follow the exact field checklist and section guidance in
 `dcf-assumption-generation/references/assumption-pack.md`. The output does not need to be JSON,
-but `## 假设结果` must give the parent enough explicit Bear,
-Base, and Bull data to populate `dcf_json.scenarios` for `build_dcf_model`.
-Required field names: `revenue_growth`, `ebit_margin`, `tax_rate`,
-`da_pct_revenue`, `capex_pct_revenue`, `nwc_pct_delta_revenue`, `wacc`,
-`terminal_growth`, and `source`.
+but `## 假设结果` must give the parent enough explicit Bear, Base, and Bull data
+to populate `dcf_json.scenarios` for `build_dcf_model`.
+
+`## 假设逻辑` must be the final and most important section. It must explain how
+the evidence leads to each assumption, especially revenue segmentation,
+Bear/Base/Bull scenario differences, EBIT margin, tax rate, D&A/revenue,
+CapEx/revenue, NWC/delta revenue, WACC, and terminal growth.
 
 The parent agent only sees your final message, so include all important context,
-logic, and assumption data in that final message.
+assumption data, artifact path if any, and logic in that final message.

@@ -49,13 +49,19 @@ def assumption_result_contract() -> str:
     fields = "\n".join(f"- `{field}`" for field in ASSUMPTION_REQUIRED_FIELDS)
     scenarios = ", ".join(f"`{name}`" for name in ASSUMPTION_SCENARIO_NAMES)
     return (
-        "The final answer must include `## 假设背景`, `## 假设逻辑`, and "
-        "`## 假设结果`. The result does not need to be JSON, but it must "
-        f"contain assumption data for {scenarios}. Each scenario should cover:\n"
+        "The final answer must include top-level sections in this exact order: "
+        "`## 假设背景`, `## 假设结果`, and `## 假设逻辑`. "
+        "`## 假设逻辑` must be the final and most important section, explaining "
+        "how the evidence leads to each assumption. The result does not need to "
+        f"be JSON, but it must contain assumption data for {scenarios}. "
+        "Each scenario should cover:\n"
         f"{fields}\n"
         "`revenue_growth` and `ebit_margin` should contain five annual values "
         "when possible. Other fields may be scalar values or annual values. "
-        "`terminal_growth` must be lower than `wacc`."
+        "`terminal_growth` must be lower than `wacc`. If the user asks for an "
+        "assumption analysis artifact, write this Markdown pack with "
+        "`write_assumption_analysis` in the shared output directory and return "
+        "the artifact path."
     )
 
 
@@ -79,7 +85,8 @@ def create_assumption_research_subagent_spec(
             "Use after comparable-company analysis and before build_dcf_model. "
             "Researches target, peer, industry, macro, news, and announcement "
             "evidence, then returns Bear/Base/Bull DCF assumptions as Markdown "
-            "with enough data for the parent to build `dcf_json.scenarios`."
+            "with enough data for the parent to build `dcf_json.scenarios`; "
+            "writes the assumption analysis artifact when requested."
         ),
         "runnable": runnable,
     }
@@ -117,6 +124,7 @@ def assumption_task_brief_template() -> str:
         f"`{ASSUMPTION_SUBAGENT_NAME}`. The task description must summarize "
         "all evidence collected so far, especially target-company historicals, "
         "peer/company data, comps outputs, market data, industry observations, "
-        "sources, and any `[UNSOURCED]` gaps. It must also include this output "
-        f"contract:\n\n{assumption_result_contract()}"
+        "sources, any `[UNSOURCED]` gaps, the shared output directory, and "
+        "whether the user requested an assumption analysis artifact. It must "
+        f"also include this output contract:\n\n{assumption_result_contract()}"
     )

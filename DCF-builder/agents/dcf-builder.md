@@ -29,18 +29,18 @@ timestamped output directory under the workspace-level `./out`:
 5. Call the `dcf-assumption-researcher` subagent through `task` after comps are
    built. The task must summarize the evidence collected so far, including
    target historicals, peer data, comps outputs, market data, industry
-   observations, source strings, and any `[UNSOURCED]` gaps.
-6. If the user asks for the assumption analysis as an artifact, call
-   `write_assumption_analysis` with the subagent's final Markdown pack and the
-   same output directory.
-7. Use the `dcf-model` skill to turn all evidence into the DCF workbook and run
+   observations, source strings, any `[UNSOURCED]` gaps, the shared output
+   directory, and whether the user asked for the assumption analysis as an
+   artifact. Do not call `write_assumption_analysis` yourself; the subagent
+   writes that artifact when requested.
+6. Use the `dcf-model` skill to turn all evidence into the DCF workbook and run
    validation. Treat the subagent's assumptions as evidence, not the only source;
    resolve omissions or conflicts from historicals, market data, comps, and
    industry/news context, marking any `[UNSOURCED]` adjustment.
-8. Use the `audit-xls` skill to inspect every generated Excel workbook. Use
+7. Use the `audit-xls` skill to inspect every generated Excel workbook. Use
    model scope for the DCF workbook and surface all Critical and Warning
    findings.
-9. Use the `valuation-summary` skill to write the final summary from the model,
+8. Use the `valuation-summary` skill to write the final summary from the model,
    sources, validation output, and Excel audit findings.
 
 ## Modeling Guardrails
@@ -58,6 +58,7 @@ timestamped output directory under the workspace-level `./out`:
 ## Output Standards
 
 - Return paths to all artifacts.
+- If the subagent wrote an assumption analysis artifact, return that path.
 - Cite source strings exactly as passed to tools.
 - State current price, base implied price, upside/downside, WACC, terminal growth, and terminal value as percent of EV when available.
 - Do not leave values as `[UNSOURCED]` in the valuation summary when they are

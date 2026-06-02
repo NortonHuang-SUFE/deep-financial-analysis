@@ -49,7 +49,8 @@ building `dcf_json` for `build_dcf_model`.
 ## References
 
 - Read `references/assumption-pack.md` before drafting the final answer. It
-  defines the required Markdown sections and assumption data checklist.
+  defines the required Markdown sections, assumption data checklist, and final
+  logic emphasis.
 
 Do not force the final result into JSON. Use tables or structured bullets when
 they communicate the assumption data more clearly.
