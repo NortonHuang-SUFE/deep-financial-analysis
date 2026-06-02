@@ -1,0 +1,39 @@
+[project]
+name = "stock-screen-agent"
+version = "0.1.0"
+description = "LangGraph Deep Agents stock screening system for China A-share and Hong Kong equity research."
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents>=0.6.1",
+    "langgraph>=0.3.0",
+    "langgraph-cli[inmem]>=0.3.1",
+    "langsmith>=0.3.0",
+    "langchain>=0.3.0",
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.3.0",
+    "langchain-community>=0.3.0",
+    "langchain-mcp-adapters>=0.1.6",
+    "mcp>=1.9.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+    "httpx>=0.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.6.0",
+]
+
+[build-system]
+requires = ["setuptools>=73.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+

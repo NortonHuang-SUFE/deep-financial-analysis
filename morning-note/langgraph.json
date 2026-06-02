@@ -1,0 +1,9 @@
+{
+  "graphs": {
+    "morning_note": "./src/morning_note_agent/graph.py:graph"
+  },
+  "python_version": "3.11",
+  "env": "../.env",
+  "dependencies": ["."]
+}
+

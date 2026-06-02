@@ -1,0 +1,9 @@
+{
+  "graphs": {
+    "stock_screen": "./src/stock_screen_agent/graph.py:graph"
+  },
+  "python_version": "3.11",
+  "env": "../.env",
+  "dependencies": ["."]
+}
+

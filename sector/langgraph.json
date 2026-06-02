@@ -1,0 +1,9 @@
+{
+  "graphs": {
+    "sector_research": "./src/sector_research_agent/graph.py:graph"
+  },
+  "python_version": "3.11",
+  "env": "../.env",
+  "dependencies": ["."]
+}
+

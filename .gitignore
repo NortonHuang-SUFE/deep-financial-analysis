@@ -4,10 +4,19 @@
 
 # Keep repository metadata and the two core project directories.
 !/.gitignore
+!/.env.example
 !/DCF-builder/
 !/DCF-builder/**
 !/industry-ananlysis/
 !/industry-ananlysis/**
+!/morning-note/
+!/morning-note/**
+!/screen/
+!/screen/**
+!/sector/
+!/sector/**
+!/thesis/
+!/thesis/**
 
 # Secrets and local overrides.
 **/.env
@@ -27,6 +36,14 @@
 
 # Tests are intentionally excluded from this first core-code upload.
 **/tests/
+!/morning-note/tests/
+!/morning-note/tests/**
+!/screen/tests/
+!/screen/tests/**
+!/sector/tests/
+!/sector/tests/**
+!/thesis/tests/
+!/thesis/tests/**
 
 # Python and tool caches.
 **/__pycache__/

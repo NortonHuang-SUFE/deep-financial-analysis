@@ -1,0 +1,8 @@
+{
+  "graphs": {
+    "thesis_tracker": "./src/thesis_tracker_agent/graph.py:graph"
+  },
+  "python_version": "3.11",
+  "env": "../.env",
+  "dependencies": ["."]
+}
