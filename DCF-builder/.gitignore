@@ -1,0 +1,24 @@
+# Credentials
+.env
+config.local.yaml
+
+# Runtime artifacts
+out/
+!out/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# LangGraph / LangSmith
+.langgraph_api/
+
+# macOS
+.DS_Store

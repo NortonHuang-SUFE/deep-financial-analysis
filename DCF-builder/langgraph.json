@@ -1,0 +1,8 @@
+{
+  "graphs": {
+    "dcf_builder": "./src/dcf_builder/graph.py:graph"
+  },
+  "python_version": "3.11",
+  "env": "./.env",
+  "dependencies": ["."]
+}

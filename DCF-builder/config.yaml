@@ -1,0 +1,74 @@
+# DCF Builder - Configuration
+# Fill credentials through .env whenever possible. Do not commit live tokens.
+
+model:
+  # All model calls go through one OpenAI-compatible gateway / relay.
+  # Override from .env with MODEL_GATEWAY_BASE_URL and MODEL_GATEWAY_API_KEY.
+  base_url: "https://api.babelark.com"
+  api_key: ""
+
+  # MODEL_PROFILE can be a profile key below or any direct model id.
+  active: "minimax"
+  default: "MiniMax-M2.7"
+  max_tokens: 16000
+  thinking: "auto"
+  profiles:
+    minimax:
+      name: "MiniMax-M2.7"
+      max_tokens: 16000
+      thinking: "auto"
+    deepseek:
+      name: "deepseek-chat"
+      max_tokens: 16000
+      thinking: "auto"
+    qwen:
+      name: "qwen3-max"
+      max_tokens: 16000
+      thinking: "auto"
+    qwen3.6-max-preview:
+      name: "qwen3.6-max-preview"
+      max_tokens: 32000
+      thinking: "auto"
+    sonnet:
+      name: "claude-sonnet-4.6"
+      max_tokens: 16000
+      thinking: "auto"
+
+mcp:
+  # iFind MCP data services. URL values are safe to keep here; secrets should
+  # be provided once with IFIND_MCP_TOKEN or IFIND_MCP_AUTHORIZATION in .env.
+  # Per-server IFIND_STOCK_MCP_TOKEN / IFIND_STOCK_MCP_AUTHORIZATION still work
+  # as overrides when needed.
+  ifind-stock:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-stock-mcp"
+    transport: "streamable_http"
+    token: ""
+  ifind-bond:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-bond-mcp"
+    transport: "streamable_http"
+    token: ""
+  ifind-edb:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-edb-mcp"
+    transport: "streamable_http"
+    token: ""
+  ifind-news:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-news-mcp"
+    transport: "streamable_http"
+    token: ""
+  ifind-index:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-index-mcp"
+    transport: "streamable_http"
+    token: ""
+  ifind-global-stock:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-global-stock-mcp"
+    transport: "streamable_http"
+    token: ""
+
+search:
+  provider: "none"
+  api_key: ""
+  max_results: 5
+
+output:
+  # Directory where artifacts are written, relative to the top-level workspace.
+  dir: "./out"

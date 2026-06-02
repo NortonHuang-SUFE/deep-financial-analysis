@@ -1,0 +1,45 @@
+# Core-code-only upload allowlist.
+# By default, ignore everything at the workspace root.
+*
+
+# Keep repository metadata and the two core project directories.
+!/.gitignore
+!/DCF-builder/
+!/DCF-builder/**
+!/industry-ananlysis/
+!/industry-ananlysis/**
+
+# Secrets and local overrides.
+**/.env
+**/.env.*
+!**/.env.example
+**/config.local.yaml
+**/*.pem
+**/*.key
+
+# Runtime outputs and generated artifacts.
+**/out/
+**/.langgraph_api/
+**/.cache/
+**/dist/
+**/build/
+**/*.egg-info/
+
+# Tests are intentionally excluded from this first core-code upload.
+**/tests/
+
+# Python and tool caches.
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.venv/
+**/venv/
+
+# Large or potentially proprietary presentation templates.
+**/templates/*.pptx
+
+# Local/editor files.
+**/.DS_Store
+**/.claude/
