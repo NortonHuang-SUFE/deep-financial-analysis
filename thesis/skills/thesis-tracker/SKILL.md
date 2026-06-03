@@ -1,6 +1,13 @@
-# Thesis Tracker
+---
+name: thesis-tracker
+description: "维护和更新中国 A 股、港股个股投资逻辑。用于新建 thesis、更新持仓逻辑、检查 thesis 是否仍成立、记录财报/公告/政策/监管/行业数据点、形成组合动作建议。触发示例：\"更新贵州茅台 thesis\"、\"看看这个持仓逻辑还成立吗\"、\"把这条公告加入 thesis\"、\"复盘港股通持仓\"。"
+tags:
+  - research
+  - portfolio-management
+  - china-equity
+---
 
-description: 维护和更新中国 A 股、港股个股投资逻辑。用于新建 thesis、更新持仓逻辑、检查 thesis 是否仍成立、记录财报/公告/政策/监管/行业数据点、形成组合动作建议。触发示例："更新贵州茅台 thesis"、"看看这个持仓逻辑还成立吗"、"把这条公告加入 thesis"、"复盘港股通持仓"。
+# Thesis Tracker
 
 ## Workflow
 

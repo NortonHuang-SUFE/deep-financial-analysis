@@ -1,6 +1,13 @@
-# Sector Overview
+---
+name: sector-overview
+description: "Create China-focused industry and sector landscape reports covering industry classification, market size, value chain, policy/regulation, listed-company competition, financial and valuation comparison, and investment implications. Use for \"行业研究\", \"赛道分析\", \"sector overview\", \"industry report\", \"market landscape\", \"行业深度\", \"产业链分析\", or thematic China equity research."
+tags:
+  - research
+  - sector-analysis
+  - china-equity
+---
 
-description: Create China-focused industry and sector landscape reports covering industry classification, market size, value chain, policy/regulation, listed-company competition, financial and valuation comparison, and investment implications. Use for "行业研究", "赛道分析", "sector overview", "industry report", "market landscape", "行业深度", "产业链分析", or thematic China equity research.
+# Sector Overview
 
 ## Workflow
 
