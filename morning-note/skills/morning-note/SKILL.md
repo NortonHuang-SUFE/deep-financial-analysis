@@ -1,6 +1,10 @@
-# Morning Note
-
+---
+name: morning-note
 description: 生成中国市场 A 股开盘前 Morning Note，覆盖隔夜海外市场、港股/中概、政策监管、上市公司公告、业绩预告/快报、机构调研、龙虎榜、北向资金、ETF、股指期货和今日事件。适用于“morning note”“早会纪要”“开盘前晨会”“隔夜发生了什么”“今日交易线索”等请求。
+allowed-tools: create_task_output_dir write_markdown_report write_json_artifact
+---
+
+# Morning Note
 
 ## 目标
 
@@ -135,4 +139,3 @@ description: 生成中国市场 A 股开盘前 Morning Note，覆盖隔夜海外
 - A 股开盘前材料必须照顾交易时效，优先选择今天可能影响价格的内容。
 - “无重大新增”是有效结论，但要说明检查过哪些模块。
 - 如果用户要求正式分发，保持一页以内、标题清晰、bullet 紧凑。
-

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import traceback
 from pathlib import Path
 from urllib.parse import urlparse
@@ -20,8 +21,14 @@ from urllib.parse import urlparse
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import ToolMessage
 
+# LangGraph loads this file by path, so make the src-layout package importable
+# before importing market_researcher.* modules.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SRC_ROOT = PROJECT_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
 from market_researcher.config import (
-    PROJECT_ROOT,
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
     ifind_auth_headers,
