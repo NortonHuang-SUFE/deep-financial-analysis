@@ -45,7 +45,7 @@ For `integrated_model.xlsx`, verify every historical and projected period:
 - CapEx/PP&E tie: Beginning PP&E + CapEx - D&A +/- acquisitions/disposals = ending PP&E, and ending PP&E ties to Balance Sheet.
 - Debt tie: Beginning debt + issuance - repayment/amortization = ending debt, and ending debt ties to Balance Sheet.
 - Revenue tie: Revenue Build total = Income Statement revenue.
-- D&A tie: PP&E / D&A schedule D&A = Income Statement and Cash Flow Statement D&A.
+- D&A tie: PP&E & D&A schedule D&A = Income Statement and Cash Flow Statement D&A.
 - DCF Inputs tie: DCF Inputs tab pulls from the model, not hardcoded duplicates.
 
 ## Severity

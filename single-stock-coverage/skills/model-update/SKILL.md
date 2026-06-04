@@ -23,8 +23,8 @@ Do not rebuild the entire model by default. Identify the dependency path and rer
 - New reported actuals affect historical periods, roll-forwards, run-rate assumptions, and checks for the updated period.
 - Revenue guidance affects `Assumptions`, `Revenue Build`, `Income Statement`, `Working Capital`, and `DCF Inputs`.
 - Margin guidance affects `Assumptions`, `Income Statement`, taxes, cash flow, and `DCF Inputs`.
-- CapEx or capacity updates affect `Assumptions`, `PP&E / D&A`, `Cash Flow Statement`, `Balance Sheet`, and `DCF Inputs`.
-- Debt, interest, rates, or refinancing updates affect `Debt / Interest`, `Income Statement`, `Cash Flow Statement`, `Balance Sheet`, and checks.
+- CapEx or capacity updates affect `Assumptions`, `PP&E & D&A`, `Cash Flow Statement`, `Balance Sheet`, and `DCF Inputs`.
+- Debt, interest, rates, or refinancing updates affect `Debt & Interest`, `Income Statement`, `Cash Flow Statement`, `Balance Sheet`, and checks.
 - Share repurchases, issuance, options, or convertibles affect `Share Count`, EPS, cash flow, equity, and per-share DCF inputs.
 - Macro updates should flow through the assumptions they actually change; do not alter company operating drivers without evidence.
 - Events should update the specific schedule and statements they touch, then refresh dependent checks and DCF inputs.

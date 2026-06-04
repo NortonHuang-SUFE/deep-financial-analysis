@@ -7,7 +7,17 @@
     "sector_research": "./sector/src/sector_research_agent/graph.py:graph",
     "thesis_tracker": "./thesis/src/thesis_tracker_agent/graph.py:graph",
     "deep_orchestrator": "./orchestrator/src/deep_orchestrator/graph.py:graph",
-    "single_stock_coverage": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:graph"
+    "single_stock_coverage": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:graph",
+    "single_stock_coverage_task1_company_researcher": "./single-stock-coverage/src/single_stock_coverage_agent/graphs/task1_company_researcher.py:graph",
+    "single_stock_coverage_task2_financial_modeler": "./single-stock-coverage/src/single_stock_coverage_agent/graphs/task2_financial_modeler.py:graph",
+    "single_stock_coverage_task2_is_modeler": "./single-stock-coverage/src/single_stock_coverage_agent/graphs/task2_is_modeler.py:graph",
+    "single_stock_coverage_task2_bs_modeler": "./single-stock-coverage/src/single_stock_coverage_agent/graphs/task2_bs_modeler.py:graph",
+    "single_stock_coverage_task2_cf_modeler": "./single-stock-coverage/src/single_stock_coverage_agent/graphs/task2_cf_modeler.py:graph",
+    "single_stock_coverage_task3_valuation_analyst": "./single-stock-coverage/src/single_stock_coverage_agent/graphs/task3_valuation_analyst.py:graph",
+    "single_stock_coverage_task3_assumption_generator": "./single-stock-coverage/src/single_stock_coverage_agent/graphs/task3_assumption_generator.py:graph",
+    "single_stock_coverage_task3_dcf_execution": "./single-stock-coverage/src/single_stock_coverage_agent/graphs/task3_dcf_execution.py:graph",
+    "single_stock_coverage_task4_chart_pack_generator": "./single-stock-coverage/src/single_stock_coverage_agent/graphs/task4_chart_pack_generator.py:graph",
+    "single_stock_coverage_task5_report_assembler": "./single-stock-coverage/src/single_stock_coverage_agent/graphs/task5_report_assembler.py:graph"
   },
   "python_version": "3.11",
   "env": "./.env",

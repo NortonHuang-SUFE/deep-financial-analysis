@@ -19,8 +19,8 @@ The workbook must include these tabs in this order unless a user-provided templa
 6. `Balance Sheet`
 7. `Cash Flow Statement`
 8. `Working Capital`
-9. `PP&E / D&A`
-10. `Debt / Interest`
+9. `PP&E & D&A`
+10. `Debt & Interest`
 11. `Share Count`
 12. `DCF Inputs`
 13. `Checks`
@@ -72,10 +72,10 @@ The workbook must include these tabs in this order unless a user-provided templa
 ### Cash Flow Statement
 
 - Net income linked from `Income Statement`.
-- D&A linked from `PP&E / D&A`.
+- D&A linked from `PP&E & D&A`.
 - Working-capital changes linked from `Working Capital`.
-- CapEx linked from `PP&E / D&A`.
-- Debt issuance/repayment linked from `Debt / Interest`.
+- CapEx linked from `PP&E & D&A`.
+- Debt issuance/repayment linked from `Debt & Interest`.
 - Buybacks/dividends linked from `Share Count` or `Assumptions`.
 - Ending cash must tie to `Balance Sheet` cash.
 
@@ -85,14 +85,14 @@ The workbook must include these tabs in this order unless a user-provided templa
 - Use days, percentage of revenue/COGS, or other explicit drivers.
 - Working-capital changes must flow to `Cash Flow Statement` with the correct sign convention.
 
-### PP&E / D&A
+### PP&E & D&A
 
 - Beginning PP&E, CapEx, acquisitions/disposals where material, D&A, ending PP&E.
 - D&A must link to `Income Statement` and `Cash Flow Statement`.
 - CapEx must link to `Cash Flow Statement`.
 - Ending PP&E must link to `Balance Sheet`.
 
-### Debt / Interest
+### Debt & Interest
 
 - Beginning debt, issuance, repayment, amortization, ending debt, average debt, interest rate, interest expense.
 - Interest expense must link to `Income Statement`.
@@ -110,8 +110,8 @@ This tab is the handoff to Task 3. It must pull from the model, not duplicate ha
 
 - Revenue from `Revenue Build`.
 - EBIT and tax from `Income Statement`.
-- D&A from `PP&E / D&A`.
-- CapEx from `Cash Flow Statement` or `PP&E / D&A`.
+- D&A from `PP&E & D&A`.
+- CapEx from `Cash Flow Statement` or `PP&E & D&A`.
 - NWC change from `Working Capital`.
 - Debt and cash from `Balance Sheet`.
 - Shares from `Share Count`.
@@ -128,7 +128,7 @@ Include a visible dashboard with formula-based checks for every historical and p
 - `CapEx/PP&E tie`: Beginning PP&E + CapEx - D&A +/- acquisitions/disposals = ending PP&E, and ending PP&E ties to Balance Sheet.
 - `Debt tie`: Beginning debt + issuance - repayment/amortization = ending debt, and ending debt ties to Balance Sheet.
 - `Revenue tie`: Revenue Build total = Income Statement revenue.
-- `D&A tie`: PP&E / D&A schedule D&A = Income Statement and Cash Flow Statement D&A.
+- `D&A tie`: PP&E & D&A schedule D&A = Income Statement and Cash Flow Statement D&A.
 
 Critical checks must return an explicit `TRUE/FALSE` or zero-difference result.
 
