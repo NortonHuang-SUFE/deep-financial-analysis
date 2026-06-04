@@ -6,7 +6,8 @@
     "stock_screen": "./screen/src/stock_screen_agent/graph.py:graph",
     "sector_research": "./sector/src/sector_research_agent/graph.py:graph",
     "thesis_tracker": "./thesis/src/thesis_tracker_agent/graph.py:graph",
-    "deep_orchestrator": "./orchestrator/src/deep_orchestrator/graph.py:graph"
+    "deep_orchestrator": "./orchestrator/src/deep_orchestrator/graph.py:graph",
+    "single_stock_coverage": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:graph"
   },
   "python_version": "3.11",
   "env": "./.env",
@@ -17,6 +18,7 @@
     "./screen",
     "./sector",
     "./thesis",
-    "./orchestrator"
+    "./orchestrator",
+    "./single-stock-coverage"
   ]
 }
