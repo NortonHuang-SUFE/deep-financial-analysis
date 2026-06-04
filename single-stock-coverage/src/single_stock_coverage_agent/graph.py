@@ -41,13 +41,18 @@ _TASK_SUBAGENTS: dict[str, tuple[str, str]] = {
     ),
     "task2_financial_modeler": (
         "task2-financial-modeler.md",
-        "Task 2 Financial Modeling: builds integrated_model.xlsx, "
-        "financial_facts.json, and model_audit.md with three-statement checks.",
+        "Task 2 Financial Modeling: parent coordinator that delegates Income "
+        "Statement, Balance Sheet, and Cash Flow Statement tabs to three child "
+        "subagents (is_modeler, bs_modeler, cf_modeler), then runs inter-statement "
+        "consistency checks, populates DCF Inputs, runs audit-xls, and writes "
+        "model_audit.md.",
     ),
     "task3_valuation_analyst": (
         "task3-valuation-analyst.md",
-        "Task 3 Valuation Analysis: runs evidence gate, value-driver map, "
-        "assumption generation/audit, DCF execution, and valuation reconciliation.",
+        "Task 3 Valuation Analysis: parent that runs evidence gate, value-driver "
+        "map, assumption audit, and valuation reconciliation. Delegates assumption "
+        "generation to assumption_generator child and DCF/comps execution to "
+        "dcf_execution child.",
     ),
     "task4_chart_pack_generator": (
         "task4-chart-pack-generator.md",
@@ -222,6 +227,108 @@ def _read_prompt(filename: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+# ── Task 2 child subagent specs ─────────────────────────────────────────────
+
+
+def _create_is_modeler_subagent_spec(*, model, tools: list, backend, middleware: list) -> dict:
+    from deepagents import create_deep_agent
+
+    runnable = create_deep_agent(
+        model=model,
+        system_prompt=_read_prompt("task2-is-modeler.md"),
+        tools=tools,
+        subagents=[],
+        skills=[str(PROJECT_ROOT / "skills")],
+        middleware=middleware,
+        backend=backend,
+        name="is_modeler",
+    )
+    return {
+        "name": "is_modeler",
+        "description": (
+            "Income Statement and Revenue Build modeler. Owned by Task 2 parent. "
+            "Builds the Revenue Build tab and Income Statement tab in integrated_model.xlsx."
+        ),
+        "runnable": runnable,
+    }
+
+
+def _create_bs_modeler_subagent_spec(*, model, tools: list, backend, middleware: list) -> dict:
+    from deepagents import create_deep_agent
+
+    runnable = create_deep_agent(
+        model=model,
+        system_prompt=_read_prompt("task2-bs-modeler.md"),
+        tools=tools,
+        subagents=[],
+        skills=[str(PROJECT_ROOT / "skills")],
+        middleware=middleware,
+        backend=backend,
+        name="bs_modeler",
+    )
+    return {
+        "name": "bs_modeler",
+        "description": (
+            "Balance Sheet modeler. Owned by Task 2 parent. "
+            "Builds the Balance Sheet tab in integrated_model.xlsx after is_modeler completes."
+        ),
+        "runnable": runnable,
+    }
+
+
+def _create_cf_modeler_subagent_spec(*, model, tools: list, backend, middleware: list) -> dict:
+    from deepagents import create_deep_agent
+
+    runnable = create_deep_agent(
+        model=model,
+        system_prompt=_read_prompt("task2-cf-modeler.md"),
+        tools=tools,
+        subagents=[],
+        skills=[str(PROJECT_ROOT / "skills")],
+        middleware=middleware,
+        backend=backend,
+        name="cf_modeler",
+    )
+    return {
+        "name": "cf_modeler",
+        "description": (
+            "Cash Flow Statement modeler. Owned by Task 2 parent. "
+            "Builds the Cash Flow Statement tab in integrated_model.xlsx after is_modeler "
+            "and bs_modeler complete, and wires the BS Cash cross-link."
+        ),
+        "runnable": runnable,
+    }
+
+
+# ── Task 3 child subagent specs ─────────────────────────────────────────────
+
+
+def _create_assumption_generator_subagent_spec(
+    *, model, tools: list, mcp_tools: list, backend, middleware: list
+) -> dict:
+    from deepagents import create_deep_agent
+
+    runnable = create_deep_agent(
+        model=model,
+        system_prompt=_read_prompt("task3-assumption-generator.md"),
+        tools=list(mcp_tools) + list(tools),
+        subagents=[],
+        skills=[str(PROJECT_ROOT / "skills")],
+        middleware=middleware,
+        backend=backend,
+        name="assumption_generator",
+    )
+    return {
+        "name": "assumption_generator",
+        "description": (
+            "DCF assumption generation subagent for Task 3. Receives the value driver map, "
+            "Task 1 and Task 2 artifacts, and any assumption audit feedback. Returns a "
+            "Bear/Base/Bull assumption pack (assumption_pack.md content) to the Task 3 parent."
+        ),
+        "runnable": runnable,
+    }
+
+
 def _create_dcf_execution_subagent_spec(*, model, tools: list, backend, middleware: list) -> dict:
     from deepagents import create_deep_agent
 
@@ -233,13 +340,19 @@ after the valuation analyst has produced and audited an assumption pack.
 Your job is to convert audited DCF inputs into deterministic artifacts:
 
 - comparable-company workbook when requested
-- DCF model workbook
+- DCF model workbook with Bear/Base/Bull cases and three 5x5 sensitivity tables
 - validation JSON / validation findings
 - valuation summary
 
 Use the local DCF tools when available. Treat the parent valuation analyst's
 assumption pack as the source of scenario inputs. Do not invent missing
 assumptions; return a clear blocker if required fields are absent.
+
+Return a structured summary to the parent including:
+- paths to dcf_model.xlsx, comps.xlsx, and any validation artifacts
+- DCF equity value per share (Bear/Base/Bull)
+- implied EV/EBITDA at Base case
+- any validation warnings
 """
 
     runnable = create_deep_agent(
@@ -278,15 +391,45 @@ def _create_task_subagent_spec(
 
     nested_subagents = []
     task_tools = list(mcp_tools) + list(tools)
-    if name == "task3_valuation_analyst":
+
+    if name == "task2_financial_modeler":
+        nested_subagents = [
+            _create_is_modeler_subagent_spec(
+                model=model,
+                tools=tools,
+                backend=backend,
+                middleware=middleware,
+            ),
+            _create_bs_modeler_subagent_spec(
+                model=model,
+                tools=tools,
+                backend=backend,
+                middleware=middleware,
+            ),
+            _create_cf_modeler_subagent_spec(
+                model=model,
+                tools=tools,
+                backend=backend,
+                middleware=middleware,
+            ),
+        ]
+
+    elif name == "task3_valuation_analyst":
         dcf_tools = _dcf_tools()
         nested_subagents = [
+            _create_assumption_generator_subagent_spec(
+                model=model,
+                tools=tools,
+                mcp_tools=mcp_tools,
+                backend=backend,
+                middleware=middleware,
+            ),
             _create_dcf_execution_subagent_spec(
                 model=model,
                 tools=dcf_tools + list(tools),
                 backend=backend,
                 middleware=middleware,
-            )
+            ),
         ]
 
     runnable = create_deep_agent(

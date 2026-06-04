@@ -28,13 +28,12 @@ only what you send.
 | `subagent_type` | Use For |
 | --- | --- |
 | `task1_company_researcher` | Company research, business-driver map, source log. |
-| `task2_financial_modeler` | Integrated three-statement model, financial facts, model audit. |
-| `task3_valuation_analyst` | Evidence gate, value-driver map, assumptions, DCF execution, valuation reconciliation. |
+| `task2_financial_modeler` | Integrated three-statement model, financial facts, model audit. Internally delegates Income Statement to is_modeler, Balance Sheet to bs_modeler, and Cash Flow Statement to cf_modeler child subagents. |
+| `task3_valuation_analyst` | Evidence gate, value-driver map, assumption generation/audit, DCF execution, valuation reconciliation. Internally delegates assumption generation to assumption_generator child and DCF/comps execution to dcf_execution child. |
 | `task4_chart_pack_generator` | Chart pack based only on Task 1-3 artifacts. |
 | `task5_report_assembler` | Initiation report or event update memo based only on Task 1-4 artifacts. |
 
-Task 3 has its own nested `dcf_execution` subagent and can use it to execute the
-DCF after assumptions are audited.
+Task 2 has three nested statement-modeler subagents (is_modeler, bs_modeler, cf_modeler). Task 3 has two nested subagents: assumption_generator (for DCF assumption packs) and dcf_execution (for workbook construction).
 
 ## Orchestration Rules
 

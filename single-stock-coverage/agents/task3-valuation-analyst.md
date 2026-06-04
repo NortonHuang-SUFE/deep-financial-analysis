@@ -129,9 +129,28 @@ For each driver include:
 
 ### 3.3 Assumption Generation
 
-Use `dcf-assumption-generation` to generate a full Bear/Base/Bull assumption
-pack from the Evidence Gate and Value Driver Map. Assumptions must be built
-from business drivers and financial evidence, not mechanical CAGR extrapolation.
+Delegate assumption generation to the `assumption_generator` child subagent.
+Do not generate assumptions inline; the child owns the `dcf-assumption-generation`
+skill and returns the full assumption pack as text.
+
+**Delegation steps:**
+
+1. Call `assumption_generator` via the task tool with `subagent_type="assumption_generator"`.
+2. Pass the following inputs to the child:
+   - Full text content of `evidence_sufficiency.md` (written in 3.1).
+   - Full content of `value_driver_map.json` (written in 3.2).
+   - Absolute paths to all Task 1 artifacts:
+     `01_company_research/company_research.md`,
+     `01_company_research/business_driver_map.json`,
+     `01_company_research/source_log.json`.
+   - Absolute paths to all Task 2 artifacts:
+     `02_financial_model/integrated_model.xlsx`,
+     `02_financial_model/financial_facts.json`,
+     `02_financial_model/model_audit.md`.
+3. Receive from the child: the complete `assumption_pack.md` content as text in
+   the child's final message. The child does NOT write the file to disk.
+4. Write `assumption_pack.md` to the Task 3 output directory yourself using
+   `write_markdown_artifact`. You are responsible for disk persistence.
 
 The `assumption_pack.md` must contain these top-level sections:
 
@@ -167,8 +186,8 @@ Required assumption content:
 
 ### 3.4 Assumption Audit
 
-Use `assumption-audit` to red-team the generated assumptions before model
-execution. Write `assumption_audit.md`.
+Run the `assumption-audit` skill on the `assumption_pack.md` content received
+from `assumption_generator`. Write `assumption_audit.md` after each audit run.
 
 Audit must challenge:
 
@@ -180,19 +199,43 @@ Audit must challenge:
 - WACC, terminal growth, terminal value share of EV, and sensitivity ranges.
 - Whether the assumptions can be falsified by concrete indicators.
 
-Revise the assumption pack if the audit identifies blocking issues. Keep an
-audit trail of changes and residual risks.
+**Revision loop:**
+
+- If the audit verdict is `Revise Before Execution`: re-call `assumption_generator`
+  via the task tool, passing BOTH the original evidence inputs (as in 3.3) AND
+  the full text content of `assumption_audit.md` so the child can address each
+  finding. The child returns a revised `assumption_pack.md` as text; you
+  overwrite the file on disk and re-run the audit. Repeat until the verdict is
+  `Pass` or `Pass with Warnings`.
+- If the audit verdict is `Do Not Proceed`: stop immediately. Write the blocker
+  findings to `assumption_audit.md` and return the blocker to the orchestrator.
+  Do not continue to model execution.
+- Keep an audit trail of all revision rounds and residual risks in
+  `assumption_audit.md`.
 
 ### 3.5 Model Execution
 
-Use the current `DCF-builder` capability as a mature executor where available.
-Treat it as a deterministic model/workbook generator and validator, not as the
-owner of Task 3 logic.
+Delegate workbook generation to the `dcf_execution` child subagent. Treat it
+as a deterministic model/workbook generator and validator, not as the owner of
+Task 3 logic.
+
+**Delegation steps:**
+
+1. Call `dcf_execution` via the task tool with `subagent_type="dcf_execution"`.
+2. Pass the following inputs to the child:
+   - Full text content of the audited `assumption_pack.md`.
+   - Full content of `value_driver_map.json`.
+   - Task 2 DCF Inputs data (from `02_financial_model/integrated_model.xlsx`
+     and `02_financial_model/financial_facts.json`).
+   - Full content of `financial_facts.json`.
+3. Receive from the child:
+   - Path to `dcf_model.xlsx`.
+   - Path to `comps.xlsx`.
+   - Equity value per share for Bear, Base, and Bull cases.
+   - Any workbook validation warnings.
 
 Execution requirements:
 
-- Feed the audited assumption pack, value driver map, Task 2 DCF inputs, and
-  financial facts into the DCF executor.
 - DCF revenue, EBIT/tax, D&A, CapEx, NWC, debt, cash, and shares must trace back
   to Task 2's integrated model unless explicitly updated and sourced.
 - Produce `dcf_model.xlsx` with Bear/Base/Bull cases and sensitivity analysis.
@@ -263,6 +306,13 @@ Write `valuation_state.json` with machine-readable state:
 - `unsourced_items`
 - `audit_warnings`
 - `last_updated`
+
+## Subagents
+
+| subagent_type | Use For |
+| --- | --- |
+| `assumption_generator` | Step 3.3: generates Bear/Base/Bull assumption_pack.md content from evidence; returns full text, does not write to disk |
+| `dcf_execution` | Step 3.5: builds DCF and comps workbooks from audited assumptions; returns file paths, equity value per share, and validation warnings |
 
 ## Quality Rules
 
