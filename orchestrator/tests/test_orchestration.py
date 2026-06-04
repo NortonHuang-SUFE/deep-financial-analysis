@@ -154,7 +154,6 @@ def test_subagent_registry_matches_disk():
     from deep_orchestrator import graph as orch
 
     expected = {
-        "dcf_builder",
         "market_researcher",
         "morning_note",
         "stock_screen",
@@ -205,10 +204,10 @@ def test_parallel_subagents_run_concurrently():
 
 def test_builtin_tools_present_and_no_custom_tools():
     """The orchestrator exposes built-in tools and none of the old custom ones."""
-    dummy, _ = _make_marker_subagent("dcf_builder", sleep_s=0.0)
+    dummy, _ = _make_marker_subagent("single_stock_coverage", sleep_s=0.0)
     model = _ScriptedToolModel(tool_calls=[], captured={})
     agent = _build_agent(
-        model, [{"name": "dcf_builder", "description": "d", "runnable": dummy}]
+        model, [{"name": "single_stock_coverage", "description": "d", "runnable": dummy}]
     )
     asyncio.run(agent.ainvoke({"messages": [{"role": "user", "content": "hi"}]}))
 
@@ -220,11 +219,11 @@ def test_builtin_tools_present_and_no_custom_tools():
 
 def test_social_card_skill_discovered_and_orchestration_skill_gone():
     """The guizang social-card skill is offered; the old orchestration skill is gone."""
-    dummy, _ = _make_marker_subagent("dcf_builder", sleep_s=0.0)
+    dummy, _ = _make_marker_subagent("single_stock_coverage", sleep_s=0.0)
     model = _ScriptedToolModel(tool_calls=[], captured={})
     agent = _build_agent(
         model,
-        [{"name": "dcf_builder", "description": "d", "runnable": dummy}],
+        [{"name": "single_stock_coverage", "description": "d", "runnable": dummy}],
         with_skills=True,
     )
     asyncio.run(agent.ainvoke({"messages": [{"role": "user", "content": "make a 头图"}]}))

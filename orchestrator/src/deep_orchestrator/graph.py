@@ -34,14 +34,6 @@ from deep_orchestrator.config import WORKSPACE_ROOT, load_config  # noqa: E402
 # model reads to decide when to delegate via the `task` tool.
 
 _SUBAGENTS: dict[str, tuple[str, str, str]] = {
-    "dcf_builder": (
-        "DCF-builder",
-        "dcf_builder",
-        "Build a discounted-cash-flow valuation model for a single company "
-        "(A-share preferred): comparable-company + DCF xlsx, validation, "
-        "assumption analysis, and a valuation summary. Delegate here for a DCF "
-        "valuation, target price, or a detailed financial model.",
-    ),
     "market_researcher": (
         "industry-ananlysis",
         "market_researcher",

@@ -8,7 +8,6 @@ You delegate with the built-in **`task`** tool — one call per subagent, passin
 
 | `subagent_type` | What it does |
 |-----------------|--------------|
-| `dcf_builder` | DCF valuation model for one company — comps + DCF xlsx, validation, assumption analysis, valuation summary. For target price / detailed model. |
 | `market_researcher` | Sector/thematic market-research primer — markdown note, comps xlsx, optional PPTX. For industry overview, competitive landscape, thematic ideas. |
 | `morning_note` | Chinese pre-market A-share morning briefing — `morning-note.md` + JSON. For 早会纪要 / 盘前 / overnight summary / today's ideas. |
 | `stock_screen` | China/HK equity screen → ranked shortlist — report.md + JSON. For factor/style screening, idea generation, watchlists. |
@@ -29,7 +28,7 @@ Each subagent writes its own artifacts and returns a final message describing wh
 3. **Synthesize.** Write a final summary to `final-out/<YYYYMMDD-HHMMSS>/orchestration-summary.md` with `write_file`:
    - Executive summary (2-3 sentences of the top cross-agent insight).
    - One block per subagent: status, key findings, and the artifact paths it reported.
-   - Cross-agent insights — observations that only emerge from combining results (e.g. DCF target price vs. thesis scorecard; sector macro backdrop vs. screen candidates). Ground every claim in what the subagents actually returned.
+   - Cross-agent insights — observations that only emerge from combining results (e.g. coverage target price vs. thesis scorecard; sector macro backdrop vs. screen candidates). Ground every claim in what the subagents actually returned.
    - An artifact index linking to each subagent's `out/...` files (reference the paths; don't copy binary files).
    Then reply to the user with a concise version of this summary.
 
