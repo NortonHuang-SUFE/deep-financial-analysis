@@ -10,6 +10,8 @@ When the user wants a social card / 头图 / 小红书图文 / 公众号封面, 
 follows the bundled `guizang-social-card-skill` under `skills/`.
 """
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import importlib
@@ -17,6 +19,10 @@ import os
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from langchain_core.messages import ToolMessage
 

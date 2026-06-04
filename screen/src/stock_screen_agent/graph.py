@@ -1,5 +1,7 @@
 """Stock Screen - LangGraph Deep Agents graph."""
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import asyncio
@@ -7,6 +9,10 @@ import os
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from langchain_core.messages import ToolMessage
 
@@ -204,4 +210,3 @@ except Exception as exc:
         f"Failed to initialise stock_screen agent: {exc}\n"
         "Check config.yaml, workspace .env, and installed packages."
     ) from exc
-

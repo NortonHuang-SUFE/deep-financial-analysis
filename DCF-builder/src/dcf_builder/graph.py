@@ -1,5 +1,7 @@
 """DCF Builder - LangGraph Deep Agents graph."""
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import asyncio
@@ -8,6 +10,10 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 from urllib.parse import urlparse
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from langchain_core.messages import ToolMessage
 

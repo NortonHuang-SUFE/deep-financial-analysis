@@ -9,14 +9,19 @@ Search tools are selected by the configured provider.
 Local tools (build_comps_excel, build_pptx) are always available.
 """
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import asyncio
 import os
 import sys
-import traceback
 from pathlib import Path
 from urllib.parse import urlparse
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import ToolMessage
