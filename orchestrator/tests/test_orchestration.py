@@ -149,7 +149,7 @@ def _build_agent(model, subagents, *, with_skills: bool = False):
 
 
 def test_subagent_registry_matches_disk():
-    """The native registry lists the 6 agents and their packages exist on disk."""
+    """The native registry lists the agents and their packages exist on disk."""
     os.environ["ORCHESTRATOR_TEST_MODE"] = "1"  # avoid building the heavy graph
     from deep_orchestrator import graph as orch
 
@@ -160,6 +160,7 @@ def test_subagent_registry_matches_disk():
         "stock_screen",
         "sector_research",
         "thesis_tracker",
+        "single_stock_coverage",
     }
     assert set(orch._SUBAGENTS) == expected
 

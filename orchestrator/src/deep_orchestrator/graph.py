@@ -1,6 +1,6 @@
 """Deep Orchestrator — LangGraph Deep Agents top-level graph.
 
-The orchestrator registers the 6 financial-analysis agents as **native Deep
+The orchestrator registers the financial-analysis agents as **native Deep
 Agents subagents**. It plans a request, then delegates to them with the
 built-in `task` tool (parallel `task` calls run the subagents concurrently)
 and writes its synthesis with the built-in filesystem tools. There are no
@@ -76,6 +76,14 @@ _SUBAGENTS: dict[str, tuple[str, str, str]] = {
         "Create or update a falsifiable single-stock investment thesis "
         "(Chinese markdown scorecard + JSON). Delegate here to build, update, "
         "or review a thesis, or to get portfolio action advice.",
+    ),
+    "single_stock_coverage": (
+        "single-stock-coverage",
+        "single_stock_coverage_agent",
+        "Complex single-stock coverage workflow under an outer research agent: "
+        "initiating coverage, event updates, three-statement model, valuation "
+        "assumption system, chart pack, and final report. Delegate here when "
+        "one target company needs full coverage or post-event re-underwriting.",
     ),
 }
 

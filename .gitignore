@@ -6,6 +6,7 @@
 !/.gitignore
 !/.env.example
 !/langgraph.json
+!/single-stock-coverage-plan.md
 !/DCF-builder/
 !/DCF-builder/**
 !/industry-ananlysis/
@@ -20,6 +21,8 @@
 !/thesis/**
 !/orchestrator/
 !/orchestrator/**
+!/single-stock-coverage/
+!/single-stock-coverage/**
 
 # Secrets and local overrides.
 **/.env
@@ -49,6 +52,8 @@
 !/thesis/tests/**
 !/orchestrator/tests/
 !/orchestrator/tests/**
+!/single-stock-coverage/tests/
+!/single-stock-coverage/tests/**
 
 # Python and tool caches.
 **/__pycache__/

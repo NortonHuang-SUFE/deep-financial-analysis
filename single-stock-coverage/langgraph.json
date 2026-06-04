@@ -1,0 +1,11 @@
+{
+  "graphs": {
+    "single_stock_coverage": "./src/single_stock_coverage_agent/graph.py:graph"
+  },
+  "python_version": "3.11",
+  "env": "../.env",
+  "dependencies": [
+    ".",
+    "../DCF-builder"
+  ]
+}
