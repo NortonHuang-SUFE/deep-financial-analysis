@@ -147,7 +147,7 @@ def test_coverage_run_and_artifact_tools(monkeypatch, tmp_path):
     assert manifest["subagents_called"] == ["task1_company_researcher"]
 
 
-def test_agent_registry_exposes_task1_and_bs_modeler_context():
+def test_agent_registry_exposes_task2_parallel_statement_context():
     registry = load_agent_registry()
 
     task1 = describe_agent(registry, "task1_company_researcher")
@@ -161,12 +161,73 @@ def test_agent_registry_exposes_task1_and_bs_modeler_context():
     ]
     assert task1["skills"] == {"single_stock_coverage": ["company-research"]}
 
-    bs_modeler = describe_agent(registry, "bs_modeler")
-    assert bs_modeler["tool_groups"] == ["local_artifact_tools"]
-    assert bs_modeler["skills"] == {
-        "single_stock_coverage": ["three-statement-model", "xlsx-author"]
+    task2 = describe_agent(registry, "task2_financial_modeler")
+    assert task2["parent"] == "single_stock_coverage"
+    assert task2["level"] == 1
+    assert task2["tool_groups"] == [
+        "mcp_tools",
+        "local_artifact_tools",
+        "financial_model_builder_tools",
+    ]
+    assert task2["tools"]["financial_model_builder_tools"] == [
+        "reconcile_statement_specs",
+        "build_integrated_three_statement_model",
+        "validate_integrated_three_statement_model",
+    ]
+    assert task2["skills"] == {
+        "single_stock_coverage": [
+            "financial-data-normalization",
+            "three-statement-model",
+            "statement-reconciliation-checks",
+            "audit-xls",
+        ]
     }
+    assert task2["subagents"] == ["is_modeler", "bs_modeler", "cf_modeler"]
+
+    is_modeler = describe_agent(registry, "is_modeler")
+    assert is_modeler["parent"] == "task2_financial_modeler"
+    assert is_modeler["level"] == 2
+    assert is_modeler["tool_groups"] == ["income_statement_json_tools"]
+    assert is_modeler["tools"]["income_statement_json_tools"] == [
+        "read_statement_context",
+        "validate_income_statement_json",
+        "write_income_statement_json",
+    ]
+    assert is_modeler["skills"] == {
+        "single_stock_coverage": ["income-statement-model", "statement-json-checks"]
+    }
+    assert "02_financial_model/income_statement_spec.json" in is_modeler["outputs"]
+
+    bs_modeler = describe_agent(registry, "bs_modeler")
+    assert bs_modeler["parent"] == "task2_financial_modeler"
+    assert bs_modeler["level"] == 2
+    assert bs_modeler["tool_groups"] == ["balance_sheet_json_tools"]
+    assert bs_modeler["tools"]["balance_sheet_json_tools"] == [
+        "read_statement_context",
+        "validate_balance_sheet_json",
+        "write_balance_sheet_json",
+    ]
+    assert bs_modeler["skills"] == {
+        "single_stock_coverage": ["balance-sheet-model", "statement-json-checks"]
+    }
+    assert bs_modeler["outputs"] == ["02_financial_model/balance_sheet_spec.json"]
     assert not agent_uses_tool_group(registry, "bs_modeler", "mcp_tools")
+
+    cf_modeler = describe_agent(registry, "cf_modeler")
+    assert cf_modeler["parent"] == "task2_financial_modeler"
+    assert cf_modeler["level"] == 2
+    assert cf_modeler["tool_groups"] == ["cash_flow_json_tools"]
+    assert cf_modeler["tools"]["cash_flow_json_tools"] == [
+        "read_statement_context",
+        "validate_cash_flow_json",
+        "write_cash_flow_json",
+    ]
+    assert cf_modeler["skills"] == {
+        "single_stock_coverage": ["cash-flow-model", "statement-json-checks"]
+    }
+    assert cf_modeler["outputs"] == [
+        "02_financial_model/cash_flow_statement_spec.json"
+    ]
 
 
 def test_root_langgraph_registers_single_stock_debug_entries():
@@ -202,6 +263,8 @@ def test_graph_factories_import_in_test_mode(monkeypatch):
 
     bs_graph = asyncio.run(graph_module.task2_bs_modeler_graph())
     assert bs_graph["name"] == "bs_modeler"
+    assert bs_graph["agent_config"]["parent"] == "task2_financial_modeler"
+    assert bs_graph["agent_config"]["tool_groups"] == ["balance_sheet_json_tools"]
     assert bs_graph["agent_config"]["skills"] == {
-        "single_stock_coverage": ["three-statement-model", "xlsx-author"]
+        "single_stock_coverage": ["balance-sheet-model", "statement-json-checks"]
     }

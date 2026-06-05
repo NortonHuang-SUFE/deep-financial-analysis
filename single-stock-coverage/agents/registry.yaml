@@ -28,6 +28,34 @@ tool_groups:
       - write_assumption_analysis
       - write_valuation_summary
 
+  financial_model_builder_tools:
+    description: Deterministic Task 2 parent tools for statement reconciliation, workbook build, and workbook validation.
+    tools:
+      - reconcile_statement_specs
+      - build_integrated_three_statement_model
+      - validate_integrated_three_statement_model
+
+  income_statement_json_tools:
+    description: Income Statement and Revenue Build JSON read, validate, data-check, and write tools for is_modeler.
+    tools:
+      - read_statement_context
+      - validate_income_statement_json
+      - write_income_statement_json
+
+  balance_sheet_json_tools:
+    description: Balance Sheet JSON read, validate, data-check, and write tools for bs_modeler.
+    tools:
+      - read_statement_context
+      - validate_balance_sheet_json
+      - write_balance_sheet_json
+
+  cash_flow_json_tools:
+    description: Cash Flow Statement JSON read, validate, data-check, and write tools for cf_modeler.
+    tools:
+      - read_statement_context
+      - validate_cash_flow_json
+      - write_cash_flow_json
+
 skill_sources:
   single_stock_coverage:
     path: ./skills
@@ -40,6 +68,16 @@ agents:
   single_stock_coverage:
     prompt: single-stock-coverage.md
     description: Root single-stock coverage orchestrator.
+    parent:
+    level: 0
+    role: Root orchestrator that creates the coverage run and delegates Tasks 1-5.
+    inputs:
+      - target company/ticker request
+      - task type and triggering event
+    outputs:
+      - coverage run directory
+      - run manifest
+      - coverage state
     tool_groups:
       - local_artifact_tools
     skills: {}
@@ -53,6 +91,16 @@ agents:
   task1_company_researcher:
     prompt: task1-company-researcher.md
     description: Produces company_research.md, business_driver_map.json, and source_log.json for one target company.
+    parent: single_stock_coverage
+    level: 1
+    role: Company research worker for Task 1 evidence gathering and business driver mapping.
+    inputs:
+      - target company/ticker request
+      - coverage run directory
+    outputs:
+      - 01_company_research/company_research.md
+      - 01_company_research/business_driver_map.json
+      - 01_company_research/source_log.json
     tool_groups:
       - mcp_tools
       - local_artifact_tools
@@ -63,17 +111,30 @@ agents:
 
   task2_financial_modeler:
     prompt: task2-financial-modeler.md
-    description: Parent coordinator for financial facts, workbook skeleton, statement child delegation, consistency checks, DCF Inputs, audit-xls, and model_audit.md.
+    description: Parent coordinator for financial facts, parallel statement JSON child delegation, statement reconciliation, workbook build/validation, audit-xls, and model_audit.md.
+    parent: single_stock_coverage
+    level: 1
+    role: Task 2 parent that prepares shared context, runs IS/BS/CF modelers in parallel, reconciles their independent JSON outputs, and owns workbook/audit handoff.
+    inputs:
+      - 01_company_research/company_research.md
+      - 01_company_research/business_driver_map.json
+      - 01_company_research/source_log.json
+    outputs:
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
+      - 02_financial_model/statement_spec_pack.json
+      - 02_financial_model/integrated_model.xlsx
+      - 02_financial_model/model_audit.md
     tool_groups:
       - mcp_tools
       - local_artifact_tools
+      - financial_model_builder_tools
     skills:
       single_stock_coverage:
         - financial-data-normalization
         - three-statement-model
-        - xlsx-author
+        - statement-reconciliation-checks
         - audit-xls
-        - model-update
     subagents:
       - is_modeler
       - bs_modeler
@@ -81,40 +142,83 @@ agents:
 
   is_modeler:
     prompt: task2-is-modeler.md
-    description: Builds the Revenue Build tab and Income Statement tab in integrated_model.xlsx.
+    description: Independently produces Revenue Build and Income Statement JSON specs; does not write Excel or read sibling statement outputs.
+    parent: task2_financial_modeler
+    level: 2
+    role: Parallel statement modeler for revenue build and income statement JSON.
+    inputs:
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
+      - 01_company_research/business_driver_map.json
+      - 01_company_research/source_log.json
+    outputs:
+      - 02_financial_model/revenue_build_spec.json
+      - 02_financial_model/income_statement_spec.json
     tool_groups:
-      - local_artifact_tools
+      - income_statement_json_tools
     skills:
       single_stock_coverage:
-        - three-statement-model
-        - xlsx-author
+        - income-statement-model
+        - statement-json-checks
     subagents: []
 
   bs_modeler:
     prompt: task2-bs-modeler.md
-    description: Builds the Balance Sheet tab in integrated_model.xlsx after is_modeler completes.
+    description: Independently produces Balance Sheet JSON spec; does not write Excel or read sibling statement outputs.
+    parent: task2_financial_modeler
+    level: 2
+    role: Parallel statement modeler for balance sheet JSON and retained earnings/cash dependency declarations.
+    inputs:
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
+      - 01_company_research/business_driver_map.json
+      - 01_company_research/source_log.json
+    outputs:
+      - 02_financial_model/balance_sheet_spec.json
     tool_groups:
-      - local_artifact_tools
+      - balance_sheet_json_tools
     skills:
       single_stock_coverage:
-        - three-statement-model
-        - xlsx-author
+        - balance-sheet-model
+        - statement-json-checks
     subagents: []
 
   cf_modeler:
     prompt: task2-cf-modeler.md
-    description: Builds the Cash Flow Statement tab and the BS Cash cross-link after is_modeler and bs_modeler complete.
+    description: Independently produces Cash Flow Statement JSON spec; does not write Excel or read sibling statement outputs.
+    parent: task2_financial_modeler
+    level: 2
+    role: Parallel statement modeler for indirect cash flow JSON and cross-statement cash tie dependency declarations.
+    inputs:
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
+      - 01_company_research/business_driver_map.json
+      - 01_company_research/source_log.json
+    outputs:
+      - 02_financial_model/cash_flow_statement_spec.json
     tool_groups:
-      - local_artifact_tools
+      - cash_flow_json_tools
     skills:
       single_stock_coverage:
-        - three-statement-model
-        - xlsx-author
+        - cash-flow-model
+        - statement-json-checks
     subagents: []
 
   task3_valuation_analyst:
     prompt: task3-valuation-analyst.md
     description: Parent valuation analyst for evidence gate, value-driver map, assumption audit, model execution, and valuation reconciliation.
+    parent: single_stock_coverage
+    level: 1
+    role: Valuation parent that turns Task 1/2 outputs into audited assumptions and valuation artifacts.
+    inputs:
+      - 01_company_research/company_research.md
+      - 01_company_research/business_driver_map.json
+      - 02_financial_model/integrated_model.xlsx
+      - 02_financial_model/model_audit.md
+    outputs:
+      - 03_valuation/assumption_pack.md
+      - 03_valuation/valuation_summary.md
+      - 03_valuation/dcf_model.xlsx
     tool_groups:
       - mcp_tools
       - local_artifact_tools
@@ -130,6 +234,15 @@ agents:
   assumption_generator:
     prompt: task3-assumption-generator.md
     description: Generates Bear/Base/Bull DCF assumption pack content from evidence and audit feedback.
+    parent: task3_valuation_analyst
+    level: 2
+    role: DCF assumption generation child for Bear/Base/Bull cases.
+    inputs:
+      - Task 1 company research artifacts
+      - Task 2 financial model artifacts
+      - parent valuation audit feedback
+    outputs:
+      - assumption pack content for task3_valuation_analyst
     tool_groups:
       - mcp_tools
       - local_artifact_tools
@@ -142,6 +255,17 @@ agents:
   dcf_execution:
     prompt: task3-dcf-execution.md
     description: Builds DCF and comps workbooks from audited assumptions using DCF-builder tools.
+    parent: task3_valuation_analyst
+    level: 2
+    role: DCF and comps execution child using deterministic DCF-builder tools.
+    inputs:
+      - audited DCF assumption pack
+      - Task 2 model handoff artifacts
+    outputs:
+      - DCF workbook
+      - comps workbook
+      - DCF validation artifacts
+      - valuation summary
     tool_groups:
       - dcf_execution_tools
       - local_artifact_tools
@@ -157,6 +281,16 @@ agents:
   task4_chart_pack_generator:
     prompt: task4-chart-pack-generator.md
     description: Creates chart_pack artifacts and chart_index.json from Task 1-3 outputs without new research.
+    parent: single_stock_coverage
+    level: 1
+    role: Chart pack generator from completed research, model, and valuation artifacts.
+    inputs:
+      - Task 1 company research artifacts
+      - Task 2 financial model artifacts
+      - Task 3 valuation artifacts
+    outputs:
+      - 04_chart_pack/chart_index.json
+      - chart pack artifacts
     tool_groups:
       - local_artifact_tools
     skills:
@@ -167,6 +301,17 @@ agents:
   task5_report_assembler:
     prompt: task5-report-assembler.md
     description: Assembles initiation reports or update memos from Task 1-4 artifacts without changing upstream conclusions.
+    parent: single_stock_coverage
+    level: 1
+    role: Final report assembler that preserves upstream conclusions.
+    inputs:
+      - Task 1 company research artifacts
+      - Task 2 financial model artifacts
+      - Task 3 valuation artifacts
+      - Task 4 chart artifacts
+    outputs:
+      - 05_report/final_report.md
+      - coverage state update
     tool_groups:
       - local_artifact_tools
     skills:

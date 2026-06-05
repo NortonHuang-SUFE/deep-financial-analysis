@@ -28,6 +28,11 @@ class AgentSpec:
     name: str
     prompt: str
     description: str
+    parent: str | None
+    level: int
+    role: str
+    inputs: tuple[str, ...]
+    outputs: tuple[str, ...]
     tool_groups: tuple[str, ...]
     skills: dict[str, tuple[str, ...]]
     subagents: tuple[str, ...]
@@ -75,6 +80,14 @@ class ToolGroupResolver:
                 self._cache[group_name] = self._mcp_tools
             elif group_name == "dcf_execution_tools":
                 self._cache[group_name] = _dcf_execution_tools()
+            elif group_name in {
+                "financial_model_builder_tools",
+                "income_statement_json_tools",
+                "balance_sheet_json_tools",
+                "cash_flow_json_tools",
+            }:
+                # Segment 1 declares the wiring; Segments 2/3 attach concrete tools.
+                self._cache[group_name] = []
             else:
                 raise KeyError(f"Unknown tool group: {group_name}")
         return list(self._cache[group_name])
@@ -147,6 +160,9 @@ def validate_agent_registry(registry: AgentRegistry) -> None:
         if not prompt_path.exists():
             errors.append(f"{agent_name}: prompt not found: {prompt_path}")
 
+        if spec.parent and spec.parent not in registry.agents:
+            errors.append(f"{agent_name}: unknown parent: {spec.parent}")
+
         for group_name in spec.tool_groups:
             if group_name not in registry.tool_groups:
                 errors.append(f"{agent_name}: unknown tool group: {group_name}")
@@ -180,6 +196,11 @@ def describe_agent(registry: AgentRegistry, agent_name: str) -> dict[str, Any]:
         "name": spec.name,
         "prompt": str(registry.prompt_path(spec.prompt)),
         "description": spec.description,
+        "parent": spec.parent,
+        "level": spec.level,
+        "role": spec.role,
+        "inputs": list(spec.inputs),
+        "outputs": list(spec.outputs),
         "tool_groups": list(spec.tool_groups),
         "tools": {
             group_name: _configured_tool_names(registry, group_name)
@@ -279,6 +300,11 @@ def _parse_agent_spec(name: str, data: dict[str, Any]) -> AgentSpec:
         name=name,
         prompt=str(data["prompt"]),
         description=str(data["description"]),
+        parent=data.get("parent"),
+        level=int(data.get("level", 0)),
+        role=str(data.get("role", "")),
+        inputs=tuple(str(item) for item in (data.get("inputs") or ())),
+        outputs=tuple(str(item) for item in (data.get("outputs") or ())),
         tool_groups=tuple(data.get("tool_groups") or ()),
         skills=skills,
         subagents=tuple(data.get("subagents") or ()),
