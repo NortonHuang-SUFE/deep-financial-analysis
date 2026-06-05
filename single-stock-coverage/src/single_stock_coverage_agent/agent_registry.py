@@ -10,8 +10,15 @@ import yaml
 
 from single_stock_coverage_agent.tools import (
     create_coverage_run_dir,
+    read_statement_context,
     update_run_manifest,
+    validate_balance_sheet_json,
+    validate_cash_flow_json,
+    validate_income_statement_json,
     write_coverage_state,
+    write_balance_sheet_json,
+    write_cash_flow_json,
+    write_income_statement_json,
     write_json_artifact,
     write_markdown_artifact,
 )
@@ -80,14 +87,15 @@ class ToolGroupResolver:
                 self._cache[group_name] = self._mcp_tools
             elif group_name == "dcf_execution_tools":
                 self._cache[group_name] = _dcf_execution_tools()
-            elif group_name in {
-                "financial_model_builder_tools",
-                "income_statement_json_tools",
-                "balance_sheet_json_tools",
-                "cash_flow_json_tools",
-            }:
-                # Segment 1 declares the wiring; Segments 2/3 attach concrete tools.
+            elif group_name == "financial_model_builder_tools":
+                # Segment 3 attaches concrete reconciliation/build/validation tools.
                 self._cache[group_name] = []
+            elif group_name == "income_statement_json_tools":
+                self._cache[group_name] = _income_statement_json_tools()
+            elif group_name == "balance_sheet_json_tools":
+                self._cache[group_name] = _balance_sheet_json_tools()
+            elif group_name == "cash_flow_json_tools":
+                self._cache[group_name] = _cash_flow_json_tools()
             else:
                 raise KeyError(f"Unknown tool group: {group_name}")
         return list(self._cache[group_name])
@@ -364,6 +372,30 @@ def _local_artifact_tools() -> list[Any]:
         write_json_artifact,
         update_run_manifest,
         write_coverage_state,
+    ]
+
+
+def _income_statement_json_tools() -> list[Any]:
+    return [
+        read_statement_context,
+        validate_income_statement_json,
+        write_income_statement_json,
+    ]
+
+
+def _balance_sheet_json_tools() -> list[Any]:
+    return [
+        read_statement_context,
+        validate_balance_sheet_json,
+        write_balance_sheet_json,
+    ]
+
+
+def _cash_flow_json_tools() -> list[Any]:
+    return [
+        read_statement_context,
+        validate_cash_flow_json,
+        write_cash_flow_json,
     ]
 
 
