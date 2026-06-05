@@ -7,7 +7,7 @@ description: Validate independent Task 2 statement JSON specs before parent reco
 
 Use this skill on every Task 2 statement subagent.
 
-## Required JSON Fields
+## Required Fields
 
 Each statement JSON artifact must include:
 
@@ -22,10 +22,22 @@ Each statement JSON artifact must include:
 - `unsourced_items`
 - `validation_status`
 
-## Severity Rules
+## Validation Procedure
 
-- Critical: missing canonical row keys, invalid JSON, missing source coverage, or missing cross-statement dependency declarations.
-- Warning: weak assumptions, `[UNSOURCED]` facts, partial segment data, or unusual sign conventions.
+1. Confirm `statement_type` matches the subagent.
+2. Confirm every required field is present and non-empty when applicable.
+3. Confirm canonical row keys use the exact names required by that statement skill.
+4. Confirm `cross_statement_dependencies` declares all parent reconciliation links.
+5. Confirm `source_coverage` covers each historical input and sourced assumption.
+6. Confirm every missing or inferred fact appears in `unsourced_items`.
+7. Confirm `forecast_logic` is formula-oriented and assumption-linked, not a hardcoded forecast table.
+8. Call the statement-specific validate tool.
+9. Fix Critical findings before writing the JSON artifact.
 
-Critical findings block parent reconciliation.
+## Severity
+
+- Critical: invalid JSON, wrong statement type, missing required field, missing canonical key, missing source coverage, or missing cross-statement dependency.
+- Warning: `[UNSOURCED]` facts, weak assumptions, partial source coverage, unusual sign conventions, or hardcode risk.
+
+Critical findings block parent reconciliation. Warnings must flow into `model_audit.md`.
 

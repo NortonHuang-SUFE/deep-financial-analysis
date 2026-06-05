@@ -11,12 +11,46 @@ Use this skill only for `cf_modeler`.
 
 Produce `02_financial_model/cash_flow_statement_spec.json`.
 
-Do not write or edit `integrated_model.xlsx`. Do not read sibling statement JSON.
+Do not create, open, edit, or save `integrated_model.xlsx`. Do not read sibling statement JSON. The parent owns reconciliation, workbook build, workbook validation, and audit handoff.
 
-## Required Checks
+## Required JSON Content
 
-- Every historical cash flow fact must include a source string or `[UNSOURCED]`.
-- Net income, D&A addback, NWC change, CFO, CapEx, CFI, financing flows, beginning cash, and ending cash must use canonical row keys.
-- Declare cross-statement dependencies for net income, D&A, NWC change, CapEx, debt movements, dividends, and ending cash.
-- State cash flow sign conventions explicitly.
+The JSON must include the shared `statement-json-checks` required fields plus:
+
+- Indirect CFO: net income, D&A addback, NWC change, other operating adjustments, CFO total.
+- CFI: CapEx, acquisitions/divestitures where material, CFI total.
+- CFF: debt movements, dividends, buybacks/issuance where material, CFF total.
+- Cash bridge: beginning cash, net change in cash, ending cash.
+- Source coverage for every historical cash flow fact and every externally sourced assumption.
+
+## Canonical Keys
+
+Include these canonical row keys exactly:
+
+- `net_income_cf`
+- `da_addback`
+- `nwc_change`
+- `cfo_total`
+- `capex`
+- `cfi_total`
+- `debt_proceeds_repayments`
+- `dividends`
+- `cff_total`
+- `beginning_cash`
+- `ending_cash`
+
+## Dependency Declarations
+
+Declare dependencies for:
+
+- `income_statement.net_income`
+- `ppe_da.da_total`
+- `balance_sheet.cash_and_equivalents`
+
+## Checks
+
+- Critical: missing canonical key, missing source coverage, missing cash bridge dependency, unclear sign convention, or missing net income dependency.
+- Warning: `[UNSOURCED]` facts, unsupported cash bridge assumption, unclear NWC convention, or forecast logic that cannot be formula-linked.
+
+Critical findings must be resolved before calling `write_cash_flow_json`.
 

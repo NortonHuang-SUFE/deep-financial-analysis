@@ -11,12 +11,43 @@ Use this skill only for `bs_modeler`.
 
 Produce `02_financial_model/balance_sheet_spec.json`.
 
-Do not write or edit `integrated_model.xlsx`. Do not read sibling statement JSON.
+Do not create, open, edit, or save `integrated_model.xlsx`. Do not read sibling statement JSON. The parent owns reconciliation, workbook build, workbook validation, and audit handoff.
 
-## Required Checks
+## Required JSON Content
 
-- Every historical balance sheet fact must include a source string or `[UNSOURCED]`.
-- Cash, working-capital accounts, PP&E, debt, retained earnings, equity, total assets, and total liabilities plus equity must use canonical row keys.
-- Declare cross-statement dependencies for cash, retained earnings, debt, PP&E, and working capital.
-- Include retained earnings roll-forward logic and any source gaps that could affect the roll-forward.
+The JSON must include the shared `statement-json-checks` required fields plus:
+
+- Assets: cash, working-capital accounts, PP&E, other assets, total assets.
+- Liabilities: current liabilities, debt, other liabilities, total liabilities.
+- Equity: common stock/APIC, retained earnings, total equity, total liabilities and equity.
+- Retained earnings roll-forward logic.
+- Source coverage for every historical balance sheet fact and every externally sourced assumption.
+
+## Canonical Keys
+
+Include these canonical row keys exactly:
+
+- `cash_and_equivalents`
+- `total_current_assets`
+- `total_assets`
+- `total_current_liabilities`
+- `total_debt`
+- `retained_earnings`
+- `total_equity`
+- `total_liabilities_and_equity`
+
+## Dependency Declarations
+
+Declare dependencies for:
+
+- `cash_flow.ending_cash`
+- `income_statement.net_income`
+- `share_count.dividends`
+
+## Checks
+
+- Critical: missing canonical key, missing source coverage, missing cash dependency, missing retained earnings dependency, or no total liabilities plus equity tie.
+- Warning: `[UNSOURCED]` facts, unclear retained earnings bridge, unusual sign convention, or unsupported balance sheet assumption.
+
+Critical findings must be resolved before calling `write_balance_sheet_json`.
 

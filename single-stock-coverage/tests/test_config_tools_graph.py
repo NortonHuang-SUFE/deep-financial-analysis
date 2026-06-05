@@ -134,6 +134,14 @@ def _minimal_model_input() -> dict:
     }
 
 
+def _agent_prompt(name: str) -> str:
+    return (PROJECT_ROOT / "agents" / name).read_text(encoding="utf-8")
+
+
+def _skill_text(name: str) -> str:
+    return (PROJECT_ROOT / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+
+
 def _clear_env(monkeypatch):
     for env_name in [
         "MODEL_NAME",
@@ -633,6 +641,66 @@ def test_statement_json_tool_groups_resolve_runtime_tools():
         "build_integrated_three_statement_model",
         "validate_integrated_three_statement_model",
     ]
+
+
+def test_task2_prompts_are_json_first_with_parent_gates():
+    parent = _agent_prompt("task2-financial-modeler.md")
+    assert "run the three statement modeler subagents in parallel" in parent
+    assert "reconcile_statement_specs" in parent
+    assert "build_integrated_three_statement_model" in parent
+    assert "validate_integrated_three_statement_model" in parent
+    assert "Critical validation finding blocks Task 3 handoff" in parent
+
+    prompt_expectations = {
+        "task2-is-modeler.md": (
+            "income_statement",
+            "validate_income_statement_json",
+            "write_income_statement_json",
+        ),
+        "task2-bs-modeler.md": (
+            "balance_sheet",
+            "validate_balance_sheet_json",
+            "write_balance_sheet_json",
+        ),
+        "task2-cf-modeler.md": (
+            "cash_flow",
+            "validate_cash_flow_json",
+            "write_cash_flow_json",
+        ),
+    }
+    for prompt_name, (statement_type, validate_tool, write_tool) in prompt_expectations.items():
+        prompt = _agent_prompt(prompt_name)
+        assert f'statement_type="{statement_type}"' in prompt
+        assert "Do not create, open, edit, or save `integrated_model.xlsx`" in prompt
+        assert "Do not read sibling statement JSON" in prompt
+        assert "statement-json-checks" in prompt
+        assert validate_tool in prompt
+        assert write_tool in prompt
+        assert "row_map" not in prompt
+        assert "populate the `" not in prompt
+        assert "xlsx-author" not in prompt
+
+
+def test_statement_skills_emphasize_checks_and_reconciliation_gates():
+    for skill_name in [
+        "income-statement-model",
+        "balance-sheet-model",
+        "cash-flow-model",
+        "statement-json-checks",
+    ]:
+        text = _skill_text(skill_name)
+        assert "Do not create, open, edit, or save `integrated_model.xlsx`" in text or (
+            skill_name == "statement-json-checks"
+        )
+        assert "Critical" in text
+        assert "source coverage" in text.lower()
+        assert "canonical" in text.lower()
+
+    reconciliation = _skill_text("statement-reconciliation-checks")
+    assert "Critical findings block `build_integrated_three_statement_model`" in reconciliation
+    assert "Cash Flow Statement `ending_cash`" in reconciliation
+    assert "Income Statement `net_income`" in reconciliation
+    assert "model_audit.md" in reconciliation
 
 
 def test_root_langgraph_registers_single_stock_debug_entries():
