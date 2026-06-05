@@ -1,6 +1,13 @@
+import asyncio
+import importlib
 import json
 
 import single_stock_coverage_agent.config as config_module
+from single_stock_coverage_agent.agent_registry import (
+    agent_uses_tool_group,
+    describe_agent,
+    load_agent_registry,
+)
 from single_stock_coverage_agent.config import (
     PROJECT_ROOT,
     WORKSPACE_ROOT,
@@ -26,6 +33,7 @@ def _clear_env(monkeypatch):
         "IFIND_MCP_AUTHORIZATION",
         "IFIND_MCP_TOKEN",
         "SINGLE_STOCK_COVERAGE_DISABLE_MCP",
+        "SINGLE_STOCK_COVERAGE_TEST_MODE",
         "SINGLE_STOCK_COVERAGE_OUTPUT_TIMESTAMP",
     ]:
         monkeypatch.delenv(env_name, raising=False)
@@ -139,9 +147,61 @@ def test_coverage_run_and_artifact_tools(monkeypatch, tmp_path):
     assert manifest["subagents_called"] == ["task1_company_researcher"]
 
 
-def test_graph_imports_in_test_mode(monkeypatch):
+def test_agent_registry_exposes_task1_and_bs_modeler_context():
+    registry = load_agent_registry()
+
+    task1 = describe_agent(registry, "task1_company_researcher")
+    assert task1["tool_groups"] == ["mcp_tools", "local_artifact_tools"]
+    assert task1["tools"]["local_artifact_tools"] == [
+        "create_coverage_run_dir",
+        "write_markdown_artifact",
+        "write_json_artifact",
+        "update_run_manifest",
+        "write_coverage_state",
+    ]
+    assert task1["skills"] == {"single_stock_coverage": ["company-research"]}
+
+    bs_modeler = describe_agent(registry, "bs_modeler")
+    assert bs_modeler["tool_groups"] == ["local_artifact_tools"]
+    assert bs_modeler["skills"] == {
+        "single_stock_coverage": ["three-statement-model", "xlsx-author"]
+    }
+    assert not agent_uses_tool_group(registry, "bs_modeler", "mcp_tools")
+
+
+def test_root_langgraph_registers_single_stock_debug_entries():
+    langgraph_config = json.loads((WORKSPACE_ROOT / "langgraph.json").read_text())
+
+    assert (
+        langgraph_config["graphs"]["single_stock_coverage_task2_bs_modeler"]
+        == "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_bs_modeler_graph"
+    )
+    assert (
+        langgraph_config["graphs"]["single_stock_coverage_task1_company_researcher"]
+        == "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task1_company_researcher_graph"
+    )
+
+
+def test_graph_factories_import_in_test_mode(monkeypatch):
     _clear_env(monkeypatch)
     monkeypatch.setenv("SINGLE_STOCK_COVERAGE_TEST_MODE", "1")
     import single_stock_coverage_agent.graph as graph_module
 
-    assert graph_module.graph == {"name": "single_stock_coverage", "test_mode": True}
+    graph_module = importlib.reload(graph_module)
+
+    root_graph = asyncio.run(graph_module.graph())
+    assert root_graph["name"] == "single_stock_coverage"
+    assert root_graph["test_mode"] is True
+    assert root_graph["agent_config"]["subagents"] == [
+        "task1_company_researcher",
+        "task2_financial_modeler",
+        "task3_valuation_analyst",
+        "task4_chart_pack_generator",
+        "task5_report_assembler",
+    ]
+
+    bs_graph = asyncio.run(graph_module.task2_bs_modeler_graph())
+    assert bs_graph["name"] == "bs_modeler"
+    assert bs_graph["agent_config"]["skills"] == {
+        "single_stock_coverage": ["three-statement-model", "xlsx-author"]
+    }

@@ -1,0 +1,175 @@
+# Human-readable wiring for the single-stock-coverage Deep Agents stack.
+#
+# Tool groups describe where runtime tools come from. Agent entries below
+# choose tool groups and skill names explicitly so each agent's context is
+# auditable without opening graph.py.
+
+tool_groups:
+  local_artifact_tools:
+    description: Coverage run and artifact writer tools defined in single_stock_coverage_agent.tools.
+    tools:
+      - create_coverage_run_dir
+      - write_markdown_artifact
+      - write_json_artifact
+      - update_run_manifest
+      - write_coverage_state
+
+  mcp_tools:
+    description: Runtime MCP tools loaded from enabled servers in single-stock-coverage/config.yaml.
+    source: config.yaml:mcp
+    servers: enabled
+
+  dcf_execution_tools:
+    description: Local deterministic DCF-builder tools imported from ../DCF-builder.
+    tools:
+      - build_comps_excel
+      - build_dcf_model
+      - validate_dcf_model
+      - write_assumption_analysis
+      - write_valuation_summary
+
+skill_sources:
+  single_stock_coverage:
+    path: ./skills
+    description: Project skills for the single-stock coverage workflow.
+  dcf_builder:
+    path: ../DCF-builder/skills
+    description: DCF-builder skills used only by the Task 3 DCF execution child.
+
+agents:
+  single_stock_coverage:
+    prompt: single-stock-coverage.md
+    description: Root single-stock coverage orchestrator.
+    tool_groups:
+      - local_artifact_tools
+    skills: {}
+    subagents:
+      - task1_company_researcher
+      - task2_financial_modeler
+      - task3_valuation_analyst
+      - task4_chart_pack_generator
+      - task5_report_assembler
+
+  task1_company_researcher:
+    prompt: task1-company-researcher.md
+    description: Produces company_research.md, business_driver_map.json, and source_log.json for one target company.
+    tool_groups:
+      - mcp_tools
+      - local_artifact_tools
+    skills:
+      single_stock_coverage:
+        - company-research
+    subagents: []
+
+  task2_financial_modeler:
+    prompt: task2-financial-modeler.md
+    description: Parent coordinator for financial facts, workbook skeleton, statement child delegation, consistency checks, DCF Inputs, audit-xls, and model_audit.md.
+    tool_groups:
+      - mcp_tools
+      - local_artifact_tools
+    skills:
+      single_stock_coverage:
+        - financial-data-normalization
+        - three-statement-model
+        - xlsx-author
+        - audit-xls
+        - model-update
+    subagents:
+      - is_modeler
+      - bs_modeler
+      - cf_modeler
+
+  is_modeler:
+    prompt: task2-is-modeler.md
+    description: Builds the Revenue Build tab and Income Statement tab in integrated_model.xlsx.
+    tool_groups:
+      - local_artifact_tools
+    skills:
+      single_stock_coverage:
+        - three-statement-model
+        - xlsx-author
+    subagents: []
+
+  bs_modeler:
+    prompt: task2-bs-modeler.md
+    description: Builds the Balance Sheet tab in integrated_model.xlsx after is_modeler completes.
+    tool_groups:
+      - local_artifact_tools
+    skills:
+      single_stock_coverage:
+        - three-statement-model
+        - xlsx-author
+    subagents: []
+
+  cf_modeler:
+    prompt: task2-cf-modeler.md
+    description: Builds the Cash Flow Statement tab and the BS Cash cross-link after is_modeler and bs_modeler complete.
+    tool_groups:
+      - local_artifact_tools
+    skills:
+      single_stock_coverage:
+        - three-statement-model
+        - xlsx-author
+    subagents: []
+
+  task3_valuation_analyst:
+    prompt: task3-valuation-analyst.md
+    description: Parent valuation analyst for evidence gate, value-driver map, assumption audit, model execution, and valuation reconciliation.
+    tool_groups:
+      - mcp_tools
+      - local_artifact_tools
+    skills:
+      single_stock_coverage:
+        - valuation-methodologies
+        - valuation-reconciliation
+        - assumption-audit
+    subagents:
+      - assumption_generator
+      - dcf_execution
+
+  assumption_generator:
+    prompt: task3-assumption-generator.md
+    description: Generates Bear/Base/Bull DCF assumption pack content from evidence and audit feedback.
+    tool_groups:
+      - mcp_tools
+      - local_artifact_tools
+    skills:
+      single_stock_coverage:
+        - dcf-assumption-generation
+        - valuation-methodologies
+    subagents: []
+
+  dcf_execution:
+    prompt: task3-dcf-execution.md
+    description: Builds DCF and comps workbooks from audited assumptions using DCF-builder tools.
+    tool_groups:
+      - dcf_execution_tools
+      - local_artifact_tools
+    skills:
+      dcf_builder:
+        - dcf-model
+        - comps-analysis
+        - valuation-summary
+        - audit-xls
+        - xlsx-author
+    subagents: []
+
+  task4_chart_pack_generator:
+    prompt: task4-chart-pack-generator.md
+    description: Creates chart_pack artifacts and chart_index.json from Task 1-3 outputs without new research.
+    tool_groups:
+      - local_artifact_tools
+    skills:
+      single_stock_coverage:
+        - chart-pack
+    subagents: []
+
+  task5_report_assembler:
+    prompt: task5-report-assembler.md
+    description: Assembles initiation reports or update memos from Task 1-4 artifacts without changing upstream conclusions.
+    tool_groups:
+      - local_artifact_tools
+    skills:
+      single_stock_coverage:
+        - report-assembly
+    subagents: []
