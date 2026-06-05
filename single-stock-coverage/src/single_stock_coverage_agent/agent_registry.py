@@ -9,11 +9,14 @@ from typing import Any
 import yaml
 
 from single_stock_coverage_agent.tools import (
+    build_integrated_three_statement_model,
     create_coverage_run_dir,
     read_statement_context,
+    reconcile_statement_specs,
     update_run_manifest,
     validate_balance_sheet_json,
     validate_cash_flow_json,
+    validate_integrated_three_statement_model,
     validate_income_statement_json,
     write_coverage_state,
     write_balance_sheet_json,
@@ -88,8 +91,7 @@ class ToolGroupResolver:
             elif group_name == "dcf_execution_tools":
                 self._cache[group_name] = _dcf_execution_tools()
             elif group_name == "financial_model_builder_tools":
-                # Segment 3 attaches concrete reconciliation/build/validation tools.
-                self._cache[group_name] = []
+                self._cache[group_name] = _financial_model_builder_tools()
             elif group_name == "income_statement_json_tools":
                 self._cache[group_name] = _income_statement_json_tools()
             elif group_name == "balance_sheet_json_tools":
@@ -396,6 +398,14 @@ def _cash_flow_json_tools() -> list[Any]:
         read_statement_context,
         validate_cash_flow_json,
         write_cash_flow_json,
+    ]
+
+
+def _financial_model_builder_tools() -> list[Any]:
+    return [
+        reconcile_statement_specs,
+        build_integrated_three_statement_model,
+        validate_integrated_three_statement_model,
     ]
 
 

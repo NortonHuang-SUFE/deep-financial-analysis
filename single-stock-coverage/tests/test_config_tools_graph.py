@@ -92,6 +92,48 @@ def _statement_payload(statement_type: str) -> dict:
     return payload
 
 
+def _minimal_model_input() -> dict:
+    return {
+        "company": "Example Co",
+        "ticker": "EXM",
+        "market": "US",
+        "currency": "USD",
+        "unit": "millions",
+        "fiscal_year_end": "Dec",
+        "projection_periods": 2,
+        "historicals": [
+            {
+                "period": "FY2023A",
+                "year": 2023,
+                "revenue": 1000,
+                "gross_profit": 500,
+                "operating_expenses": 180,
+                "da": 30,
+                "ebit": 290,
+                "ebitda": 320,
+                "interest_expense": 10,
+                "pretax_income": 280,
+                "tax_expense": 70,
+                "net_income": 210,
+                "capex": 45,
+                "cash": 120,
+                "debt": 200,
+                "retained_earnings": 300,
+                "shares": 100,
+                "source": "FY2023 annual report",
+            }
+        ],
+        "assumptions": {
+            "revenue_growth": 0.05,
+            "gross_margin": 0.5,
+            "opex_pct_revenue": 0.18,
+            "tax_rate": 0.25,
+            "da_pct_revenue": 0.03,
+            "capex_pct_revenue": 0.04,
+        },
+    }
+
+
 def _clear_env(monkeypatch):
     for env_name in [
         "MODEL_NAME",
@@ -313,6 +355,169 @@ def test_statement_json_tools_validate_write_and_read_context(monkeypatch, tmp_p
     assert bad_validation["critical_count"] > 0
 
 
+def test_reconcile_statement_specs_writes_pack_and_preserves_warnings(
+    monkeypatch, tmp_path
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "coverage" / "us-exm" / "runs" / "20260604-120000"
+    (run_dir / "02_financial_model").mkdir(parents=True)
+
+    income_json = json.dumps(_statement_payload("income_statement"))
+    balance_payload = _statement_payload("balance_sheet")
+    balance_payload["unsourced_items"] = ["retained_earnings bridge"]
+    cash_flow_json = json.dumps(_statement_payload("cash_flow"))
+    for tool_call, statement_json in (
+        (tools.write_income_statement_json, income_json),
+        (tools.write_balance_sheet_json, json.dumps(balance_payload)),
+        (tools.write_cash_flow_json, cash_flow_json),
+    ):
+        result = json.loads(
+            tool_call.invoke(
+                {
+                    "statement_json": statement_json,
+                    "ticker": "EXM",
+                    "market": "US",
+                    "run_dir": str(run_dir),
+                }
+            )
+        )
+        assert result["status"] == "OK"
+
+    result = json.loads(
+        tools.reconcile_statement_specs.invoke(
+            {"ticker": "EXM", "market": "US", "run_dir": str(run_dir)}
+        )
+    )
+
+    pack_path = tmp_path / result["statement_spec_pack_path"]
+    assert result["status"] == "PASS"
+    assert result["builder_blocked"] is False
+    assert result["critical_count"] == 0
+    assert result["warning_count"] > 0
+    assert pack_path.exists()
+    assert json.loads(pack_path.read_text(encoding="utf-8"))["status"] == "PASS"
+
+
+def test_integrated_three_statement_builder_and_validator(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "coverage" / "us-exm" / "runs" / "20260604-120000"
+    run_dir.mkdir(parents=True)
+
+    result = json.loads(
+        tools.build_integrated_three_statement_model.invoke(
+            {
+                "model_input_json": json.dumps(_minimal_model_input()),
+                "run_dir": str(run_dir),
+            }
+        )
+    )
+    workbook_path = tmp_path / result["workbook_path"]
+
+    assert result["status"] == "OK"
+    assert workbook_path.exists()
+    assert result["row_map"]["income_statement"]["revenue_total"] == 8
+    assert result["row_map"]["balance_sheet"]["cash_and_equivalents"] == 8
+    assert result["row_map"]["cash_flow"]["ending_cash"] == 25
+    assert result["period_columns"] == {
+        "FY2023A": "C",
+        "FY2024E": "D",
+        "FY2025E": "E",
+    }
+
+    import openpyxl
+
+    wb = openpyxl.load_workbook(workbook_path, data_only=False)
+    assert wb.sheetnames == list(tools.THREE_STATEMENT_TABS)
+    assert all(name in set(wb.defined_names) for name in tools.REQUIRED_MODEL_NAMES)
+    assert wb["DCF Inputs"]["D8"].value.startswith("=")
+    assert wb["Checks"]["D9"].value.startswith("=")
+
+    validation = json.loads(
+        tools.validate_integrated_three_statement_model.invoke(
+            {
+                "excel_path": str(workbook_path),
+                "row_map_json": json.dumps(result["row_map"]),
+            }
+        )
+    )
+    assert validation["status"] == "PASS"
+    assert validation["critical_count"] == 0
+
+
+def test_integrated_three_statement_validator_flags_missing_tab(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "coverage" / "us-exm" / "runs" / "20260604-120000"
+    run_dir.mkdir(parents=True)
+    result = json.loads(
+        tools.build_integrated_three_statement_model.invoke(
+            {
+                "model_input_json": json.dumps(_minimal_model_input()),
+                "run_dir": str(run_dir),
+            }
+        )
+    )
+    workbook_path = tmp_path / result["workbook_path"]
+
+    import openpyxl
+
+    wb = openpyxl.load_workbook(workbook_path)
+    del wb["Checks"]
+    wb.save(workbook_path)
+
+    validation = json.loads(
+        tools.validate_integrated_three_statement_model.invoke(
+            {"excel_path": str(workbook_path)}
+        )
+    )
+    assert validation["status"] == "FAIL"
+    assert validation["critical"][0]["category"] == "Missing Required Tab"
+
+
+def test_integrated_three_statement_validator_flags_hardcode_and_cash_break(
+    monkeypatch, tmp_path
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "coverage" / "us-exm" / "runs" / "20260604-120000"
+    run_dir.mkdir(parents=True)
+    result = json.loads(
+        tools.build_integrated_three_statement_model.invoke(
+            {
+                "model_input_json": json.dumps(_minimal_model_input()),
+                "run_dir": str(run_dir),
+            }
+        )
+    )
+    workbook_path = tmp_path / result["workbook_path"]
+
+    import openpyxl
+
+    wb = openpyxl.load_workbook(workbook_path, data_only=False)
+    wb["Income Statement"]["D8"] = 1234
+    wb["Balance Sheet"]["D8"] = 555
+    wb.save(workbook_path)
+
+    validation = json.loads(
+        tools.validate_integrated_three_statement_model.invoke(
+            {
+                "excel_path": str(workbook_path),
+                "row_map_json": json.dumps(result["row_map"]),
+            }
+        )
+    )
+    categories = {item["category"] for item in validation["critical"]}
+    assert validation["status"] == "FAIL"
+    assert "Projection Hardcode" in categories
+    assert "Cash Tie-Out" in categories
+
+
 def test_agent_registry_exposes_task2_parallel_statement_context():
     registry = load_agent_registry()
 
@@ -419,6 +624,14 @@ def test_statement_json_tool_groups_resolve_runtime_tools():
         "read_statement_context",
         "validate_cash_flow_json",
         "write_cash_flow_json",
+    ]
+    assert [
+        tool.name
+        for tool in resolver.resolve(("financial_model_builder_tools",))
+    ] == [
+        "reconcile_statement_specs",
+        "build_integrated_three_statement_model",
+        "validate_integrated_three_statement_model",
     ]
 
 
