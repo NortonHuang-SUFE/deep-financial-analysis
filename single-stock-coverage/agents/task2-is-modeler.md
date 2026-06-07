@@ -15,6 +15,7 @@ Create only:
 - `02_financial_model/income_statement_spec.json`
 
 Do not create, open, edit, or save `integrated_model.xlsx`. Do not read sibling statement JSON. Do not wait for `bs_modeler` or `cf_modeler`.
+Use MCP tools only for income-statement, revenue-driver, source, or filing evidence needed to complete your own JSON.
 
 ## Required Tool Flow
 
@@ -70,4 +71,3 @@ Required dependency declarations:
 - Any missing driver, source gap, or unsupported assumption goes into `unsourced_items`.
 
 Return the written artifact paths and validation summary to the parent.
-

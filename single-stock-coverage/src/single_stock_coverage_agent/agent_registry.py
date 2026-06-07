@@ -84,20 +84,18 @@ class ToolGroupResolver:
 
     def _resolve_group(self, group_name: str) -> list[Any]:
         if group_name not in self._cache:
-            if group_name == "local_artifact_tools":
-                self._cache[group_name] = _local_artifact_tools()
+            if group_name == "coverage_artifact_tools":
+                self._cache[group_name] = _coverage_artifact_tools()
             elif group_name == "mcp_tools":
                 self._cache[group_name] = self._mcp_tools
             elif group_name == "dcf_execution_tools":
                 self._cache[group_name] = _dcf_execution_tools()
-            elif group_name == "financial_model_builder_tools":
-                self._cache[group_name] = _financial_model_builder_tools()
-            elif group_name == "income_statement_json_tools":
-                self._cache[group_name] = _income_statement_json_tools()
-            elif group_name == "balance_sheet_json_tools":
-                self._cache[group_name] = _balance_sheet_json_tools()
-            elif group_name == "cash_flow_json_tools":
-                self._cache[group_name] = _cash_flow_json_tools()
+            elif group_name == "task2_check_tools":
+                self._cache[group_name] = _task2_check_tools()
+            elif group_name == "statement_modeling_tools":
+                self._cache[group_name] = _statement_modeling_tools()
+            elif group_name == "workbook_authoring_tools":
+                self._cache[group_name] = _workbook_authoring_tools()
             else:
                 raise KeyError(f"Unknown tool group: {group_name}")
         return list(self._cache[group_name])
@@ -367,7 +365,7 @@ def _configured_tool_names(registry: AgentRegistry, group_name: str) -> list[str
     return [f"<{group.get('description', 'runtime tools')}>"]
 
 
-def _local_artifact_tools() -> list[Any]:
+def _coverage_artifact_tools() -> list[Any]:
     return [
         create_coverage_run_dir,
         write_markdown_artifact,
@@ -377,33 +375,26 @@ def _local_artifact_tools() -> list[Any]:
     ]
 
 
-def _income_statement_json_tools() -> list[Any]:
+def _task2_check_tools() -> list[Any]:
+    return [
+        reconcile_statement_specs,
+    ]
+
+
+def _statement_modeling_tools() -> list[Any]:
     return [
         read_statement_context,
         validate_income_statement_json,
         write_income_statement_json,
-    ]
-
-
-def _balance_sheet_json_tools() -> list[Any]:
-    return [
-        read_statement_context,
         validate_balance_sheet_json,
         write_balance_sheet_json,
-    ]
-
-
-def _cash_flow_json_tools() -> list[Any]:
-    return [
-        read_statement_context,
         validate_cash_flow_json,
         write_cash_flow_json,
     ]
 
 
-def _financial_model_builder_tools() -> list[Any]:
+def _workbook_authoring_tools() -> list[Any]:
     return [
-        reconcile_statement_specs,
         build_integrated_three_statement_model,
         validate_integrated_three_statement_model,
     ]

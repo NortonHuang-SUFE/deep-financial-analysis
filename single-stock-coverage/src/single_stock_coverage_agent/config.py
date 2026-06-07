@@ -34,7 +34,7 @@ class MCPServerConfig(BaseModel):
 
 
 class OutputConfig(BaseModel):
-    dir: str = "./coverage"
+    dir: str = "./out/coverage"
 
 
 class Config(BaseModel):

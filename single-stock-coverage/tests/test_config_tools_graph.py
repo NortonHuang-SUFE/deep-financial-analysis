@@ -174,7 +174,7 @@ def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
     assert PROJECT_ROOT.name == "single-stock-coverage"
     assert WORKSPACE_ROOT.name == "financialServicesModified"
     assert cfg.model.default == "qwen-3.7-max"
-    assert cfg.output.dir == "./coverage"
+    assert cfg.output.dir == "./out/coverage"
     assert "ifind-stock" in cfg.mcp
 
 
@@ -228,7 +228,7 @@ def test_coverage_run_and_artifact_tools(monkeypatch, tmp_path):
     )
     result = json.loads(result_json)
 
-    assert result["run_dir"] == "coverage/a-share-000001.sz/runs/20260604-120000"
+    assert result["run_dir"] == "out/coverage/a-share-000001.sz/runs/20260604-120000"
     manifest_path = tmp_path / result["manifest_path"]
     state_path = tmp_path / result["coverage_state_path"]
     assert manifest_path.exists()
@@ -526,12 +526,192 @@ def test_integrated_three_statement_validator_flags_hardcode_and_cash_break(
     assert "Cash Tie-Out" in categories
 
 
+def test_task2_artifact_flow_defaults_to_out_coverage_after_task1_fixture(
+    monkeypatch,
+    tmp_path,
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    monkeypatch.setenv("SINGLE_STOCK_COVERAGE_OUTPUT_TIMESTAMP", "20260607-101500")
+
+    legacy_coverage = tmp_path / "coverage" / "sz-300516.sz" / "runs" / "old-task1"
+    legacy_coverage.mkdir(parents=True)
+    (legacy_coverage / "run_manifest.json").write_text("{}", encoding="utf-8")
+
+    run = json.loads(
+        tools.create_coverage_run_dir.invoke(
+            {
+                "company": "测试公司",
+                "ticker": "300516.SZ",
+                "market": "SZ",
+                "task_type": "model_update",
+                "triggering_event": "Task1 fixture from root coverage regression",
+            }
+        )
+    )
+    assert run["run_dir"] == "out/coverage/sz-300516.sz/runs/20260607-101500"
+    run_dir = tmp_path / run["run_dir"]
+
+    tools.write_markdown_artifact.invoke(
+        {
+            "markdown": "# 测试公司\n\nTask1 company research fixture.\n",
+            "filename": "company_research.md",
+            "subdir": "01_company_research",
+            "ticker": "300516.SZ",
+            "market": "SZ",
+            "run_dir": run["run_dir"],
+        }
+    )
+    tools.write_json_artifact.invoke(
+        {
+            "data_json": json.dumps(
+                {
+                    "company": "测试公司",
+                    "ticker": "300516.SZ",
+                    "drivers": ["revenue growth"],
+                }
+            ),
+            "filename": "business_driver_map.json",
+            "subdir": "01_company_research",
+            "ticker": "300516.SZ",
+            "market": "SZ",
+            "run_dir": run["run_dir"],
+        }
+    )
+    tools.write_json_artifact.invoke(
+        {
+            "data_json": json.dumps({"sources": ["Task1 fixture source"]}),
+            "filename": "source_log.json",
+            "subdir": "01_company_research",
+            "ticker": "300516.SZ",
+            "market": "SZ",
+            "run_dir": run["run_dir"],
+        }
+    )
+
+    facts = _minimal_model_input()
+    facts.update({"company": "测试公司", "ticker": "300516.SZ", "market": "SZ"})
+    tools.write_json_artifact.invoke(
+        {
+            "data_json": json.dumps(facts),
+            "filename": "financial_facts.json",
+            "subdir": "02_financial_model",
+            "ticker": "300516.SZ",
+            "market": "SZ",
+            "run_dir": run["run_dir"],
+        }
+    )
+    tools.write_json_artifact.invoke(
+        {
+            "data_json": json.dumps(
+                {
+                    "company": "测试公司",
+                    "ticker": "300516.SZ",
+                    "currency": "USD",
+                    "canonical_row_keys": tools.STATEMENT_CANONICAL_KEYS,
+                }
+            ),
+            "filename": "task2_context_packet.json",
+            "subdir": "02_financial_model",
+            "ticker": "300516.SZ",
+            "market": "SZ",
+            "run_dir": run["run_dir"],
+        }
+    )
+
+    for tool_call, statement_type in (
+        (tools.write_income_statement_json, "income_statement"),
+        (tools.write_balance_sheet_json, "balance_sheet"),
+        (tools.write_cash_flow_json, "cash_flow"),
+    ):
+        result = json.loads(
+            tool_call.invoke(
+                {
+                    "statement_json": json.dumps(_statement_payload(statement_type)),
+                    "ticker": "300516.SZ",
+                    "market": "SZ",
+                    "run_dir": run["run_dir"],
+                }
+            )
+        )
+        assert result["status"] == "OK"
+
+    pack = json.loads(
+        tools.reconcile_statement_specs.invoke(
+            {"ticker": "300516.SZ", "market": "SZ", "run_dir": run["run_dir"]}
+        )
+    )
+    assert pack["status"] == "PASS"
+    assert pack["statement_spec_pack_path"].startswith(run["run_dir"])
+
+    build = json.loads(
+        tools.build_integrated_three_statement_model.invoke(
+            {"model_input_json": json.dumps(facts), "run_dir": run["run_dir"]}
+        )
+    )
+    assert build["status"] == "OK"
+    assert build["workbook_path"].startswith(run["run_dir"])
+    assert (tmp_path / build["workbook_path"]).exists()
+
+    validation = json.loads(
+        tools.validate_integrated_three_statement_model.invoke(
+            {
+                "excel_path": str(tmp_path / build["workbook_path"]),
+                "row_map_json": json.dumps(build["row_map"]),
+            }
+        )
+    )
+    assert validation["status"] == "PASS"
+
+    audit_path = tools.write_markdown_artifact.invoke(
+        {
+            "markdown": "# Model Audit\n\nOverall: Clean\n",
+            "filename": "model_audit.md",
+            "subdir": "02_financial_model",
+            "ticker": "300516.SZ",
+            "market": "SZ",
+            "run_dir": run["run_dir"],
+        }
+    )
+    manifest_path = tools.update_run_manifest.invoke(
+        {
+            "patch_json": json.dumps(
+                {
+                    "subagents_called": [
+                        "financial_facts_modeler",
+                        "is_modeler",
+                        "bs_modeler",
+                        "cf_modeler",
+                        "workbook_builder",
+                    ],
+                    "output_artifacts": [
+                        pack["statement_spec_pack_path"],
+                        build["workbook_path"],
+                        audit_path,
+                    ],
+                    "task3_handoff_ready": True,
+                }
+            ),
+            "ticker": "300516.SZ",
+            "market": "SZ",
+            "run_dir": run["run_dir"],
+        }
+    )
+
+    assert manifest_path.startswith("out/coverage/")
+    assert audit_path.startswith(run["run_dir"])
+    assert (run_dir / "02_financial_model" / "integrated_model.xlsx").exists()
+    assert (tmp_path / "coverage" / "sz-300516.sz" / "runs" / "old-task1").exists()
+    assert not (legacy_coverage / "out").exists()
+
+
 def test_agent_registry_exposes_task2_parallel_statement_context():
     registry = load_agent_registry()
 
     task1 = describe_agent(registry, "task1_company_researcher")
-    assert task1["tool_groups"] == ["mcp_tools", "local_artifact_tools"]
-    assert task1["tools"]["local_artifact_tools"] == [
+    assert task1["tool_groups"] == ["mcp_tools", "coverage_artifact_tools"]
+    assert task1["tools"]["coverage_artifact_tools"] == [
         "create_coverage_run_dir",
         "write_markdown_artifact",
         "write_json_artifact",
@@ -544,33 +724,52 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     assert task2["parent"] == "single_stock_coverage"
     assert task2["level"] == 1
     assert task2["tool_groups"] == [
-        "mcp_tools",
-        "local_artifact_tools",
-        "financial_model_builder_tools",
+        "coverage_artifact_tools",
+        "task2_check_tools",
     ]
-    assert task2["tools"]["financial_model_builder_tools"] == [
+    assert task2["tools"]["task2_check_tools"] == [
         "reconcile_statement_specs",
-        "build_integrated_three_statement_model",
-        "validate_integrated_three_statement_model",
     ]
     assert task2["skills"] == {
         "single_stock_coverage": [
-            "financial-data-normalization",
-            "three-statement-model",
+            "model-update",
             "statement-reconciliation-checks",
-            "audit-xls",
         ]
     }
-    assert task2["subagents"] == ["is_modeler", "bs_modeler", "cf_modeler"]
+    assert task2["subagents"] == [
+        "financial_facts_modeler",
+        "is_modeler",
+        "bs_modeler",
+        "cf_modeler",
+        "workbook_builder",
+    ]
+    assert not agent_uses_tool_group(
+        registry, "task2_financial_modeler", "mcp_tools", recursive=False
+    )
+    assert agent_uses_tool_group(registry, "task2_financial_modeler", "mcp_tools")
+
+    facts_modeler = describe_agent(registry, "financial_facts_modeler")
+    assert facts_modeler["parent"] == "task2_financial_modeler"
+    assert facts_modeler["tool_groups"] == [
+        "mcp_tools",
+        "coverage_artifact_tools",
+    ]
+    assert facts_modeler["skills"] == {
+        "single_stock_coverage": ["financial-data-normalization", "model-update"]
+    }
 
     is_modeler = describe_agent(registry, "is_modeler")
     assert is_modeler["parent"] == "task2_financial_modeler"
     assert is_modeler["level"] == 2
-    assert is_modeler["tool_groups"] == ["income_statement_json_tools"]
-    assert is_modeler["tools"]["income_statement_json_tools"] == [
+    assert is_modeler["tool_groups"] == ["mcp_tools", "statement_modeling_tools"]
+    assert is_modeler["tools"]["statement_modeling_tools"] == [
         "read_statement_context",
         "validate_income_statement_json",
         "write_income_statement_json",
+        "validate_balance_sheet_json",
+        "write_balance_sheet_json",
+        "validate_cash_flow_json",
+        "write_cash_flow_json",
     ]
     assert is_modeler["skills"] == {
         "single_stock_coverage": ["income-statement-model", "statement-json-checks"]
@@ -580,27 +779,17 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     bs_modeler = describe_agent(registry, "bs_modeler")
     assert bs_modeler["parent"] == "task2_financial_modeler"
     assert bs_modeler["level"] == 2
-    assert bs_modeler["tool_groups"] == ["balance_sheet_json_tools"]
-    assert bs_modeler["tools"]["balance_sheet_json_tools"] == [
-        "read_statement_context",
-        "validate_balance_sheet_json",
-        "write_balance_sheet_json",
-    ]
+    assert bs_modeler["tool_groups"] == ["mcp_tools", "statement_modeling_tools"]
     assert bs_modeler["skills"] == {
         "single_stock_coverage": ["balance-sheet-model", "statement-json-checks"]
     }
     assert bs_modeler["outputs"] == ["02_financial_model/balance_sheet_spec.json"]
-    assert not agent_uses_tool_group(registry, "bs_modeler", "mcp_tools")
+    assert agent_uses_tool_group(registry, "bs_modeler", "mcp_tools", recursive=False)
 
     cf_modeler = describe_agent(registry, "cf_modeler")
     assert cf_modeler["parent"] == "task2_financial_modeler"
     assert cf_modeler["level"] == 2
-    assert cf_modeler["tool_groups"] == ["cash_flow_json_tools"]
-    assert cf_modeler["tools"]["cash_flow_json_tools"] == [
-        "read_statement_context",
-        "validate_cash_flow_json",
-        "write_cash_flow_json",
-    ]
+    assert cf_modeler["tool_groups"] == ["mcp_tools", "statement_modeling_tools"]
     assert cf_modeler["skills"] == {
         "single_stock_coverage": ["cash-flow-model", "statement-json-checks"]
     }
@@ -608,36 +797,40 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         "02_financial_model/cash_flow_statement_spec.json"
     ]
 
+    workbook_builder = describe_agent(registry, "workbook_builder")
+    assert workbook_builder["parent"] == "task2_financial_modeler"
+    assert workbook_builder["tool_groups"] == [
+        "workbook_authoring_tools",
+        "coverage_artifact_tools",
+    ]
+    assert workbook_builder["tools"]["workbook_authoring_tools"] == [
+        "build_integrated_three_statement_model",
+        "validate_integrated_three_statement_model",
+    ]
+    assert workbook_builder["skills"] == {
+        "single_stock_coverage": ["three-statement-model", "xlsx-author", "audit-xls"]
+    }
+
 
 def test_statement_json_tool_groups_resolve_runtime_tools():
     resolver = ToolGroupResolver(mcp_tools=[])
 
     assert [
         tool.name
-        for tool in resolver.resolve(("income_statement_json_tools",))
+        for tool in resolver.resolve(("statement_modeling_tools",))
     ] == [
         "read_statement_context",
         "validate_income_statement_json",
         "write_income_statement_json",
-    ]
-    assert [
-        tool.name
-        for tool in resolver.resolve(("balance_sheet_json_tools",))
-    ] == [
-        "read_statement_context",
         "validate_balance_sheet_json",
         "write_balance_sheet_json",
-    ]
-    assert [tool.name for tool in resolver.resolve(("cash_flow_json_tools",))] == [
-        "read_statement_context",
         "validate_cash_flow_json",
         "write_cash_flow_json",
     ]
-    assert [
-        tool.name
-        for tool in resolver.resolve(("financial_model_builder_tools",))
-    ] == [
+    assert [tool.name for tool in resolver.resolve(("task2_check_tools",))] == [
         "reconcile_statement_specs",
+    ]
+    assert [tool.name for tool in resolver.resolve(("workbook_authoring_tools",))] == [
         "build_integrated_three_statement_model",
         "validate_integrated_three_statement_model",
     ]
@@ -645,11 +838,25 @@ def test_statement_json_tool_groups_resolve_runtime_tools():
 
 def test_task2_prompts_are_json_first_with_parent_gates():
     parent = _agent_prompt("task2-financial-modeler.md")
-    assert "run the three statement modeler subagents in parallel" in parent
+    assert "Do not call MCP tools" in parent
+    assert "Do not build, open, edit, or save `integrated_model.xlsx`" in parent
+    assert "Assign `financial_facts_modeler`" in parent
     assert "reconcile_statement_specs" in parent
-    assert "build_integrated_three_statement_model" in parent
-    assert "validate_integrated_three_statement_model" in parent
-    assert "Critical validation finding blocks Task 3 handoff" in parent
+    assert "assign `workbook_builder`" in parent.lower()
+    assert "build_integrated_three_statement_model" not in parent
+    assert "validate_integrated_three_statement_model" not in parent
+
+    facts_prompt = _agent_prompt("task2-financial-facts-modeler.md")
+    assert "Use MCP tools" in facts_prompt
+    assert "financial_facts.json" in facts_prompt
+    assert "task2_context_packet.json" in facts_prompt
+    assert "Do not build, open, edit, or save `integrated_model.xlsx`" in facts_prompt
+
+    workbook_prompt = _agent_prompt("task2-workbook-builder.md")
+    assert "only Task 2 agent allowed to create, open, edit, or save" in workbook_prompt
+    assert "build_integrated_three_statement_model" in workbook_prompt
+    assert "validate_integrated_three_statement_model" in workbook_prompt
+    assert "model_audit.md" in workbook_prompt
 
     prompt_expectations = {
         "task2-is-modeler.md": (
@@ -697,7 +904,7 @@ def test_statement_skills_emphasize_checks_and_reconciliation_gates():
         assert "canonical" in text.lower()
 
     reconciliation = _skill_text("statement-reconciliation-checks")
-    assert "Critical findings block `build_integrated_three_statement_model`" in reconciliation
+    assert "Critical findings block assignment to `workbook_builder`" in reconciliation
     assert "Cash Flow Statement `ending_cash`" in reconciliation
     assert "Income Statement `net_income`" in reconciliation
     assert "model_audit.md" in reconciliation
@@ -709,6 +916,14 @@ def test_root_langgraph_registers_single_stock_debug_entries():
     assert (
         langgraph_config["graphs"]["single_stock_coverage_task2_bs_modeler"]
         == "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_bs_modeler_graph"
+    )
+    assert (
+        langgraph_config["graphs"]["single_stock_coverage_task2_financial_facts_modeler"]
+        == "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_financial_facts_modeler_graph"
+    )
+    assert (
+        langgraph_config["graphs"]["single_stock_coverage_task2_workbook_builder"]
+        == "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_workbook_builder_graph"
     )
     assert (
         langgraph_config["graphs"]["single_stock_coverage_task1_company_researcher"]
@@ -737,7 +952,24 @@ def test_graph_factories_import_in_test_mode(monkeypatch):
     bs_graph = asyncio.run(graph_module.task2_bs_modeler_graph())
     assert bs_graph["name"] == "bs_modeler"
     assert bs_graph["agent_config"]["parent"] == "task2_financial_modeler"
-    assert bs_graph["agent_config"]["tool_groups"] == ["balance_sheet_json_tools"]
+    assert bs_graph["agent_config"]["tool_groups"] == [
+        "mcp_tools",
+        "statement_modeling_tools",
+    ]
     assert bs_graph["agent_config"]["skills"] == {
         "single_stock_coverage": ["balance-sheet-model", "statement-json-checks"]
     }
+
+    facts_graph = asyncio.run(graph_module.task2_financial_facts_modeler_graph())
+    assert facts_graph["name"] == "financial_facts_modeler"
+    assert facts_graph["agent_config"]["tool_groups"] == [
+        "mcp_tools",
+        "coverage_artifact_tools",
+    ]
+
+    workbook_graph = asyncio.run(graph_module.task2_workbook_builder_graph())
+    assert workbook_graph["name"] == "workbook_builder"
+    assert workbook_graph["agent_config"]["tool_groups"] == [
+        "workbook_authoring_tools",
+        "coverage_artifact_tools",
+    ]

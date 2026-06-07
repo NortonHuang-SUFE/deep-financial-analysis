@@ -14,7 +14,7 @@ Produce independent JSON specs for:
 - `02_financial_model/revenue_build_spec.json`
 - `02_financial_model/income_statement_spec.json`
 
-Do not create, open, edit, or save `integrated_model.xlsx`. Do not read sibling statement JSON. The parent owns reconciliation, workbook build, workbook validation, and audit handoff.
+Do not create, open, edit, or save `integrated_model.xlsx`. Do not read sibling statement JSON. The parent owns reconciliation and handoff gates; workbook_builder owns workbook build, workbook validation, and audit handoff.
 
 ## Required JSON Content
 

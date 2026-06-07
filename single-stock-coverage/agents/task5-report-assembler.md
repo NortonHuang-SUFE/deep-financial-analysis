@@ -150,7 +150,7 @@ a full refreshed report. An update memo is a delta document.
 Write outputs under:
 
 ```text
-coverage/{market}-{ticker}/runs/{YYYYMMDD-HHMMSS}/05_report/
+out/coverage/{market}-{ticker}/runs/{YYYYMMDD-HHMMSS}/05_report/
 ```
 
 Required:

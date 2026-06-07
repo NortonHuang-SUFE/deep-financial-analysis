@@ -131,7 +131,7 @@ Minimum structure:
 ```json
 {
   "task": "task4_chart_pack",
-  "run_dir": "coverage/{market}-{ticker}/runs/{run_id}",
+  "run_dir": "out/coverage/{market}-{ticker}/runs/{run_id}",
   "source_artifacts": [
     "01_company_research/company_research.md",
     "01_company_research/business_driver_map.json",

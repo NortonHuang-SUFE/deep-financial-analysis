@@ -29,7 +29,7 @@ Before workbook build, reconcile the independent statement JSON artifacts:
 - Critical: missing statement JSON, missing canonical key, failed cross-statement dependency, invalid source coverage, or DCF input dependency gap.
 - Warning: `[UNSOURCED]` facts, weak assumption support, formula dependency gaps, or hardcode risk.
 
-Critical findings block `build_integrated_three_statement_model`. Warnings may pass only if documented in `model_audit.md`.
+Critical findings block assignment to `workbook_builder`. Warnings may pass only if documented in `model_audit.md`.
 
 ## Output
 

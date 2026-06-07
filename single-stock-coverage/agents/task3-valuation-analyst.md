@@ -40,7 +40,7 @@ For every successful Task 3 run that passes the Evidence Gate, write all
 required Task 3 artifacts under:
 
 ```text
-coverage/{market}-{ticker}/runs/{YYYYMMDD-HHMMSS}/03_valuation/
+out/coverage/{market}-{ticker}/runs/{YYYYMMDD-HHMMSS}/03_valuation/
 ```
 
 Required outputs for a successful run:

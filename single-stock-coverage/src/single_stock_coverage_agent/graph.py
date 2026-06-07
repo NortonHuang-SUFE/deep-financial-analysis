@@ -212,6 +212,10 @@ async def task2_financial_modeler_graph():
     return await _create_agent("task2_financial_modeler")
 
 
+async def task2_financial_facts_modeler_graph():
+    return await _create_agent("financial_facts_modeler")
+
+
 async def task2_is_modeler_graph():
     return await _create_agent("is_modeler")
 
@@ -222,6 +226,10 @@ async def task2_bs_modeler_graph():
 
 async def task2_cf_modeler_graph():
     return await _create_agent("cf_modeler")
+
+
+async def task2_workbook_builder_graph():
+    return await _create_agent("workbook_builder")
 
 
 async def task3_valuation_analyst_graph():

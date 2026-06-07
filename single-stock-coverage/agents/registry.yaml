@@ -5,8 +5,8 @@
 # auditable without opening graph.py.
 
 tool_groups:
-  local_artifact_tools:
-    description: Coverage run and artifact writer tools defined in single_stock_coverage_agent.tools.
+  coverage_artifact_tools:
+    description: Coverage run directory, artifact writers, manifest, and state tools.
     tools:
       - create_coverage_run_dir
       - write_markdown_artifact
@@ -28,33 +28,27 @@ tool_groups:
       - write_assumption_analysis
       - write_valuation_summary
 
-  financial_model_builder_tools:
-    description: Deterministic Task 2 parent tools for statement reconciliation, workbook build, and workbook validation.
+  task2_check_tools:
+    description: Task 2 parent checks after child modelers finish.
     tools:
       - reconcile_statement_specs
-      - build_integrated_three_statement_model
-      - validate_integrated_three_statement_model
 
-  income_statement_json_tools:
-    description: Income Statement and Revenue Build JSON read, validate, data-check, and write tools for is_modeler.
+  statement_modeling_tools:
+    description: Shared Task 2 statement JSON context, validation, and write tools.
     tools:
       - read_statement_context
       - validate_income_statement_json
       - write_income_statement_json
-
-  balance_sheet_json_tools:
-    description: Balance Sheet JSON read, validate, data-check, and write tools for bs_modeler.
-    tools:
-      - read_statement_context
       - validate_balance_sheet_json
       - write_balance_sheet_json
-
-  cash_flow_json_tools:
-    description: Cash Flow Statement JSON read, validate, data-check, and write tools for cf_modeler.
-    tools:
-      - read_statement_context
       - validate_cash_flow_json
       - write_cash_flow_json
+
+  workbook_authoring_tools:
+    description: Task 2 workbook child tools for final Excel build and validation.
+    tools:
+      - build_integrated_three_statement_model
+      - validate_integrated_three_statement_model
 
 skill_sources:
   single_stock_coverage:
@@ -79,7 +73,7 @@ agents:
       - run manifest
       - coverage state
     tool_groups:
-      - local_artifact_tools
+      - coverage_artifact_tools
     skills: {}
     subagents:
       - task1_company_researcher
@@ -103,7 +97,7 @@ agents:
       - 01_company_research/source_log.json
     tool_groups:
       - mcp_tools
-      - local_artifact_tools
+      - coverage_artifact_tools
     skills:
       single_stock_coverage:
         - company-research
@@ -111,10 +105,10 @@ agents:
 
   task2_financial_modeler:
     prompt: task2-financial-modeler.md
-    description: Parent coordinator for financial facts, parallel statement JSON child delegation, statement reconciliation, workbook build/validation, audit-xls, and model_audit.md.
+    description: Parent coordinator for Task 2 model updates, child task assignment, statement reconciliation, handoff checks, and manifest updates.
     parent: single_stock_coverage
     level: 1
-    role: Task 2 parent that prepares shared context, runs IS/BS/CF modelers in parallel, reconciles their independent JSON outputs, and owns workbook/audit handoff.
+    role: Task 2 parent that verifies prerequisites, delegates facts/statement/workbook work to children, runs reconciliation checks, and updates the run manifest.
     inputs:
       - 01_company_research/company_research.md
       - 01_company_research/business_driver_map.json
@@ -126,23 +120,45 @@ agents:
       - 02_financial_model/integrated_model.xlsx
       - 02_financial_model/model_audit.md
     tool_groups:
-      - mcp_tools
-      - local_artifact_tools
-      - financial_model_builder_tools
+      - coverage_artifact_tools
+      - task2_check_tools
     skills:
       single_stock_coverage:
-        - financial-data-normalization
-        - three-statement-model
+        - model-update
         - statement-reconciliation-checks
-        - audit-xls
     subagents:
+      - financial_facts_modeler
       - is_modeler
       - bs_modeler
       - cf_modeler
+      - workbook_builder
+
+  financial_facts_modeler:
+    prompt: task2-financial-facts-modeler.md
+    description: Uses MCP data and Task 1 artifacts to produce sourced financial_facts.json and task2_context_packet.json.
+    parent: task2_financial_modeler
+    level: 2
+    role: Task 2 data normalization child for sourced historical facts and compact model context.
+    inputs:
+      - 01_company_research/company_research.md
+      - 01_company_research/business_driver_map.json
+      - 01_company_research/source_log.json
+      - prior Task 2 artifacts for model updates when provided
+    outputs:
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
+    tool_groups:
+      - mcp_tools
+      - coverage_artifact_tools
+    skills:
+      single_stock_coverage:
+        - financial-data-normalization
+        - model-update
+    subagents: []
 
   is_modeler:
     prompt: task2-is-modeler.md
-    description: Independently produces Revenue Build and Income Statement JSON specs; does not write Excel or read sibling statement outputs.
+    description: Uses MCP data plus shared Task 2 context to produce Revenue Build and Income Statement JSON specs; does not write Excel or read sibling statement outputs.
     parent: task2_financial_modeler
     level: 2
     role: Parallel statement modeler for revenue build and income statement JSON.
@@ -155,7 +171,8 @@ agents:
       - 02_financial_model/revenue_build_spec.json
       - 02_financial_model/income_statement_spec.json
     tool_groups:
-      - income_statement_json_tools
+      - mcp_tools
+      - statement_modeling_tools
     skills:
       single_stock_coverage:
         - income-statement-model
@@ -176,7 +193,8 @@ agents:
     outputs:
       - 02_financial_model/balance_sheet_spec.json
     tool_groups:
-      - balance_sheet_json_tools
+      - mcp_tools
+      - statement_modeling_tools
     skills:
       single_stock_coverage:
         - balance-sheet-model
@@ -197,11 +215,39 @@ agents:
     outputs:
       - 02_financial_model/cash_flow_statement_spec.json
     tool_groups:
-      - cash_flow_json_tools
+      - mcp_tools
+      - statement_modeling_tools
     skills:
       single_stock_coverage:
         - cash-flow-model
         - statement-json-checks
+    subagents: []
+
+  workbook_builder:
+    prompt: task2-workbook-builder.md
+    description: Builds and validates integrated_model.xlsx from reconciled Task 2 JSON artifacts, then writes model_audit.md.
+    parent: task2_financial_modeler
+    level: 2
+    role: Final Task 2 workbook authoring child for Excel generation, validation, and audit handoff.
+    inputs:
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
+      - 02_financial_model/statement_spec_pack.json
+      - 02_financial_model/revenue_build_spec.json
+      - 02_financial_model/income_statement_spec.json
+      - 02_financial_model/balance_sheet_spec.json
+      - 02_financial_model/cash_flow_statement_spec.json
+    outputs:
+      - 02_financial_model/integrated_model.xlsx
+      - 02_financial_model/model_audit.md
+    tool_groups:
+      - workbook_authoring_tools
+      - coverage_artifact_tools
+    skills:
+      single_stock_coverage:
+        - three-statement-model
+        - xlsx-author
+        - audit-xls
     subagents: []
 
   task3_valuation_analyst:
@@ -221,7 +267,7 @@ agents:
       - 03_valuation/dcf_model.xlsx
     tool_groups:
       - mcp_tools
-      - local_artifact_tools
+      - coverage_artifact_tools
     skills:
       single_stock_coverage:
         - valuation-methodologies
@@ -245,7 +291,7 @@ agents:
       - assumption pack content for task3_valuation_analyst
     tool_groups:
       - mcp_tools
-      - local_artifact_tools
+      - coverage_artifact_tools
     skills:
       single_stock_coverage:
         - dcf-assumption-generation
@@ -268,7 +314,7 @@ agents:
       - valuation summary
     tool_groups:
       - dcf_execution_tools
-      - local_artifact_tools
+      - coverage_artifact_tools
     skills:
       dcf_builder:
         - dcf-model
@@ -292,7 +338,7 @@ agents:
       - 04_chart_pack/chart_index.json
       - chart pack artifacts
     tool_groups:
-      - local_artifact_tools
+      - coverage_artifact_tools
     skills:
       single_stock_coverage:
         - chart-pack
@@ -313,7 +359,7 @@ agents:
       - 05_report/final_report.md
       - coverage state update
     tool_groups:
-      - local_artifact_tools
+      - coverage_artifact_tools
     skills:
       single_stock_coverage:
         - report-assembly

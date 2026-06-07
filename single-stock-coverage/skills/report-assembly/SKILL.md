@@ -39,7 +39,7 @@ Ownership of corrections:
 Expected run layout:
 
 ```text
-coverage/{market}-{ticker}/
+out/coverage/{market}-{ticker}/
   coverage_state.json
   runs/{YYYYMMDD-HHMMSS}/
     run_manifest.json

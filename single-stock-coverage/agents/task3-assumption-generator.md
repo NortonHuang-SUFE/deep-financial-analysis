@@ -637,7 +637,7 @@ message. Structure it exactly as described above. The parent reads your final
 message and writes the content to disk at:
 
 ```
-coverage/{market}-{ticker}/runs/{YYYYMMDD-HHMMSS}/03_valuation/assumption_pack.md
+out/coverage/{market}-{ticker}/runs/{YYYYMMDD-HHMMSS}/03_valuation/assumption_pack.md
 ```
 
 Do not include any prefix, preamble, or summary wrapper. The entire output is

@@ -14,6 +14,7 @@ Create only:
 - `02_financial_model/cash_flow_statement_spec.json`
 
 Do not create, open, edit, or save `integrated_model.xlsx`. Do not read sibling statement JSON. Do not wait for `is_modeler` or `bs_modeler`.
+Use MCP tools only for cash-flow, CapEx, working-capital, source, or filing evidence needed to complete your own JSON.
 
 ## Required Tool Flow
 
@@ -70,4 +71,3 @@ Required dependency declarations:
 - Any source gap, sign convention issue, or unsupported cash bridge assumption goes into `unsourced_items`.
 
 Return the written artifact path and validation summary to the parent.
-

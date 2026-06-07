@@ -29,4 +29,4 @@ mcp:
     transport: "streamable_http"
 
 output:
-  dir: "./coverage"
+  dir: "./out/coverage"

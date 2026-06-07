@@ -12,6 +12,8 @@ from typing import Any
 from langchain_core.tools import tool
 
 
+DEFAULT_OUTPUT_DIR = "./out/coverage"
+
 _ACTIVE_RUNS: dict[str, Path] = {}
 
 STATEMENT_JSON_REQUIRED_FIELDS: tuple[str, ...] = (
@@ -251,11 +253,11 @@ def _safe_ticker(ticker: str) -> str:
     return _slugify(ticker or "ticker", "ticker")
 
 
-def _coverage_root(output_dir: str = "./coverage") -> Path:
+def _coverage_root(output_dir: str = DEFAULT_OUTPUT_DIR) -> Path:
     return _resolve_workspace_path(output_dir)
 
 
-def _coverage_dir(market: str, ticker: str, output_dir: str = "./coverage") -> Path:
+def _coverage_dir(market: str, ticker: str, output_dir: str = DEFAULT_OUTPUT_DIR) -> Path:
     return _coverage_root(output_dir) / f"{_safe_market(market)}-{_safe_ticker(ticker)}"
 
 
@@ -675,7 +677,7 @@ def _write_statement_json(
     ticker: str,
     market: str,
     run_dir: str = "",
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     payload = _json_loads(statement_json, "statement_json")
     if not isinstance(payload, dict):
@@ -737,7 +739,7 @@ def _find_run_dir(
     *,
     market: str,
     ticker: str,
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
     run_dir: str = "",
 ) -> Path:
     if run_dir:
@@ -766,7 +768,7 @@ def _create_run_dir(
     market: str,
     task_type: str,
     triggering_event: str,
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> Path:
     coverage_dir = _coverage_dir(market, ticker, output_dir)
     runs_dir = coverage_dir / "runs"
@@ -840,7 +842,7 @@ def create_coverage_run_dir(
     market: str,
     task_type: str = "initiation",
     triggering_event: str = "",
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Create or return a timestamped run directory for one stock coverage task.
 
@@ -850,7 +852,7 @@ def create_coverage_run_dir(
         market: Listing market, such as A-share, HK, US, or ADR.
         task_type: initiation, update, valuation_refresh, model_audit, etc.
         triggering_event: Optional event that triggered this run.
-        output_dir: Coverage root relative to workspace. Defaults to ./coverage.
+        output_dir: Coverage root relative to workspace. Defaults to ./out/coverage.
 
     Returns:
         JSON with workspace-relative coverage_dir, run_dir, manifest_path, and
@@ -882,7 +884,7 @@ def write_markdown_artifact(
     ticker: str,
     market: str,
     run_dir: str = "",
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Write a Markdown artifact into a coverage run subdirectory."""
     out_dir = _find_run_dir(
@@ -907,7 +909,7 @@ def write_json_artifact(
     ticker: str,
     market: str,
     run_dir: str = "",
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Validate and write a JSON artifact into a coverage run subdirectory."""
     parsed: Any = _json_loads(data_json, "data_json")
@@ -932,7 +934,7 @@ def write_json_artifact(
 def read_statement_context(
     statement_type: str,
     run_dir: str,
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Read minimal Task 2 context for one independent statement JSON modeler.
 
@@ -964,7 +966,7 @@ def write_income_statement_json(
     ticker: str,
     market: str,
     run_dir: str = "",
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Validate and write income_statement_spec.json and optional revenue_build_spec.json."""
     return _write_statement_json(
@@ -989,7 +991,7 @@ def write_balance_sheet_json(
     ticker: str,
     market: str,
     run_dir: str = "",
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Validate and write balance_sheet_spec.json."""
     return _write_statement_json(
@@ -1014,7 +1016,7 @@ def write_cash_flow_json(
     ticker: str,
     market: str,
     run_dir: str = "",
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Validate and write cash_flow_statement_spec.json."""
     return _write_statement_json(
@@ -1032,7 +1034,7 @@ def reconcile_statement_specs(
     ticker: str,
     market: str,
     run_dir: str = "",
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Reconcile independent IS, BS, and CF JSON specs before workbook build.
 
@@ -1169,7 +1171,7 @@ def reconcile_statement_specs(
 def _scoped_build_integrated_three_statement_model_reference(
     model_input_json: str,
     run_dir: str,
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Build deterministic Task 2 integrated_model.xlsx from reconciled inputs."""
     try:
@@ -2112,7 +2114,7 @@ def update_run_manifest(
     ticker: str,
     market: str,
     run_dir: str = "",
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Merge a JSON patch object into the current run manifest."""
     patch: Any = _json_loads(patch_json, "patch_json")
@@ -2144,7 +2146,7 @@ def update_run_manifest(
 def build_integrated_three_statement_model(
     model_input_json: str,
     run_dir: str,
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Build deterministic Task 2 integrated_model.xlsx from statement specs."""
     try:
@@ -2664,7 +2666,7 @@ def write_coverage_state(
     state_json: str,
     ticker: str,
     market: str,
-    output_dir: str = "./coverage",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> str:
     """Overwrite coverage_state.json for the stock after validating JSON."""
     state: Any = _json_loads(state_json, "state_json")

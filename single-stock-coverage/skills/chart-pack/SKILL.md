@@ -27,7 +27,7 @@ Task 5 can use for report assembly.
 Start from the active run directory:
 
 ```text
-coverage/{market}-{ticker}/runs/{YYYYMMDD-HHMMSS}/
+out/coverage/{market}-{ticker}/runs/{YYYYMMDD-HHMMSS}/
 ```
 
 Required artifacts:
@@ -128,7 +128,7 @@ Use this minimum schema:
 ```json
 {
   "task": "task4_chart_pack",
-  "run_dir": "coverage/{market}-{ticker}/runs/{run_id}",
+  "run_dir": "out/coverage/{market}-{ticker}/runs/{run_id}",
   "generated_at": "YYYY-MM-DDTHH:MM:SS",
   "source_artifacts": [
     "01_company_research/company_research.md",

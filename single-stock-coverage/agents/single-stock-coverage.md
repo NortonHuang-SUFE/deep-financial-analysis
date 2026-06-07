@@ -28,17 +28,17 @@ only what you send.
 | `subagent_type` | Use For |
 | --- | --- |
 | `task1_company_researcher` | Company research, business-driver map, source log. |
-| `task2_financial_modeler` | Integrated three-statement model, financial facts, model audit. Internally delegates Income Statement to is_modeler, Balance Sheet to bs_modeler, and Cash Flow Statement to cf_modeler child subagents. |
+| `task2_financial_modeler` | Financial model orchestration, statement reconciliation, workbook-builder assignment, and Task 3 handoff checks. Internally delegates facts/context to financial_facts_modeler, statements to is_modeler/bs_modeler/cf_modeler, and final Excel to workbook_builder. |
 | `task3_valuation_analyst` | Evidence gate, value-driver map, assumption generation/audit, DCF execution, valuation reconciliation. Internally delegates assumption generation to assumption_generator child and DCF/comps execution to dcf_execution child. |
 | `task4_chart_pack_generator` | Chart pack based only on Task 1-3 artifacts. |
 | `task5_report_assembler` | Initiation report or event update memo based only on Task 1-4 artifacts. |
 
-Task 2 has three nested statement-modeler subagents (is_modeler, bs_modeler, cf_modeler). Task 3 has two nested subagents: assumption_generator (for DCF assumption packs) and dcf_execution (for workbook construction).
+Task 2 has five nested subagents: financial_facts_modeler, is_modeler, bs_modeler, cf_modeler, and workbook_builder. MCP data tools are assigned to Task 2 children, not the Task 2 parent. Task 3 has two nested subagents: assumption_generator (for DCF assumption packs) and dcf_execution (for workbook construction).
 
 ## Orchestration Rules
 
 - Create a coverage run directory first with `create_coverage_run_dir`.
-- Write all artifacts under `coverage/{market}-{ticker}/runs/{timestamp}/`.
+- Write all artifacts under `out/coverage/{market}-{ticker}/runs/{timestamp}/`.
 - Update `run_manifest.json` after each subagent returns.
 - Update `coverage_state.json` at the end of the run.
 - Do not skip prerequisites. Task 3 must not run until Task 1 and Task 2
@@ -82,7 +82,7 @@ changed, and what remains `[UNSOURCED]`.
 Expected run layout:
 
 ```text
-coverage/{market}-{ticker}/
+out/coverage/{market}-{ticker}/
   coverage_state.json
   runs/{YYYYMMDD-HHMMSS}/
     run_manifest.json
