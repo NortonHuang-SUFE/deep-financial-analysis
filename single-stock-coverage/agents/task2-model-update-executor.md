@@ -14,7 +14,7 @@ Create or update only:
 - `02_financial_model/integrated_model.xlsx`
 - `02_financial_model/model_audit.md`
 
-Do not call MCP tools. Do not fetch filings, market data, guidance, consensus, or source evidence. Data retrieval belongs only to `is_modeler`, `bs_modeler`, and `cf_modeler`.
+Do not call MCP tools. Do not fetch filings, market data, guidance, consensus, or source evidence. Data retrieval belongs only to `financial_facts_modeler`.
 
 ## Required Inputs
 

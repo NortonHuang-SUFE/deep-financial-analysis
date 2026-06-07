@@ -29,9 +29,12 @@ tool_groups:
       - write_valuation_summary
 
   task2_check_tools:
-    description: Task 2 parent checks after child modelers finish.
+    description: Task 2 parent handoff, artifact verification, reconciliation, and compact audit tools.
     tools:
+      - resolve_task2_handoff
+      - verify_task2_artifacts
       - reconcile_statement_specs
+      - write_task2_model_audit
 
   statement_modeling_tools:
     description: Shared Task 2 statement JSON context, validation, and write tools.
@@ -133,27 +136,49 @@ agents:
         - model-update
         - statement-reconciliation-checks
     subagents:
+      - financial_facts_modeler
       - is_modeler
       - bs_modeler
       - cf_modeler
       - model_update_executor
       - workbook_builder
 
-  is_modeler:
-    prompt: task2-is-modeler.md
-    description: Uses MCP data plus shared Task 2 context to produce Revenue Build and Income Statement JSON specs; does not write Excel or read sibling statement outputs.
+  financial_facts_modeler:
+    prompt: task2-financial-facts-modeler.md
+    description: Uses Task 1 artifacts and MCP evidence to normalize financial facts and write compact Task 2 context.
     parent: task2_financial_modeler
     level: 2
-    role: Parallel statement modeler for revenue build and income statement JSON.
+    role: Task 2 data normalization child for sourced historical facts and compact model context.
     inputs:
       - 01_company_research/company_research.md
       - 01_company_research/business_driver_map.json
       - 01_company_research/source_log.json
+      - prior Task 2 artifacts for model updates when provided
+    outputs:
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
+    tool_groups:
+      - mcp_tools
+      - coverage_artifact_tools
+    skills:
+      single_stock_coverage:
+        - financial-data-normalization
+        - model-update
+    subagents: []
+
+  is_modeler:
+    prompt: task2-is-modeler.md
+    description: Uses compact Task 2 context to produce Revenue Build and Income Statement JSON specs; does not write Excel or read sibling statement outputs.
+    parent: task2_financial_modeler
+    level: 2
+    role: Parallel statement modeler for revenue build and income statement JSON.
+    inputs:
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
     outputs:
       - 02_financial_model/revenue_build_spec.json
       - 02_financial_model/income_statement_spec.json
     tool_groups:
-      - mcp_tools
       - statement_modeling_tools
     skills:
       single_stock_coverage:
@@ -169,13 +194,11 @@ agents:
     level: 2
     role: Parallel statement modeler for balance sheet JSON and retained earnings/cash dependency declarations.
     inputs:
-      - 01_company_research/company_research.md
-      - 01_company_research/business_driver_map.json
-      - 01_company_research/source_log.json
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
     outputs:
       - 02_financial_model/balance_sheet_spec.json
     tool_groups:
-      - mcp_tools
       - statement_modeling_tools
     skills:
       single_stock_coverage:
@@ -191,13 +214,11 @@ agents:
     level: 2
     role: Parallel statement modeler for indirect cash flow JSON and cross-statement cash tie dependency declarations.
     inputs:
-      - 01_company_research/company_research.md
-      - 01_company_research/business_driver_map.json
-      - 01_company_research/source_log.json
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
     outputs:
       - 02_financial_model/cash_flow_statement_spec.json
     tool_groups:
-      - mcp_tools
       - statement_modeling_tools
     skills:
       single_stock_coverage:

@@ -17,6 +17,26 @@ DEFAULT_OUTPUT_DIR = "./out/coverage"
 
 _ACTIVE_RUNS: dict[str, Path] = {}
 
+TASK1_REQUIRED_ARTIFACTS: tuple[str, ...] = (
+    "company_research.md",
+    "business_driver_map.json",
+    "source_log.json",
+)
+
+TASK2_STATEMENT_ARTIFACTS: dict[str, str] = {
+    "income_statement": "income_statement_spec.json",
+    "balance_sheet": "balance_sheet_spec.json",
+    "cash_flow": "cash_flow_statement_spec.json",
+}
+
+TASK2_MODEL_ARTIFACTS: tuple[str, ...] = (
+    "financial_facts.json",
+    "task2_context_packet.json",
+    "statement_spec_pack.json",
+    "integrated_model.xlsx",
+    "model_audit.md",
+)
+
 STATEMENT_JSON_REQUIRED_FIELDS: tuple[str, ...] = (
     "statement_type",
     "canonical_row_keys",
@@ -238,7 +258,28 @@ def _workspace_root() -> Path:
 
 def _resolve_workspace_path(path: str | Path) -> Path:
     candidate = Path(path)
-    return candidate if candidate.is_absolute() else _workspace_root() / candidate
+    if candidate.is_absolute():
+        return _canonicalize_workspace_path(candidate)
+    return _canonicalize_workspace_path(_workspace_root() / candidate)
+
+
+def _canonicalize_workspace_path(path: Path) -> Path:
+    """Map project-local out/ paths to the workspace-level artifact root."""
+    project_out = _project_root() / "out"
+    try:
+        return _workspace_root() / "out" / path.resolve().relative_to(project_out)
+    except ValueError:
+        return path
+
+
+def _project_wrong_root_path(path: Path) -> Path | None:
+    try:
+        rel = path.resolve().relative_to(_workspace_root())
+    except ValueError:
+        return None
+    if not rel.parts or rel.parts[0] != "out":
+        return None
+    return _project_root() / rel
 
 
 def _slugify(text: str, fallback: str = "unknown") -> str:
@@ -499,6 +540,140 @@ def _json_result(data: dict[str, Any]) -> str:
     return json.dumps(data, ensure_ascii=False, indent=2)
 
 
+def _required_task1_paths(run_dir: Path) -> dict[str, Path]:
+    task1_dir = _task1_dir(run_dir)
+    return {name: task1_dir / name for name in TASK1_REQUIRED_ARTIFACTS}
+
+
+def _task1_missing_paths(run_dir: Path) -> list[str]:
+    return [
+        _relative_to_workspace(path)
+        for path in _required_task1_paths(run_dir).values()
+        if not path.exists()
+    ]
+
+
+def _infer_run_dir_from_task1_path(path: Path) -> Path:
+    if path.name in TASK1_REQUIRED_ARTIFACTS:
+        path = path.parent
+    return path.parent if path.name == "01_company_research" else path
+
+
+def _latest_task1_run(
+    *,
+    ticker: str,
+    market: str,
+    output_dir: str = DEFAULT_OUTPUT_DIR,
+) -> Path | None:
+    runs_dir = _coverage_dir(market, ticker, output_dir) / "runs"
+    if not runs_dir.exists():
+        return None
+    candidates = [
+        path
+        for path in runs_dir.iterdir()
+        if path.is_dir() and not _task1_missing_paths(path)
+    ]
+    if not candidates:
+        return None
+    return sorted(candidates, key=lambda item: item.name)[-1]
+
+
+def _wrong_root_artifacts_for(run_dir: Path) -> list[dict[str, str]]:
+    wrong_run_dir = _project_wrong_root_path(run_dir)
+    if wrong_run_dir is None or not wrong_run_dir.exists():
+        return []
+
+    artifacts: list[dict[str, str]] = []
+    tracked = [
+        *(wrong_run_dir / "01_company_research" / name for name in TASK1_REQUIRED_ARTIFACTS),
+        *(
+            wrong_run_dir / "02_financial_model" / name
+            for name in (
+                *TASK2_STATEMENT_ARTIFACTS.values(),
+                "revenue_build_spec.json",
+                *TASK2_MODEL_ARTIFACTS,
+            )
+        ),
+    ]
+    for wrong_path in tracked:
+        if not wrong_path.exists():
+            continue
+        canonical_path = _workspace_root() / wrong_path.relative_to(_project_root())
+        severity = "critical" if not canonical_path.exists() else "warning"
+        artifacts.append(
+            {
+                "severity": severity,
+                "wrong_root_path": str(wrong_path),
+                "canonical_path": _relative_to_workspace(canonical_path),
+            }
+        )
+    return artifacts
+
+
+def _artifact_record(path: Path) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "path": _relative_to_workspace(path),
+        "exists": path.exists(),
+    }
+    if path.suffix == ".json" and path.exists():
+        try:
+            parsed = _read_json_file(path)
+        except Exception as exc:
+            record.update({"json_valid": False, "error": str(exc)})
+        else:
+            record["json_valid"] = isinstance(parsed, (dict, list))
+    return record
+
+
+def _append_finding(
+    findings: list[dict[str, str]],
+    *,
+    category: str,
+    issue: str,
+    path: Path | None = None,
+) -> None:
+    finding = {"category": category, "issue": issue}
+    if path is not None:
+        finding["path"] = _relative_to_workspace(path)
+    findings.append(finding)
+
+
+def _safe_audit_text(value: Any, limit: int = 700) -> str:
+    text = str(value or "").replace("\r", " ").strip()
+    blocked = (
+        "SystemMessage",
+        "HumanMessage",
+        "AIMessage",
+        "ToolMessage",
+        "inputs.messages",
+        '"messages"',
+        '"generations"',
+        "langchain.schema.messages",
+    )
+    if any(token in text for token in blocked):
+        return "[omitted runtime trace]"
+    text = re.sub(r"\s+", " ", text)
+    return text[:limit]
+
+
+def _normalize_findings(raw: Any, *, limit: int = 50) -> list[dict[str, str]]:
+    if not isinstance(raw, list):
+        return []
+    findings: list[dict[str, str]] = []
+    for item in raw[:limit]:
+        if isinstance(item, dict):
+            category = _safe_audit_text(item.get("category") or item.get("type") or "Finding")
+            issue = _safe_audit_text(item.get("issue") or item.get("message") or item)
+            path = _safe_audit_text(item.get("path") or "")
+            finding = {"category": category, "issue": issue}
+            if path:
+                finding["path"] = path
+        else:
+            finding = {"category": "Finding", "issue": _safe_audit_text(item)}
+        findings.append(finding)
+    return findings
+
+
 def _statement_context_payload(statement_type: str, run_dir: Path) -> dict[str, Any]:
     if statement_type not in STATEMENT_JSON_ALLOWED_TYPES:
         raise ValueError(
@@ -575,6 +750,30 @@ def _canonical_keys(payload: dict[str, Any]) -> set[str]:
     if isinstance(raw, list):
         return {str(item) for item in raw}
     return set()
+
+
+def _supplemental_keys(payload: dict[str, Any]) -> set[str]:
+    keys: set[str] = set()
+    raw = payload.get("supplemental_line_items") or []
+    if isinstance(raw, dict):
+        raw = list(raw.values())
+    if not isinstance(raw, list):
+        return keys
+    for item in raw:
+        if isinstance(item, dict):
+            key = _field(
+                item,
+                "canonical_key",
+                "line_item_key",
+                "key",
+                "name",
+                default="",
+            )
+            if key:
+                keys.add(str(key))
+        elif item:
+            keys.add(str(item))
+    return keys
 
 
 def _dependency_values(payload: dict[str, Any]) -> list[str]:
@@ -658,6 +857,7 @@ def _validate_statement_historical_inputs(
         return
 
     canonical_keys = _canonical_keys(payload)
+    supplemental_keys = _supplemental_keys(payload)
     for idx, record in enumerate(records):
         missing: list[str] = []
         if not record.get("period"):
@@ -666,15 +866,29 @@ def _validate_statement_historical_inputs(
         if not key:
             missing.append("canonical_key")
         elif key not in canonical_keys:
-            warnings.append(
-                {
-                    "category": "Historical Inputs",
-                    "issue": (
-                        f"historical_inputs[{idx}] canonical_key '{key}' is not "
-                        f"listed in {expected_statement_type} canonical_row_keys."
-                    ),
-                }
+            parent_key = str(
+                _field(
+                    record,
+                    "parent_canonical_key",
+                    "parent_key",
+                    "aggregate_key",
+                    default="",
+                )
+                or ""
             )
+            if parent_key in canonical_keys or key in supplemental_keys:
+                pass
+            else:
+                warnings.append(
+                    {
+                        "category": "Historical Inputs",
+                        "issue": (
+                            f"historical_inputs[{idx}] canonical_key '{key}' is not "
+                            f"listed in {expected_statement_type} canonical_row_keys "
+                            "and has no valid parent_canonical_key."
+                        ),
+                    }
+                )
         if "value" not in record and "amount" not in record:
             missing.append("value")
         if not _field(record, "source", "source_text", default=""):
@@ -724,6 +938,18 @@ def _derive_financial_facts(
                 unsourced.append(f"{statement_type}:{period}:{_historical_input_key(item)}")
 
             model_field = _model_field_for_canonical_key(_historical_input_key(item))
+            if not model_field:
+                parent_key = str(
+                    _field(
+                        item,
+                        "parent_canonical_key",
+                        "parent_key",
+                        "aggregate_key",
+                        default="",
+                    )
+                    or ""
+                )
+                model_field = _model_field_for_canonical_key(parent_key)
             if model_field:
                 record[model_field] = _as_float(
                     _field(item, "value", "amount", default=0.0),
@@ -1141,6 +1367,346 @@ def write_json_artifact(
 
 
 @tool
+def resolve_task2_handoff(
+    ticker: str,
+    market: str,
+    run_dir: str = "",
+    task1_dir: str = "",
+    company_research_path: str = "",
+    business_driver_map_path: str = "",
+    source_log_path: str = "",
+    create_new_run: bool = False,
+    output_dir: str = DEFAULT_OUTPUT_DIR,
+) -> str:
+    """Resolve Task 2 to one canonical workspace-level run directory.
+
+    Direct Task 2 runs should continue the run that already contains Task 1
+    artifacts. This tool never reconstructs Task 1 from prose. It either finds
+    real Task 1 files or returns a blocking failure with exact missing paths.
+    """
+    explicit_paths = [
+        company_research_path,
+        business_driver_map_path,
+        source_log_path,
+    ]
+    supplied = [path for path in explicit_paths if path]
+
+    selected_run_dir: Path | None = None
+    source = ""
+    if run_dir:
+        selected_run_dir = _infer_run_dir_from_task1_path(_resolve_workspace_path(run_dir))
+        source = "run_dir"
+    elif task1_dir:
+        selected_run_dir = _infer_run_dir_from_task1_path(
+            _resolve_workspace_path(task1_dir)
+        )
+        source = "task1_dir"
+    elif supplied:
+        selected_run_dir = _infer_run_dir_from_task1_path(
+            _resolve_workspace_path(supplied[0])
+        )
+        source = "task1_file_paths"
+    elif create_new_run:
+        selected_run_dir = _create_run_dir(
+            company="",
+            ticker=ticker,
+            market=market,
+            task_type="initiation",
+            triggering_event="",
+            output_dir=output_dir,
+        )
+        source = "created_new_run"
+    else:
+        selected_run_dir = _latest_task1_run(
+            ticker=ticker,
+            market=market,
+            output_dir=output_dir,
+        )
+        source = "latest_task1_run"
+
+    if selected_run_dir is None:
+        coverage_runs = _coverage_dir(market, ticker, output_dir) / "runs"
+        return _json_result(
+            {
+                "status": "FAIL",
+                "ticker": ticker,
+                "market": market,
+                "run_dir": "",
+                "missing_artifacts": [
+                    f"No run with complete Task 1 artifacts under {_relative_to_workspace(coverage_runs)}"
+                ],
+                "created_new_run": False,
+                "source": source,
+            }
+        )
+
+    selected_run_dir = _canonicalize_workspace_path(selected_run_dir)
+    missing = _task1_missing_paths(selected_run_dir)
+    file_path_mismatches: list[str] = []
+    for supplied_path, expected_name in zip(explicit_paths, TASK1_REQUIRED_ARTIFACTS):
+        if not supplied_path:
+            continue
+        resolved = _resolve_workspace_path(supplied_path)
+        expected = _task1_dir(selected_run_dir) / expected_name
+        if resolved.resolve() != expected.resolve():
+            file_path_mismatches.append(
+                f"{expected_name}: expected {_relative_to_workspace(expected)}, "
+                f"got {_relative_to_workspace(resolved)}"
+            )
+
+    key = f"{_safe_market(market)}:{_safe_ticker(ticker)}:{output_dir}"
+    _ACTIVE_RUNS[key] = selected_run_dir
+
+    wrong_root_artifacts = _wrong_root_artifacts_for(selected_run_dir)
+    status = "OK" if not missing and not file_path_mismatches else "FAIL"
+    return _json_result(
+        {
+            "status": status,
+            "ticker": ticker,
+            "market": market,
+            "run_dir": _relative_to_workspace(selected_run_dir),
+            "task1_dir": _relative_to_workspace(_task1_dir(selected_run_dir)),
+            "model_dir": _relative_to_workspace(_statement_model_dir(selected_run_dir)),
+            "missing_artifacts": missing,
+            "file_path_mismatches": file_path_mismatches,
+            "wrong_root_artifacts": wrong_root_artifacts,
+            "created_new_run": source == "created_new_run",
+            "source": source,
+        }
+    )
+
+
+@tool
+def verify_task2_artifacts(run_dir: str, stage: str = "all") -> str:
+    """Verify Task 2 artifacts in the canonical run directory.
+
+    Args:
+        run_dir: Coverage run directory, absolute or workspace-relative.
+        stage: task1, financial_facts, statements, reconciliation, workbook, or all.
+    """
+    out_dir = _resolve_workspace_path(run_dir)
+    model_dir = _statement_model_dir(out_dir)
+    normalized_stage = str(stage or "all").strip().lower()
+    critical: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
+    artifacts: dict[str, Any] = {}
+
+    valid_stages = {
+        "task1",
+        "financial_facts",
+        "statements",
+        "reconciliation",
+        "workbook",
+        "all",
+    }
+    if normalized_stage not in valid_stages:
+        raise ValueError("stage must be one of: " + ", ".join(sorted(valid_stages)))
+
+    def should_check(name: str) -> bool:
+        return normalized_stage in {"all", name}
+
+    wrong_root_artifacts = _wrong_root_artifacts_for(out_dir)
+    for item in wrong_root_artifacts:
+        target = critical if item["severity"] == "critical" else warnings
+        target.append(
+            {
+                "category": "Wrong Artifact Root",
+                "issue": (
+                    "Artifact exists under single-stock-coverage/out instead of "
+                    "workspace-level out."
+                ),
+                "path": item["wrong_root_path"],
+            }
+        )
+
+    if should_check("task1"):
+        artifacts["task1"] = {}
+        for name, path in _required_task1_paths(out_dir).items():
+            artifacts["task1"][name] = _artifact_record(path)
+            if not path.exists():
+                _append_finding(
+                    critical,
+                    category="Missing Task 1 Artifact",
+                    issue=f"Required Task 1 artifact missing: {name}",
+                    path=path,
+                )
+
+    if should_check("financial_facts"):
+        artifacts["financial_facts"] = {}
+        for name in ("financial_facts.json", "task2_context_packet.json"):
+            path = model_dir / name
+            artifacts["financial_facts"][name] = _artifact_record(path)
+            payload = _read_json_file(path)
+            if not isinstance(payload, dict):
+                _append_finding(
+                    critical,
+                    category="Missing Financial Context",
+                    issue=f"{name} must exist and be valid JSON before statement modeling.",
+                    path=path,
+                )
+        facts = _read_json_file(model_dir / "financial_facts.json")
+        if isinstance(facts, dict) and not isinstance(facts.get("historicals"), list):
+            _append_finding(
+                critical,
+                category="Invalid Financial Facts",
+                issue="financial_facts.json must include a historicals list.",
+                path=model_dir / "financial_facts.json",
+            )
+
+    if should_check("statements"):
+        artifacts["statements"] = {}
+        for statement_type, filename in TASK2_STATEMENT_ARTIFACTS.items():
+            path = model_dir / filename
+            artifacts["statements"][statement_type] = _artifact_record(path)
+            payload = _read_json_file(path)
+            if not isinstance(payload, dict):
+                _append_finding(
+                    critical,
+                    category="Missing Statement JSON",
+                    issue=f"{filename} must be written by its statement subagent.",
+                    path=path,
+                )
+                continue
+            validation = _validate_statement_payload(payload, statement_type)
+            for finding in validation["critical"]:
+                critical.append({"statement_type": statement_type, **finding})
+            for finding in validation["warnings"]:
+                warnings.append({"statement_type": statement_type, **finding})
+
+    if should_check("reconciliation"):
+        path = model_dir / "statement_spec_pack.json"
+        artifacts["reconciliation"] = {"statement_spec_pack.json": _artifact_record(path)}
+        pack = _read_json_file(path)
+        if not isinstance(pack, dict):
+            _append_finding(
+                critical,
+                category="Missing Reconciliation",
+                issue="statement_spec_pack.json must exist before workbook build.",
+                path=path,
+            )
+        else:
+            for finding in pack.get("critical") or []:
+                critical.append({"statement_type": "statement_pack", **finding})
+            for finding in pack.get("warnings") or []:
+                warnings.append({"statement_type": "statement_pack", **finding})
+
+    if should_check("workbook"):
+        artifacts["workbook"] = {}
+        for name in ("integrated_model.xlsx", "model_audit.md"):
+            path = model_dir / name
+            artifacts["workbook"][name] = _artifact_record(path)
+            if not path.exists():
+                _append_finding(
+                    critical,
+                    category="Missing Workbook Artifact",
+                    issue=f"{name} is required for Task 3 handoff.",
+                    path=path,
+                )
+
+    status = "PASS" if not critical else "FAIL"
+    return _json_result(
+        {
+            "status": status,
+            "stage": normalized_stage,
+            "run_dir": _relative_to_workspace(out_dir),
+            "critical_count": len(critical),
+            "warning_count": len(warnings),
+            "critical": critical,
+            "warnings": warnings,
+            "artifacts": artifacts,
+            "wrong_root_artifacts": wrong_root_artifacts,
+        }
+    )
+
+
+@tool
+def write_task2_model_audit(run_dir: str, audit_json: str) -> str:
+    """Write a compact Task 2 model_audit.md from structured findings only."""
+    audit = _json_loads(audit_json, "audit_json")
+    if not isinstance(audit, dict):
+        raise ValueError("audit_json must be a JSON object")
+
+    out_dir = _resolve_workspace_path(run_dir)
+    model_dir = _statement_model_dir(out_dir)
+    model_dir.mkdir(parents=True, exist_ok=True)
+    path = model_dir / "model_audit.md"
+
+    status = _safe_audit_text(audit.get("status") or "UNKNOWN", 80)
+    route = _safe_audit_text(audit.get("route") or audit.get("model_route") or "")
+    handoff_ready = bool(audit.get("task3_handoff_ready"))
+    critical = _normalize_findings(audit.get("critical"))
+    warnings = _normalize_findings(audit.get("warnings"))
+    artifacts = audit.get("artifacts") if isinstance(audit.get("artifacts"), dict) else {}
+    next_steps = [
+        _safe_audit_text(item, 300)
+        for item in (audit.get("next_steps") or [])
+        if _safe_audit_text(item, 300)
+    ][:12]
+
+    lines = [
+        "# Task 2 Model Audit",
+        "",
+        f"- Status: {status}",
+        f"- Run: `{_relative_to_workspace(out_dir)}`",
+        f"- Task 3 handoff ready: {'yes' if handoff_ready else 'no'}",
+    ]
+    if route:
+        lines.append(f"- Route: {route}")
+    lines.extend(
+        [
+            f"- Critical findings: {len(critical)}",
+            f"- Warnings: {len(warnings)}",
+            "",
+            "## Critical Findings",
+        ]
+    )
+    if critical:
+        for idx, finding in enumerate(critical, start=1):
+            path_text = f" (`{finding['path']}`)" if finding.get("path") else ""
+            lines.append(
+                f"{idx}. {finding['category']}: {finding['issue']}{path_text}"
+            )
+    else:
+        lines.append("None.")
+
+    lines.extend(["", "## Warnings"])
+    if warnings:
+        for idx, finding in enumerate(warnings[:50], start=1):
+            path_text = f" (`{finding['path']}`)" if finding.get("path") else ""
+            lines.append(
+                f"{idx}. {finding['category']}: {finding['issue']}{path_text}"
+            )
+    else:
+        lines.append("None.")
+
+    lines.extend(["", "## Artifact Status"])
+    if artifacts:
+        for name, value in artifacts.items():
+            lines.append(f"- `{_safe_audit_text(name, 120)}`: {_safe_audit_text(value, 240)}")
+    else:
+        lines.append("No artifact status supplied.")
+
+    lines.extend(["", "## Next Steps"])
+    if next_steps:
+        for idx, item in enumerate(next_steps, start=1):
+            lines.append(f"{idx}. {item}")
+    else:
+        lines.append("No follow-up steps supplied.")
+
+    markdown = "\n".join(lines).strip() + "\n"
+    path.write_text(markdown, encoding="utf-8")
+    return _json_result(
+        {
+            "status": "OK",
+            "model_audit_path": _relative_to_workspace(path),
+            "critical_count": len(critical),
+            "warning_count": len(warnings),
+            "task3_handoff_ready": handoff_ready,
+        }
+    )
+
+
+@tool
 def read_statement_context(
     statement_type: str,
     run_dir: str,
@@ -1376,18 +1942,29 @@ def reconcile_statement_specs(
     pack_path = model_dir / "statement_spec_pack.json"
     pack_path.write_text(_json_result(pack) + "\n", encoding="utf-8")
 
-    financial_facts = _derive_financial_facts(
-        specs=specs,
-        ticker=ticker,
-        market=market,
-    )
-    context_packet = _derive_task2_context_packet(
-        specs=specs,
-        pack=pack,
-        financial_facts=financial_facts,
-    )
     facts_path = model_dir / "financial_facts.json"
     context_path = model_dir / "task2_context_packet.json"
+    financial_facts = _read_json_file(facts_path)
+    if not isinstance(financial_facts, dict):
+        financial_facts = _derive_financial_facts(
+            specs=specs,
+            ticker=ticker,
+            market=market,
+        )
+    context_packet = _read_json_file(context_path)
+    if not isinstance(context_packet, dict):
+        context_packet = _derive_task2_context_packet(
+            specs=specs,
+            pack=pack,
+            financial_facts=financial_facts,
+        )
+    else:
+        context_packet = {
+            **context_packet,
+            "reconciliation_status": pack.get("status"),
+            "critical_count": pack.get("critical_count", 0),
+            "warning_count": pack.get("warning_count", 0),
+        }
     facts_path.write_text(_json_result(financial_facts) + "\n", encoding="utf-8")
     context_path.write_text(_json_result(context_packet) + "\n", encoding="utf-8")
 

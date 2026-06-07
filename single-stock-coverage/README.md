@@ -18,16 +18,20 @@ nested task graph for direct debugging.
 Task 2 uses a context-controlled statement workflow:
 
 - `task2_financial_modeler` is a parent coordinator for assignment,
-  reconciliation checks, manifest updates, and Task 3 handoff gates.
+  handoff resolution, artifact verification, reconciliation checks, compact
+  audit writing, manifest updates, and Task 3 handoff gates.
+- `financial_facts_modeler` reads Task 1 artifacts, uses MCP data when needed,
+  and writes compact `financial_facts.json` plus `task2_context_packet.json`.
 - `is_modeler`, `bs_modeler`, and `cf_modeler` run as independent statement
-  JSON workers. They use MCP data for their own statements, apply
-  financial-data normalization, and write only their own JSON artifacts.
+  JSON workers. They consume the compact Task 2 context and write only their
+  own JSON artifacts.
 - The Task 2 parent reconciles the three statement JSON files with
-  `reconcile_statement_specs`; this also writes `financial_facts.json` and
-  `task2_context_packet.json`.
+  `reconcile_statement_specs`.
 - `workbook_builder` is the only Task 2 child that builds
   `integrated_model.xlsx`, validates the workbook, and writes `model_audit.md`.
 - `model_update_executor` refreshes an existing workbook from reconciled
   statement specs without using MCP tools.
 
-Artifacts are written under workspace-level `out/coverage/{market}-{ticker}/runs/<timestamp>/`.
+Direct Task 2 runs resolve and continue the run that contains real Task 1
+artifacts; they do not reconstruct Task 1 from prompt prose. Artifacts are
+written under workspace-level `out/coverage/{market}-{ticker}/runs/<timestamp>/`.

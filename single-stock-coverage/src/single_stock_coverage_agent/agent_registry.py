@@ -13,18 +13,21 @@ from single_stock_coverage_agent.tools import (
     create_coverage_run_dir,
     read_statement_context,
     reconcile_statement_specs,
+    resolve_task2_handoff,
     update_integrated_three_statement_model,
     update_run_manifest,
     validate_balance_sheet_json,
     validate_cash_flow_json,
     validate_integrated_three_statement_model,
     validate_income_statement_json,
+    verify_task2_artifacts,
     write_coverage_state,
     write_balance_sheet_json,
     write_cash_flow_json,
     write_income_statement_json,
     write_json_artifact,
     write_markdown_artifact,
+    write_task2_model_audit,
 )
 
 
@@ -380,7 +383,10 @@ def _coverage_artifact_tools() -> list[Any]:
 
 def _task2_check_tools() -> list[Any]:
     return [
+        resolve_task2_handoff,
+        verify_task2_artifacts,
         reconcile_statement_specs,
+        write_task2_model_audit,
     ]
 
 

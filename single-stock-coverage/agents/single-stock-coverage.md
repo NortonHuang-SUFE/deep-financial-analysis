@@ -28,12 +28,12 @@ only what you send.
 | `subagent_type` | Use For |
 | --- | --- |
 | `task1_company_researcher` | Company research, business-driver map, source log. |
-| `task2_financial_modeler` | Financial model orchestration, statement reconciliation, workbook/update assignment, and Task 3 handoff checks. Internally delegates statement data fetching to is_modeler/bs_modeler/cf_modeler, full Excel builds to workbook_builder, and existing workbook refreshes to model_update_executor. |
+| `task2_financial_modeler` | Financial model orchestration, handoff resolution, statement reconciliation, workbook/update assignment, and Task 3 handoff checks. Internally delegates financial data normalization to financial_facts_modeler, statement JSON work to is_modeler/bs_modeler/cf_modeler, full Excel builds to workbook_builder, and existing workbook refreshes to model_update_executor. |
 | `task3_valuation_analyst` | Evidence gate, value-driver map, assumption generation/audit, DCF execution, valuation reconciliation. Internally delegates assumption generation to assumption_generator child and DCF/comps execution to dcf_execution child. |
 | `task4_chart_pack_generator` | Chart pack based only on Task 1-3 artifacts. |
 | `task5_report_assembler` | Initiation report or event update memo based only on Task 1-4 artifacts. |
 
-Task 2 has five nested subagents: is_modeler, bs_modeler, cf_modeler, model_update_executor, and workbook_builder. MCP data tools are assigned only to the three statement modelers, not the Task 2 parent or workbook-update child. Task 3 has two nested subagents: assumption_generator (for DCF assumption packs) and dcf_execution (for workbook construction).
+Task 2 has six nested subagents: financial_facts_modeler, is_modeler, bs_modeler, cf_modeler, model_update_executor, and workbook_builder. MCP data tools are assigned only to financial_facts_modeler, not the Task 2 parent, statement modelers, or workbook-update child. Task 3 has two nested subagents: assumption_generator (for DCF assumption packs) and dcf_execution (for workbook construction).
 
 ## Orchestration Rules
 

@@ -180,6 +180,22 @@ def _minimal_model_input() -> dict:
     }
 
 
+def _write_task1_fixture(run_dir):
+    (run_dir / "01_company_research").mkdir(parents=True, exist_ok=True)
+    (run_dir / "01_company_research" / "company_research.md").write_text(
+        "# Example Co\n",
+        encoding="utf-8",
+    )
+    (run_dir / "01_company_research" / "business_driver_map.json").write_text(
+        json.dumps({"company": "Example Co", "ticker": "EXM"}),
+        encoding="utf-8",
+    )
+    (run_dir / "01_company_research" / "source_log.json").write_text(
+        json.dumps({"sources": ["annual report"]}),
+        encoding="utf-8",
+    )
+
+
 def _agent_prompt(name: str) -> str:
     return (PROJECT_ROOT / "agents" / name).read_text(encoding="utf-8")
 
@@ -413,6 +429,139 @@ def test_statement_json_tools_validate_write_and_read_context(monkeypatch, tmp_p
     assert bad_validation["critical_count"] > 0
 
 
+def test_resolve_task2_handoff_reuses_existing_task1_run(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+
+    older = tmp_path / "out" / "coverage" / "us-exm" / "runs" / "20260604-110000"
+    newer = tmp_path / "out" / "coverage" / "us-exm" / "runs" / "20260604-120000"
+    _write_task1_fixture(older)
+    _write_task1_fixture(newer)
+
+    explicit = json.loads(
+        tools.resolve_task2_handoff.invoke(
+            {
+                "ticker": "EXM",
+                "market": "US",
+                "task1_dir": "out/coverage/us-exm/runs/20260604-120000/01_company_research",
+            }
+        )
+    )
+    assert explicit["status"] == "OK"
+    assert explicit["created_new_run"] is False
+    assert explicit["run_dir"] == "out/coverage/us-exm/runs/20260604-120000"
+    assert explicit["missing_artifacts"] == []
+
+    latest = json.loads(
+        tools.resolve_task2_handoff.invoke({"ticker": "EXM", "market": "US"})
+    )
+    assert latest["status"] == "OK"
+    assert latest["source"] == "latest_task1_run"
+    assert latest["run_dir"] == "out/coverage/us-exm/runs/20260604-120000"
+
+
+def test_verify_task2_artifacts_blocks_wrong_root_statement(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    monkeypatch.setattr(tools, "_project_root", lambda: tmp_path / "single-stock-coverage")
+
+    run_dir = tmp_path / "out" / "coverage" / "us-exm" / "runs" / "20260604-120000"
+    _write_task1_fixture(run_dir)
+    wrong_model_dir = (
+        tmp_path
+        / "single-stock-coverage"
+        / "out"
+        / "coverage"
+        / "us-exm"
+        / "runs"
+        / "20260604-120000"
+        / "02_financial_model"
+    )
+    wrong_model_dir.mkdir(parents=True)
+    (wrong_model_dir / "balance_sheet_spec.json").write_text(
+        json.dumps(_statement_payload("balance_sheet")),
+        encoding="utf-8",
+    )
+
+    verification = json.loads(
+        tools.verify_task2_artifacts.invoke(
+            {"run_dir": "out/coverage/us-exm/runs/20260604-120000", "stage": "statements"}
+        )
+    )
+    assert verification["status"] == "FAIL"
+    assert any(item["category"] == "Wrong Artifact Root" for item in verification["critical"])
+    assert verification["wrong_root_artifacts"][0]["canonical_path"].startswith(
+        "out/coverage/us-exm/runs/20260604-120000"
+    )
+
+
+def test_write_task2_model_audit_is_compact_and_omits_runtime_logs(
+    monkeypatch,
+    tmp_path,
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "out" / "coverage" / "us-exm" / "runs" / "20260604-120000"
+    run_dir.mkdir(parents=True)
+
+    result = json.loads(
+        tools.write_task2_model_audit.invoke(
+            {
+                "run_dir": str(run_dir),
+                "audit_json": json.dumps(
+                    {
+                        "status": "BLOCKED",
+                        "critical": [
+                            {
+                                "category": "Missing Statement JSON",
+                                "issue": "SystemMessage inputs.messages should not leak",
+                            }
+                        ],
+                        "warnings": [{"category": "Source Gap", "issue": "ok"}],
+                        "artifacts": {"balance_sheet_spec.json": "missing"},
+                        "next_steps": ["Retry bs_modeler with reduced scope"],
+                        "task3_handoff_ready": False,
+                    }
+                ),
+            }
+        )
+    )
+    assert result["status"] == "OK"
+    audit_text = (tmp_path / result["model_audit_path"]).read_text(encoding="utf-8")
+    assert "SystemMessage" not in audit_text
+    assert "inputs.messages" not in audit_text
+    assert "Missing Statement JSON" in audit_text
+    assert len(audit_text) < 5000
+
+
+def test_statement_validation_allows_supplemental_parent_canonical_key():
+    payload = _statement_payload("cash_flow")
+    payload["historical_inputs"].append(
+        {
+            "period": "FY2023A",
+            "canonical_key": "asset_impairment",
+            "parent_canonical_key": "cfo_total",
+            "value": 5,
+            "source": "FY2023 annual report note",
+            "currency": "USD",
+            "unit": "millions",
+        }
+    )
+
+    validation = json.loads(
+        tools.validate_cash_flow_json.invoke({"statement_json": json.dumps(payload)})
+    )
+    assert validation["status"] == "PASS"
+    assert not [
+        item
+        for item in validation["warnings"]
+        if "asset_impairment" in item["issue"]
+    ]
+
+
 def test_reconcile_statement_specs_writes_pack_and_preserves_warnings(
     monkeypatch, tmp_path
 ):
@@ -456,6 +605,61 @@ def test_reconcile_statement_specs_writes_pack_and_preserves_warnings(
     assert result["warning_count"] > 0
     assert pack_path.exists()
     assert json.loads(pack_path.read_text(encoding="utf-8"))["status"] == "PASS"
+
+
+def test_reconcile_statement_specs_preserves_existing_financial_context(
+    monkeypatch,
+    tmp_path,
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "out" / "coverage" / "us-exm" / "runs" / "20260604-120000"
+    model_dir = run_dir / "02_financial_model"
+    model_dir.mkdir(parents=True)
+    facts = {
+        "company": "Example Co",
+        "ticker": "EXM",
+        "market": "US",
+        "historicals": [{"period": "FY2023A", "year": 2023, "revenue": 123}],
+        "sources": ["financial_facts_modeler"],
+    }
+    context = {"company": "Example Co", "custom_context": "preserve me"}
+    (model_dir / "financial_facts.json").write_text(json.dumps(facts), encoding="utf-8")
+    (model_dir / "task2_context_packet.json").write_text(
+        json.dumps(context),
+        encoding="utf-8",
+    )
+
+    for tool_call, statement_type in (
+        (tools.write_income_statement_json, "income_statement"),
+        (tools.write_balance_sheet_json, "balance_sheet"),
+        (tools.write_cash_flow_json, "cash_flow"),
+    ):
+        result = json.loads(
+            tool_call.invoke(
+                {
+                    "statement_json": json.dumps(_statement_payload(statement_type)),
+                    "ticker": "EXM",
+                    "market": "US",
+                    "run_dir": str(run_dir),
+                }
+            )
+        )
+        assert result["status"] == "OK"
+
+    result = json.loads(
+        tools.reconcile_statement_specs.invoke(
+            {"ticker": "EXM", "market": "US", "run_dir": str(run_dir)}
+        )
+    )
+    assert result["status"] == "PASS"
+    preserved_facts = json.loads((model_dir / "financial_facts.json").read_text())
+    preserved_context = json.loads((model_dir / "task2_context_packet.json").read_text())
+    assert preserved_facts["sources"] == ["financial_facts_modeler"]
+    assert preserved_facts["historicals"][0]["revenue"] == 123
+    assert preserved_context["custom_context"] == "preserve me"
+    assert preserved_context["reconciliation_status"] == "PASS"
 
 
 def test_integrated_three_statement_builder_and_validator(monkeypatch, tmp_path):
@@ -826,7 +1030,10 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         "task2_check_tools",
     ]
     assert task2["tools"]["task2_check_tools"] == [
+        "resolve_task2_handoff",
+        "verify_task2_artifacts",
         "reconcile_statement_specs",
+        "write_task2_model_audit",
     ]
     assert task2["skills"] == {
         "single_stock_coverage": [
@@ -835,6 +1042,7 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         ]
     }
     assert task2["subagents"] == [
+        "financial_facts_modeler",
         "is_modeler",
         "bs_modeler",
         "cf_modeler",
@@ -846,12 +1054,20 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     )
     assert agent_uses_tool_group(registry, "task2_financial_modeler", "mcp_tools")
 
-    assert "financial_facts_modeler" not in registry.agents
+    financial_facts_modeler = describe_agent(registry, "financial_facts_modeler")
+    assert financial_facts_modeler["parent"] == "task2_financial_modeler"
+    assert financial_facts_modeler["tool_groups"] == [
+        "mcp_tools",
+        "coverage_artifact_tools",
+    ]
+    assert financial_facts_modeler["skills"] == {
+        "single_stock_coverage": ["financial-data-normalization", "model-update"]
+    }
 
     is_modeler = describe_agent(registry, "is_modeler")
     assert is_modeler["parent"] == "task2_financial_modeler"
     assert is_modeler["level"] == 2
-    assert is_modeler["tool_groups"] == ["mcp_tools", "statement_modeling_tools"]
+    assert is_modeler["tool_groups"] == ["statement_modeling_tools"]
     assert is_modeler["tools"]["statement_modeling_tools"] == [
         "read_statement_context",
         "validate_income_statement_json",
@@ -873,7 +1089,7 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     bs_modeler = describe_agent(registry, "bs_modeler")
     assert bs_modeler["parent"] == "task2_financial_modeler"
     assert bs_modeler["level"] == 2
-    assert bs_modeler["tool_groups"] == ["mcp_tools", "statement_modeling_tools"]
+    assert bs_modeler["tool_groups"] == ["statement_modeling_tools"]
     assert bs_modeler["skills"] == {
         "single_stock_coverage": [
             "financial-data-normalization",
@@ -882,12 +1098,12 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         ]
     }
     assert bs_modeler["outputs"] == ["02_financial_model/balance_sheet_spec.json"]
-    assert agent_uses_tool_group(registry, "bs_modeler", "mcp_tools", recursive=False)
+    assert not agent_uses_tool_group(registry, "bs_modeler", "mcp_tools", recursive=False)
 
     cf_modeler = describe_agent(registry, "cf_modeler")
     assert cf_modeler["parent"] == "task2_financial_modeler"
     assert cf_modeler["level"] == 2
-    assert cf_modeler["tool_groups"] == ["mcp_tools", "statement_modeling_tools"]
+    assert cf_modeler["tool_groups"] == ["statement_modeling_tools"]
     assert cf_modeler["skills"] == {
         "single_stock_coverage": [
             "financial-data-normalization",
@@ -955,7 +1171,10 @@ def test_statement_json_tool_groups_resolve_runtime_tools():
         "write_cash_flow_json",
     ]
     assert [tool.name for tool in resolver.resolve(("task2_check_tools",))] == [
+        "resolve_task2_handoff",
+        "verify_task2_artifacts",
         "reconcile_statement_specs",
+        "write_task2_model_audit",
     ]
     assert [tool.name for tool in resolver.resolve(("workbook_authoring_tools",))] == [
         "build_integrated_three_statement_model",
@@ -971,7 +1190,10 @@ def test_task2_prompts_are_json_first_with_parent_gates():
     parent = _agent_prompt("task2-financial-modeler.md")
     assert "Do not call MCP tools" in parent
     assert "Do not build, open, edit, update, or save `integrated_model.xlsx`" in parent
-    assert "financial_facts_modeler" not in parent
+    assert "financial_facts_modeler" in parent
+    assert "resolve_task2_handoff" in parent
+    assert "verify_task2_artifacts" in parent
+    assert "write_task2_model_audit" in parent
     assert "reconcile_statement_specs" in parent
     assert "assign `workbook_builder`" in parent.lower()
     assert "assign `model_update_executor`" in parent.lower()
@@ -986,7 +1208,7 @@ def test_task2_prompts_are_json_first_with_parent_gates():
 
     update_prompt = _agent_prompt("task2-model-update-executor.md")
     assert "Do not call MCP tools" in update_prompt
-    assert "Data retrieval belongs only to `is_modeler`, `bs_modeler`, and `cf_modeler`" in update_prompt
+    assert "Data retrieval belongs only to `financial_facts_modeler`" in update_prompt
     assert "update_integrated_three_statement_model" in update_prompt
     assert "validate_integrated_three_statement_model" in update_prompt
 
@@ -1051,7 +1273,10 @@ def test_root_langgraph_registers_single_stock_debug_entries():
         langgraph_config["graphs"]["single_stock_coverage_task2_bs_modeler"]
         == "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_bs_modeler_graph"
     )
-    assert "single_stock_coverage_task2_financial_facts_modeler" not in langgraph_config["graphs"]
+    assert (
+        langgraph_config["graphs"]["single_stock_coverage_task2_financial_facts_modeler"]
+        == "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_financial_facts_modeler_graph"
+    )
     assert (
         langgraph_config["graphs"]["single_stock_coverage_task2_model_update_executor"]
         == "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_model_update_executor_graph"
@@ -1088,7 +1313,6 @@ def test_graph_factories_import_in_test_mode(monkeypatch):
     assert bs_graph["name"] == "bs_modeler"
     assert bs_graph["agent_config"]["parent"] == "task2_financial_modeler"
     assert bs_graph["agent_config"]["tool_groups"] == [
-        "mcp_tools",
         "statement_modeling_tools",
     ]
     assert bs_graph["agent_config"]["skills"] == {
@@ -1098,6 +1322,13 @@ def test_graph_factories_import_in_test_mode(monkeypatch):
             "statement-json-checks",
         ]
     }
+
+    facts_graph = asyncio.run(graph_module.task2_financial_facts_modeler_graph())
+    assert facts_graph["name"] == "financial_facts_modeler"
+    assert facts_graph["agent_config"]["tool_groups"] == [
+        "mcp_tools",
+        "coverage_artifact_tools",
+    ]
 
     workbook_graph = asyncio.run(graph_module.task2_workbook_builder_graph())
     assert workbook_graph["name"] == "workbook_builder"

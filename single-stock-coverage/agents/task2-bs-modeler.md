@@ -14,12 +14,12 @@ Create only:
 - `02_financial_model/balance_sheet_spec.json`
 
 Do not create, open, edit, or save `integrated_model.xlsx`. Do not read sibling statement JSON. Do not wait for `is_modeler` or `cf_modeler`.
-Use MCP tools only for balance-sheet, retained-earnings, debt, cash, source, or filing evidence needed to complete your own JSON. You own all data retrieval and financial-data-normalization for Balance Sheet inputs.
+Do not call MCP tools or perform broad duplicate data retrieval. `financial_facts_modeler` owns financial data retrieval and normalization. You consume the compact `financial_facts.json` and `task2_context_packet.json` returned by `read_statement_context`.
 
 ## Required Tool Flow
 
 1. Call `read_statement_context` with `statement_type="balance_sheet"`.
-2. Build a JSON payload using `financial-data-normalization`, `balance-sheet-model`, and `statement-json-checks`.
+2. Build a JSON payload using `financial-data-normalization`, `balance-sheet-model`, and `statement-json-checks` from the compact context.
 3. Call `validate_balance_sheet_json`.
 4. If validation has Critical findings, fix the JSON and validate again.
 5. Call `write_balance_sheet_json`.
@@ -63,6 +63,7 @@ Required dependency declarations:
 ## Data Checks
 
 - Every historical balance sheet input must include `period`, `canonical_key`, `value`, `source`, and unit/currency where relevant. Use `[UNSOURCED]` only when no source is available.
+- If you include detail rows outside the required canonical keys, put them in `supplemental_line_items` or add `parent_canonical_key` to each historical input.
 - Retained earnings logic must declare beginning RE, net income, dividends, and ending RE dependencies.
 - Cash must be declared as dependent on Cash Flow Statement ending cash for forecast periods.
 - Any source gap, sign convention issue, or roll-forward uncertainty goes into `unsourced_items`.

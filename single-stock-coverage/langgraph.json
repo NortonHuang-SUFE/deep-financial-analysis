@@ -3,6 +3,7 @@
     "single_stock_coverage": "./src/single_stock_coverage_agent/graph.py:graph",
     "single_stock_coverage_task1_company_researcher": "./src/single_stock_coverage_agent/graph.py:task1_company_researcher_graph",
     "single_stock_coverage_task2_financial_modeler": "./src/single_stock_coverage_agent/graph.py:task2_financial_modeler_graph",
+    "single_stock_coverage_task2_financial_facts_modeler": "./src/single_stock_coverage_agent/graph.py:task2_financial_facts_modeler_graph",
     "single_stock_coverage_task2_is_modeler": "./src/single_stock_coverage_agent/graph.py:task2_is_modeler_graph",
     "single_stock_coverage_task2_bs_modeler": "./src/single_stock_coverage_agent/graph.py:task2_bs_modeler_graph",
     "single_stock_coverage_task2_cf_modeler": "./src/single_stock_coverage_agent/graph.py:task2_cf_modeler_graph",

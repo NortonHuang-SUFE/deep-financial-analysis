@@ -5,7 +5,7 @@ description: Normalize sourced public-company financial data for Task 2 single-s
 
 # Financial Data Normalization
 
-Use this skill inside `is_modeler`, `bs_modeler`, and `cf_modeler` after Task 1 research and before statement JSON writing. The goal is sourced, normalized statement-level facts that can be reconciled into `financial_facts.json`, model checks, and Task 3 DCF inputs.
+Use this skill first inside `financial_facts_modeler` after Task 1 research. The goal is sourced, normalized statement-level facts that can be compacted into `financial_facts.json` and `task2_context_packet.json`, then consumed by `is_modeler`, `bs_modeler`, and `cf_modeler` without broad duplicate data retrieval.
 
 ## Inputs
 
@@ -47,9 +47,9 @@ When cleaning spreadsheet inputs, follow the same discipline as `clean-data-xls`
 - Prefer formula-based helper columns for transparent transformations.
 - Do not destructively overwrite raw imported data unless explicitly requested.
 
-## Output: statement historical_inputs
+## Output: financial_facts and statement historical_inputs
 
-Each statement subagent writes normalized data into its own statement JSON `historical_inputs`. Parent reconciliation then derives `financial_facts.json`. Each historical input record must include:
+`financial_facts_modeler` writes compact normalized facts first. Each statement subagent then maps those facts into its own statement JSON `historical_inputs`. Each historical input record must include:
 
 ```json
 {
@@ -70,6 +70,10 @@ Each record should preserve:
 - Debt, cash, diluted shares.
 - Segment revenue and margin if available.
 - Source string or `[UNSOURCED]`.
+
+If a statement needs detail rows outside the required aggregate canonical keys,
+use `supplemental_line_items` or set `parent_canonical_key` on each detail
+historical input so parent checks can tie the detail back to the aggregate row.
 
 ## Quality Gate
 
