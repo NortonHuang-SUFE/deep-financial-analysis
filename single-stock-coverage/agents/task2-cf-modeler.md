@@ -14,12 +14,12 @@ Create only:
 - `02_financial_model/cash_flow_statement_spec.json`
 
 Do not create, open, edit, or save `integrated_model.xlsx`. Do not read sibling statement JSON. Do not wait for `is_modeler` or `bs_modeler`.
-Use MCP tools only for cash-flow, CapEx, working-capital, source, or filing evidence needed to complete your own JSON.
+Use MCP tools only for cash-flow, CapEx, working-capital, source, or filing evidence needed to complete your own JSON. You own all data retrieval and financial-data-normalization for Cash Flow Statement inputs.
 
 ## Required Tool Flow
 
 1. Call `read_statement_context` with `statement_type="cash_flow"`.
-2. Build a JSON payload using `cash-flow-model` and `statement-json-checks`.
+2. Build a JSON payload using `financial-data-normalization`, `cash-flow-model`, and `statement-json-checks`.
 3. Call `validate_cash_flow_json`.
 4. If validation has Critical findings, fix the JSON and validate again.
 5. Call `write_cash_flow_json`.
@@ -65,7 +65,7 @@ Required dependency declarations:
 
 ## Data Checks
 
-- Every historical cash flow input must have a source string or `[UNSOURCED]`.
+- Every historical cash flow input must include `period`, `canonical_key`, `value`, `source`, and unit/currency where relevant. Use `[UNSOURCED]` only when no source is available.
 - State cash flow sign convention explicitly: inflows positive, outflows negative.
 - Forecast logic must declare indirect method links for net income, D&A, NWC, CapEx, debt movement, dividends, beginning cash, and ending cash.
 - Any source gap, sign convention issue, or unsupported cash bridge assumption goes into `unsourced_items`.

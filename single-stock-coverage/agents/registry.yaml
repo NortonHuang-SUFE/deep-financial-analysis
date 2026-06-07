@@ -50,6 +50,12 @@ tool_groups:
       - build_integrated_three_statement_model
       - validate_integrated_three_statement_model
 
+  workbook_update_tools:
+    description: Task 2 update child tools for prior-workbook refresh and validation.
+    tools:
+      - update_integrated_three_statement_model
+      - validate_integrated_three_statement_model
+
 skill_sources:
   single_stock_coverage:
     path: ./skills
@@ -127,34 +133,11 @@ agents:
         - model-update
         - statement-reconciliation-checks
     subagents:
-      - financial_facts_modeler
       - is_modeler
       - bs_modeler
       - cf_modeler
+      - model_update_executor
       - workbook_builder
-
-  financial_facts_modeler:
-    prompt: task2-financial-facts-modeler.md
-    description: Uses MCP data and Task 1 artifacts to produce sourced financial_facts.json and task2_context_packet.json.
-    parent: task2_financial_modeler
-    level: 2
-    role: Task 2 data normalization child for sourced historical facts and compact model context.
-    inputs:
-      - 01_company_research/company_research.md
-      - 01_company_research/business_driver_map.json
-      - 01_company_research/source_log.json
-      - prior Task 2 artifacts for model updates when provided
-    outputs:
-      - 02_financial_model/financial_facts.json
-      - 02_financial_model/task2_context_packet.json
-    tool_groups:
-      - mcp_tools
-      - coverage_artifact_tools
-    skills:
-      single_stock_coverage:
-        - financial-data-normalization
-        - model-update
-    subagents: []
 
   is_modeler:
     prompt: task2-is-modeler.md
@@ -163,8 +146,7 @@ agents:
     level: 2
     role: Parallel statement modeler for revenue build and income statement JSON.
     inputs:
-      - 02_financial_model/financial_facts.json
-      - 02_financial_model/task2_context_packet.json
+      - 01_company_research/company_research.md
       - 01_company_research/business_driver_map.json
       - 01_company_research/source_log.json
     outputs:
@@ -175,6 +157,7 @@ agents:
       - statement_modeling_tools
     skills:
       single_stock_coverage:
+        - financial-data-normalization
         - income-statement-model
         - statement-json-checks
     subagents: []
@@ -186,8 +169,7 @@ agents:
     level: 2
     role: Parallel statement modeler for balance sheet JSON and retained earnings/cash dependency declarations.
     inputs:
-      - 02_financial_model/financial_facts.json
-      - 02_financial_model/task2_context_packet.json
+      - 01_company_research/company_research.md
       - 01_company_research/business_driver_map.json
       - 01_company_research/source_log.json
     outputs:
@@ -197,6 +179,7 @@ agents:
       - statement_modeling_tools
     skills:
       single_stock_coverage:
+        - financial-data-normalization
         - balance-sheet-model
         - statement-json-checks
     subagents: []
@@ -208,8 +191,7 @@ agents:
     level: 2
     role: Parallel statement modeler for indirect cash flow JSON and cross-statement cash tie dependency declarations.
     inputs:
-      - 02_financial_model/financial_facts.json
-      - 02_financial_model/task2_context_packet.json
+      - 01_company_research/company_research.md
       - 01_company_research/business_driver_map.json
       - 01_company_research/source_log.json
     outputs:
@@ -219,8 +201,34 @@ agents:
       - statement_modeling_tools
     skills:
       single_stock_coverage:
+        - financial-data-normalization
         - cash-flow-model
         - statement-json-checks
+    subagents: []
+
+  model_update_executor:
+    prompt: task2-model-update-executor.md
+    description: Refreshes an existing integrated_model.xlsx from reconciled updated statement specs without fetching data.
+    parent: task2_financial_modeler
+    level: 2
+    role: Existing-model update child for workbook refresh, validation, and audit handoff.
+    inputs:
+      - prior 02_financial_model/integrated_model.xlsx
+      - 02_financial_model/financial_facts.json
+      - 02_financial_model/task2_context_packet.json
+      - 02_financial_model/statement_spec_pack.json
+    outputs:
+      - 02_financial_model/integrated_model.xlsx
+      - 02_financial_model/model_audit.md
+    tool_groups:
+      - workbook_update_tools
+      - coverage_artifact_tools
+    skills:
+      single_stock_coverage:
+        - model-update
+        - three-statement-model
+        - xlsx-author
+        - audit-xls
     subagents: []
 
   workbook_builder:

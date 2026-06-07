@@ -13,6 +13,7 @@ from single_stock_coverage_agent.tools import (
     create_coverage_run_dir,
     read_statement_context,
     reconcile_statement_specs,
+    update_integrated_three_statement_model,
     update_run_manifest,
     validate_balance_sheet_json,
     validate_cash_flow_json,
@@ -96,6 +97,8 @@ class ToolGroupResolver:
                 self._cache[group_name] = _statement_modeling_tools()
             elif group_name == "workbook_authoring_tools":
                 self._cache[group_name] = _workbook_authoring_tools()
+            elif group_name == "workbook_update_tools":
+                self._cache[group_name] = _workbook_update_tools()
             else:
                 raise KeyError(f"Unknown tool group: {group_name}")
         return list(self._cache[group_name])
@@ -396,6 +399,13 @@ def _statement_modeling_tools() -> list[Any]:
 def _workbook_authoring_tools() -> list[Any]:
     return [
         build_integrated_three_statement_model,
+        validate_integrated_three_statement_model,
+    ]
+
+
+def _workbook_update_tools() -> list[Any]:
+    return [
+        update_integrated_three_statement_model,
         validate_integrated_three_statement_model,
     ]
 

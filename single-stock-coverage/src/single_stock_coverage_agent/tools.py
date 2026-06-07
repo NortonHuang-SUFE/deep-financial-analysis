@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -510,13 +511,29 @@ def _statement_context_payload(statement_type: str, run_dir: Path) -> dict[str, 
     paths = {
         "business_driver_map": task1_dir / "business_driver_map.json",
         "source_log": task1_dir / "source_log.json",
+        "company_research": task1_dir / "company_research.md",
+    }
+    optional_paths = {
         "financial_facts": model_dir / "financial_facts.json",
         "task2_context_packet": model_dir / "task2_context_packet.json",
     }
-    artifacts = {name: _read_json_file(path) for name, path in paths.items()}
+    artifacts = {
+        name: (
+            path.read_text(encoding="utf-8")
+            if name == "company_research" and path.exists()
+            else _read_json_file(path)
+        )
+        for name, path in paths.items()
+    }
+    artifacts.update({name: _read_json_file(path) for name, path in optional_paths.items()})
     missing = [
         _relative_to_workspace(path)
         for name, path in paths.items()
+        if artifacts[name] is None
+    ]
+    optional_missing = [
+        _relative_to_workspace(path)
+        for name, path in optional_paths.items()
         if artifacts[name] is None
     ]
     return {
@@ -529,6 +546,7 @@ def _statement_context_payload(statement_type: str, run_dir: Path) -> dict[str, 
         ),
         "artifacts": artifacts,
         "missing_artifacts": missing,
+        "optional_missing_artifacts": optional_missing,
     }
 
 
@@ -577,6 +595,191 @@ def _dependency_values(payload: dict[str, Any]) -> list[str]:
     return []
 
 
+def _historical_input_records(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    raw = payload.get("historical_inputs")
+    if not isinstance(raw, list):
+        return []
+    return [item for item in raw if isinstance(item, dict)]
+
+
+def _historical_input_key(record: dict[str, Any]) -> str:
+    return str(
+        _field(
+            record,
+            "canonical_key",
+            "canonical_row_key",
+            "line_item_key",
+            "key",
+            "name",
+            default="",
+        )
+        or ""
+    )
+
+
+def _model_field_for_canonical_key(canonical_key: str) -> str | None:
+    mapping = {
+        "revenue_total": "revenue",
+        "gross_profit": "gross_profit",
+        "ebit": "ebit",
+        "ebitda": "ebitda",
+        "interest_expense": "interest_expense",
+        "pretax_income": "pretax_income",
+        "tax_expense": "tax_expense",
+        "net_income": "net_income",
+        "da_total": "da",
+        "cash_and_equivalents": "cash",
+        "accounts_receivable": "ar",
+        "inventory": "inventory",
+        "accounts_payable": "ap",
+        "capex": "capex",
+        "net_ppe": "ppe",
+        "total_debt": "debt",
+        "retained_earnings": "retained_earnings",
+        "diluted_shares": "shares",
+    }
+    return mapping.get(canonical_key)
+
+
+def _validate_statement_historical_inputs(
+    payload: dict[str, Any],
+    expected_statement_type: str,
+    critical: list[dict[str, str]],
+    warnings: list[dict[str, str]],
+) -> None:
+    records = _historical_input_records(payload)
+    if not records:
+        critical.append(
+            {
+                "category": "Historical Inputs",
+                "issue": "historical_inputs must include sourced records.",
+            }
+        )
+        return
+
+    canonical_keys = _canonical_keys(payload)
+    for idx, record in enumerate(records):
+        missing: list[str] = []
+        if not record.get("period"):
+            missing.append("period")
+        key = _historical_input_key(record)
+        if not key:
+            missing.append("canonical_key")
+        elif key not in canonical_keys:
+            warnings.append(
+                {
+                    "category": "Historical Inputs",
+                    "issue": (
+                        f"historical_inputs[{idx}] canonical_key '{key}' is not "
+                        f"listed in {expected_statement_type} canonical_row_keys."
+                    ),
+                }
+            )
+        if "value" not in record and "amount" not in record:
+            missing.append("value")
+        if not _field(record, "source", "source_text", default=""):
+            missing.append("source")
+        if missing:
+            critical.append(
+                {
+                    "category": "Historical Inputs",
+                    "issue": (
+                        f"historical_inputs[{idx}] missing required field(s): "
+                        + ", ".join(missing)
+                    ),
+                }
+            )
+
+
+def _derive_financial_facts(
+    *,
+    specs: dict[str, dict[str, Any]],
+    ticker: str,
+    market: str,
+) -> dict[str, Any]:
+    metadata_source = next(iter(specs.values()), {})
+    periods: dict[str, dict[str, Any]] = {}
+    sources: list[str] = []
+    unsourced: list[str] = []
+
+    for statement_type, payload in specs.items():
+        for item in _historical_input_records(payload):
+            period = str(item.get("period") or "")
+            if not period:
+                continue
+            record = periods.setdefault(
+                period,
+                {
+                    "period": period,
+                    "year": _period_year(period, 2020 + len(periods)),
+                    "source": "[UNSOURCED]",
+                },
+            )
+            source = str(_field(item, "source", "source_text", default="[UNSOURCED]"))
+            if source and source != "[UNSOURCED]":
+                sources.append(source)
+                if record.get("source") == "[UNSOURCED]":
+                    record["source"] = source
+            elif source == "[UNSOURCED]":
+                unsourced.append(f"{statement_type}:{period}:{_historical_input_key(item)}")
+
+            model_field = _model_field_for_canonical_key(_historical_input_key(item))
+            if model_field:
+                record[model_field] = _as_float(
+                    _field(item, "value", "amount", default=0.0),
+                    0.0,
+                )
+
+        for item in payload.get("unsourced_items") or []:
+            unsourced.append(f"{statement_type}:{item}")
+
+    historicals = sorted(periods.values(), key=lambda item: item["year"])
+    return {
+        "company": str(_field(metadata_source, "company", "company_name", default="Company")),
+        "ticker": str(_field(metadata_source, "ticker", "symbol", default=ticker)),
+        "market": str(_field(metadata_source, "market", "exchange", default=market)),
+        "currency": str(_field(metadata_source, "currency", "reporting_currency", default="USD")),
+        "unit": str(_field(metadata_source, "unit", "reporting_unit", default="millions")),
+        "fiscal_year_end": str(_field(metadata_source, "fiscal_year_end", default="Dec")),
+        "historicals": historicals,
+        "segments": [],
+        "guidance": [],
+        "projection_summary": {},
+        "assumptions": dict(metadata_source.get("assumptions") or {}),
+        "sources": sorted(set(sources)),
+        "unsourced": sorted(set(unsourced)),
+    }
+
+
+def _derive_task2_context_packet(
+    *,
+    specs: dict[str, dict[str, Any]],
+    pack: dict[str, Any],
+    financial_facts: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "company": financial_facts.get("company", "Company"),
+        "ticker": financial_facts.get("ticker", ""),
+        "market": financial_facts.get("market", ""),
+        "currency": financial_facts.get("currency", "USD"),
+        "unit": financial_facts.get("unit", "millions"),
+        "fiscal_year_end": financial_facts.get("fiscal_year_end", "Dec"),
+        "periods": [item.get("period") for item in financial_facts.get("historicals", [])],
+        "canonical_row_keys": {
+            statement_type: list(STATEMENT_CANONICAL_KEYS[statement_type])
+            for statement_type in STATEMENT_JSON_ALLOWED_TYPES
+        },
+        "source_coverage": {
+            statement_type: payload.get("source_coverage", {})
+            for statement_type, payload in specs.items()
+        },
+        "unsourced": financial_facts.get("unsourced", []),
+        "reconciliation_status": pack.get("status"),
+        "critical_count": pack.get("critical_count", 0),
+        "warning_count": pack.get("warning_count", 0),
+    }
+
+
 def _validate_statement_payload(
     payload: dict[str, Any],
     expected_statement_type: str,
@@ -615,6 +818,13 @@ def _validate_statement_payload(
                 "issue": "Missing canonical row keys: " + ", ".join(missing_keys),
             }
         )
+
+    _validate_statement_historical_inputs(
+        payload,
+        expected_statement_type,
+        critical,
+        warnings,
+    )
 
     dependencies = " ".join(_dependency_values(payload)).lower()
     if not dependencies:
@@ -1165,7 +1375,30 @@ def reconcile_statement_specs(
     model_dir.mkdir(parents=True, exist_ok=True)
     pack_path = model_dir / "statement_spec_pack.json"
     pack_path.write_text(_json_result(pack) + "\n", encoding="utf-8")
-    return _json_result({**pack, "statement_spec_pack_path": _relative_to_workspace(pack_path)})
+
+    financial_facts = _derive_financial_facts(
+        specs=specs,
+        ticker=ticker,
+        market=market,
+    )
+    context_packet = _derive_task2_context_packet(
+        specs=specs,
+        pack=pack,
+        financial_facts=financial_facts,
+    )
+    facts_path = model_dir / "financial_facts.json"
+    context_path = model_dir / "task2_context_packet.json"
+    facts_path.write_text(_json_result(financial_facts) + "\n", encoding="utf-8")
+    context_path.write_text(_json_result(context_packet) + "\n", encoding="utf-8")
+
+    return _json_result(
+        {
+            **pack,
+            "statement_spec_pack_path": _relative_to_workspace(pack_path),
+            "financial_facts_path": _relative_to_workspace(facts_path),
+            "task2_context_packet_path": _relative_to_workspace(context_path),
+        }
+    )
 
 
 def _scoped_build_integrated_three_statement_model_reference(
@@ -2513,6 +2746,208 @@ def build_integrated_three_statement_model(
             "period_columns": period_columns,
             "warnings": [],
             "unsourced_items": sorted(set(str(item) for item in unsourced_items)),
+        }
+    )
+
+
+@tool
+def update_integrated_three_statement_model(
+    prior_workbook_path: str,
+    run_dir: str,
+    model_input_json: str = "",
+    statement_spec_pack_json: str = "",
+    update_scope_json: str = "{}",
+    output_dir: str = DEFAULT_OUTPUT_DIR,
+) -> str:
+    """Refresh an existing Task 2 workbook into the current run directory.
+
+    The update executor uses this only after statement specs are reconciled. It
+    does not fetch data; it copies the prior workbook, preserves formulas, marks
+    the workbook for recalculation, and returns the current-run workbook path for
+    validation/audit.
+    """
+    del output_dir
+    source_path = _resolve_workspace_path(prior_workbook_path)
+    if not source_path.exists():
+        return _json_result(
+            {
+                "status": "FAIL",
+                "workbook_path": "",
+                "critical_count": 1,
+                "critical": [
+                    {
+                        "category": "Missing Prior Workbook",
+                        "issue": f"Prior workbook not found: {source_path}",
+                    }
+                ],
+                "warnings": [],
+            }
+        )
+
+    try:
+        import openpyxl
+    except ImportError as exc:
+        return _json_result({"status": "ERROR", "message": f"openpyxl is not installed: {exc}"})
+
+    out_dir = _resolve_workspace_path(run_dir)
+    model_dir = _statement_model_dir(out_dir)
+    model_dir.mkdir(parents=True, exist_ok=True)
+    workbook_path = model_dir / "integrated_model.xlsx"
+    if source_path.resolve() != workbook_path.resolve():
+        shutil.copy2(source_path, workbook_path)
+
+    update_scope = _json_loads(update_scope_json or "{}", "update_scope_json")
+    if not isinstance(update_scope, dict):
+        raise ValueError("update_scope_json must be a JSON object")
+    model_input = _json_loads(model_input_json, "model_input_json") if model_input_json else {}
+    if not isinstance(model_input, dict):
+        raise ValueError("model_input_json must be a JSON object")
+    statement_pack = (
+        _json_loads(statement_spec_pack_json, "statement_spec_pack_json")
+        if statement_spec_pack_json
+        else _read_json_file(model_dir / "statement_spec_pack.json") or {}
+    )
+    if not isinstance(statement_pack, dict):
+        raise ValueError("statement_spec_pack_json must be a JSON object")
+    warnings = list(statement_pack.get("warnings") or [])
+    if statement_pack.get("builder_blocked"):
+        return _json_result(
+            {
+                "status": "FAIL",
+                "workbook_path": "",
+                "critical_count": int(statement_pack.get("critical_count") or 0),
+                "critical": statement_pack.get("critical") or [],
+                "warnings": statement_pack.get("warnings") or [],
+                "message": "statement_spec_pack.json has critical findings; update is blocked.",
+            }
+        )
+
+    wb = openpyxl.load_workbook(workbook_path)
+    updated_cells: list[str] = []
+    if model_input:
+        try:
+            merged = _merge_payload_model_input(model_input)
+            historicals = _historical_records(merged)
+        except ValueError as exc:
+            warnings.append(
+                {
+                    "category": "Model Input",
+                    "issue": f"Could not apply model_input_json to workbook: {exc}",
+                }
+            )
+        else:
+            period_ws = wb["Income Statement"] if "Income Statement" in wb.sheetnames else wb.active
+            period_cols = {
+                str(period_ws.cell(row=5, column=col_idx).value): col_idx
+                for col_idx in range(3, period_ws.max_column + 1)
+                if period_ws.cell(row=5, column=col_idx).value
+            }
+            update_map = {
+                "Revenue Build": {
+                    "core_revenue": "revenue",
+                    "revenue_total": "revenue",
+                },
+                "Income Statement": {
+                    "revenue_total": "revenue",
+                    "gross_profit": "gross_profit",
+                    "da_total": "da",
+                    "ebit": "ebit",
+                    "ebitda": "ebitda",
+                    "interest_expense": "interest_expense",
+                    "pretax_income": "pretax_income",
+                    "tax_expense": "tax_expense",
+                    "net_income": "net_income",
+                    "diluted_shares": "shares",
+                },
+                "Balance Sheet": {
+                    "cash_and_equivalents": "cash",
+                    "accounts_receivable": "ar",
+                    "inventory": "inventory",
+                    "accounts_payable": "ap",
+                    "net_ppe": "ppe",
+                    "total_debt": "debt",
+                    "retained_earnings": "retained_earnings",
+                },
+                "Cash Flow Statement": {
+                    "net_income_cf": "net_income",
+                    "da_addback": "da",
+                    "capex": "capex",
+                    "ending_cash": "cash",
+                },
+                "Working Capital": {
+                    "accounts_receivable": "ar",
+                    "inventory": "inventory",
+                    "accounts_payable": "ap",
+                },
+                "PP&E & D&A": {
+                    "capex": "capex",
+                    "da_total": "da",
+                    "ending_ppe": "ppe",
+                },
+                "Debt & Interest": {
+                    "ending_debt": "debt",
+                },
+                "Share Count": {
+                    "ending_diluted_shares": "shares",
+                },
+            }
+            sheet_key_map = {
+                "Revenue Build": "revenue_build",
+                "Income Statement": "income_statement",
+                "Balance Sheet": "balance_sheet",
+                "Cash Flow Statement": "cash_flow",
+                "Working Capital": "working_capital",
+                "PP&E & D&A": "ppe_da",
+                "Debt & Interest": "debt_interest",
+                "Share Count": "share_count",
+            }
+            for record in historicals:
+                col_idx = period_cols.get(str(record["period"]))
+                if not col_idx:
+                    warnings.append(
+                        {
+                            "category": "Period Mapping",
+                            "issue": f"Workbook has no existing period column for {record['period']}.",
+                        }
+                    )
+                    continue
+                for sheet_name, row_to_field in update_map.items():
+                    if sheet_name not in wb.sheetnames:
+                        continue
+                    ws = wb[sheet_name]
+                    sheet_rows = DEFAULT_THREE_STATEMENT_ROW_MAP[
+                        sheet_key_map[sheet_name]
+                    ]
+                    for row_key, field_name in row_to_field.items():
+                        if field_name not in record or row_key not in sheet_rows:
+                            continue
+                        ws.cell(row=sheet_rows[row_key], column=col_idx, value=record[field_name])
+                        updated_cells.append(
+                            f"{sheet_name}!{_column_letter(col_idx)}{sheet_rows[row_key]}"
+                        )
+
+    wb.calculation.fullCalcOnLoad = True
+    wb.calculation.forceFullCalc = True
+    if "Cover" in wb.sheetnames:
+        cover = wb["Cover"]
+        cover["A14"] = "Update Scope"
+        cover["B14"] = json.dumps(update_scope, ensure_ascii=False)
+        if model_input:
+            cover["A15"] = "Updated Model Input"
+            cover["B15"] = "financial_facts/task2_context_packet"
+    wb.save(workbook_path)
+
+    return _json_result(
+        {
+            "status": "OK",
+            "workbook_path": _relative_to_workspace(workbook_path),
+            "prior_workbook_path": _relative_to_workspace(source_path),
+            "update_scope": update_scope,
+            "updated_cells": updated_cells,
+            "critical_count": 0,
+            "warning_count": len(warnings),
+            "critical": [],
+            "warnings": warnings,
         }
     )
 

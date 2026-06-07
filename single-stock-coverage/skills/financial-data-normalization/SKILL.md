@@ -5,7 +5,7 @@ description: Normalize sourced public-company financial data for Task 2 single-s
 
 # Financial Data Normalization
 
-Use this skill after Task 1 research and before building the three-statement workbook. The goal is a sourced, normalized fact base that can support formulas, model checks, and Task 3 DCF inputs.
+Use this skill inside `is_modeler`, `bs_modeler`, and `cf_modeler` after Task 1 research and before statement JSON writing. The goal is sourced, normalized statement-level facts that can be reconciled into `financial_facts.json`, model checks, and Task 3 DCF inputs.
 
 ## Inputs
 
@@ -47,27 +47,22 @@ When cleaning spreadsheet inputs, follow the same discipline as `clean-data-xls`
 - Prefer formula-based helper columns for transparent transformations.
 - Do not destructively overwrite raw imported data unless explicitly requested.
 
-## Output: financial_facts.json
+## Output: statement historical_inputs
 
-`financial_facts.json` must be valid JSON and include at minimum:
+Each statement subagent writes normalized data into its own statement JSON `historical_inputs`. Parent reconciliation then derives `financial_facts.json`. Each historical input record must include:
 
 ```json
 {
-  "company": "",
-  "ticker": "",
+  "period": "",
+  "canonical_key": "",
+  "value": 0,
+  "source": "",
   "currency": "",
-  "unit": "",
-  "fiscal_year_end": "",
-  "historicals": [],
-  "segments": [],
-  "guidance": [],
-  "projection_summary": {},
-  "sources": [],
-  "unsourced": []
+  "unit": ""
 }
 ```
 
-Each historical record should include:
+Each record should preserve:
 
 - Period label and actual/estimate flag.
 - Revenue, EBIT, EBITDA, net income.

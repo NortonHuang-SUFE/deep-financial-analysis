@@ -22,6 +22,7 @@ import asyncio
 import os
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Annotated, TypedDict
 
 import pytest
@@ -167,6 +168,29 @@ def test_subagent_registry_matches_disk():
         graph_file = WORKSPACE_ROOT / folder / "src" / package / "graph.py"
         assert graph_file.exists(), f"{name}: missing {graph_file}"
         assert description.strip(), f"{name}: empty description"
+
+
+def test_loader_resolves_async_graph_factory(monkeypatch):
+    """Sibling agents may expose `graph` as an async LangGraph factory."""
+    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"  # avoid building the heavy graph
+    from deep_orchestrator import graph as orch
+
+    class FakeRunnable:
+        def with_config(self, _config):
+            return self
+
+    expected = FakeRunnable()
+
+    async def graph_factory():
+        return expected
+
+    monkeypatch.setattr(
+        orch.importlib,
+        "import_module",
+        lambda name: SimpleNamespace(graph=graph_factory),
+    )
+
+    assert orch._load_subagent_runnable("dummy-folder", "dummy_package") is expected
 
 
 def test_parallel_subagents_run_concurrently():

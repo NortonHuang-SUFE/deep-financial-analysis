@@ -14,7 +14,9 @@ follows the bundled `guizang-social-card-skill` under `skills/`.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
+import inspect
 import os
 import sys
 from pathlib import Path
@@ -204,15 +206,26 @@ def _load_subagent_runnable(folder: str, package: str):
     """Import a sibling agent package and return its compiled `graph`.
 
     Each sibling lives in its own src-layout package and builds its compiled
-    graph at import time. We make its src/ importable, then import
-    `<package>.graph` and hand back the compiled graph as a CompiledSubAgent
-    runnable (its state schema already includes the required `messages` key).
+    graph either at import time or through a LangGraph-compatible factory
+    function. We make its src/ importable, then import `<package>.graph` and
+    hand back the compiled graph as a CompiledSubAgent runnable (its state
+    schema already includes the required `messages` key).
     """
     src_path = str(WORKSPACE_ROOT / folder / "src")
     if src_path not in sys.path:
         sys.path.insert(0, src_path)
     mod = importlib.import_module(f"{package}.graph")
-    return mod.graph
+    graph = mod.graph
+    if inspect.isfunction(graph) or inspect.ismethod(graph):
+        graph = graph()
+    if inspect.isawaitable(graph):
+        graph = asyncio.run(graph)
+    if not hasattr(graph, "with_config"):
+        raise TypeError(
+            f"{package}.graph:graph resolved to {type(graph).__name__}, "
+            "expected a LangGraph/LangChain runnable with .with_config()."
+        )
+    return graph
 
 
 def _build_subagent_specs() -> list[dict]:
