@@ -180,6 +180,311 @@ def _minimal_model_input() -> dict:
     }
 
 
+def _nested_a_share_model_input() -> dict:
+    financial_facts = {
+        "company": {
+            "legal_name": "成都新易盛通信技术股份有限公司",
+            "short_name": "新易盛",
+            "ticker": "300502.SZ",
+            "market": "A-share",
+            "currency": "CNY",
+            "reporting_unit": "亿元",
+            "fiscal_year_end": "12-31",
+        },
+        "historicals": [
+            {
+                "year": "2022",
+                "is": {
+                    "revenue": 33.1057,
+                    "cogs": 20.9686,
+                    "gross_profit": 12.1372,
+                    "finance_expenses": -1.2452,
+                    "interest_income": 0.2151,
+                    "operating_profit": 10.2778,
+                    "pretax_income": 10.2786,
+                    "income_tax": 1.2428,
+                    "net_income": 9.0358,
+                    "ebit": 10.2924,
+                    "ebitda": 11.3133,
+                },
+                "bs": {
+                    "cash": 17.8497,
+                    "accounts_receivable": 6.6196,
+                    "inventory": 14.692,
+                    "current_assets": 42.0537,
+                    "ppe_net": 6.6102,
+                    "total_assets": 58.7606,
+                    "accounts_payable": 4.3614,
+                    "short_term_debt": 0.0,
+                    "long_term_debt": 0.0,
+                    "current_liabilities": 9.3173,
+                    "total_liabilities": 10.4689,
+                    "total_equity": 48.2917,
+                },
+                "cf": {"capex": 3.6472},
+                "derived": {"da_estimated": 1.0209},
+            },
+            {
+                "year": "2023",
+                "is": {
+                    "revenue": 30.9761,
+                    "cogs": 21.3766,
+                    "gross_profit": 9.5995,
+                    "finance_expenses": -1.0824,
+                    "interest_income": 0.7456,
+                    "operating_profit": 7.848,
+                    "pretax_income": 7.887,
+                    "income_tax": 1.003,
+                    "net_income": 6.884,
+                    "ebit": 7.9,
+                    "ebitda": 8.92,
+                },
+                "bs": {
+                    "cash": 25.15,
+                    "accounts_receivable": 7.15,
+                    "inventory": 9.63,
+                    "current_assets": 43.35,
+                    "ppe_net": 13.1,
+                    "total_assets": 64.4,
+                    "accounts_payable": 5.98,
+                    "short_term_debt": 0.0,
+                    "long_term_debt": 0.0,
+                    "current_liabilities": 8.67,
+                    "total_liabilities": 9.74,
+                    "total_equity": 54.66,
+                },
+                "cf": {"capex": 5.54},
+                "derived": {"da_estimated": 1.02},
+            },
+            {
+                "year": "2024",
+                "is": {
+                    "revenue": 86.4683,
+                    "cogs": 47.802,
+                    "gross_profit": 38.6663,
+                    "finance_expenses": -1.7932,
+                    "interest_income": 0.7284,
+                    "operating_profit": 32.315,
+                    "pretax_income": 32.342,
+                    "income_tax": 3.964,
+                    "net_income": 28.378,
+                    "ebit": 32.36,
+                    "ebitda": 34.0,
+                },
+                "bs": {
+                    "cash": 16.0,
+                    "accounts_receivable": 25.39,
+                    "inventory": 41.32,
+                    "current_assets": 89.25,
+                    "ppe_net": 20.22,
+                    "total_assets": 122.67,
+                    "accounts_payable": 21.94,
+                    "short_term_debt": 0.0,
+                    "long_term_debt": 0.0,
+                    "current_liabilities": 38.25,
+                    "total_liabilities": 39.38,
+                    "total_equity": 83.28,
+                },
+                "cf": {"capex": 14.76},
+                "derived": {"da_estimated": 1.64},
+            },
+            {
+                "year": "2025",
+                "is": {
+                    "revenue": 248.4185,
+                    "cogs": 129.6605,
+                    "gross_profit": 118.758,
+                    "finance_expenses": -3.1818,
+                    "interest_income": 0.7795,
+                    "operating_profit": 108.5927,
+                    "pretax_income": 108.6448,
+                    "income_tax": 13.1244,
+                    "net_income": 95.5328,
+                    "ebit": 108.6567,
+                    "ebitda": 112.1171,
+                },
+                "bs": {
+                    "cash": 81.5561,
+                    "accounts_receivable": 44.3751,
+                    "inventory": 72.3433,
+                    "current_assets": 205.1599,
+                    "ppe_net": 33.5386,
+                    "total_assets": 258.8107,
+                    "accounts_payable": 37.2637,
+                    "interest_bearing_debt": 0.1493887,
+                    "short_term_debt_raw": 15.5258,
+                    "debt_to_market_equity": 0.0035,
+                    "current_liabilities": 68.9625,
+                    "total_liabilities": 78.1682,
+                    "total_equity": 180.6425,
+                },
+                "cf": {"capex": 13.197},
+                "derived": {"da_estimated": 3.4604},
+            },
+        ],
+        "shares": {
+            "2022": {"total_shares_期末": 5.0709},
+            "2023": {"total_shares_期末": 7.0992},
+            "2024": {"total_shares_期末": 7.0881},
+            "2025": {"total_shares_期末": 9.9401},
+        },
+    }
+    revenue_build_spec = {
+        "segments": [
+            {
+                "label": "800G Revenue",
+                "historical_revenue": [
+                    {"period": "2022", "value": 28},
+                    {"period": "2023", "value": 22},
+                    {"period": "2024", "value": 72},
+                    {"period": "2025", "value": 185},
+                ],
+                "forecast_revenue": [
+                    {"period": "2026E", "value": 190},
+                    {"period": "2027E", "value": 180},
+                    {"period": "2028E", "value": 160},
+                ],
+            },
+            {
+                "label": "1.6T Revenue",
+                "historical_revenue": [
+                    {"period": "2022", "value": 0},
+                    {"period": "2023", "value": 0},
+                    {"period": "2024", "value": 5},
+                    {"period": "2025", "value": 50},
+                ],
+                "forecast_revenue": [
+                    {"period": "2026E", "value": 160},
+                    {"period": "2027E", "value": 290},
+                    {"period": "2028E", "value": 420},
+                ],
+            },
+            {
+                "label": "Other Revenue",
+                "historical_revenue": [
+                    {"period": "2022", "value": 5.1057},
+                    {"period": "2023", "value": 8.9761},
+                    {"period": "2024", "value": 9.4683},
+                    {"period": "2025", "value": 13.4185},
+                ],
+                "forecast_revenue": [
+                    {"period": "2026E", "value": 30},
+                    {"period": "2027E", "value": 40},
+                    {"period": "2028E", "value": 60},
+                ],
+            },
+        ],
+        "total_revenue_reconciliation": {
+            "forecast": [
+                {"period": "2026E", "total": 380},
+                {"period": "2027E", "total": 510},
+                {"period": "2028E", "total": 640},
+            ]
+        },
+    }
+    statement_spec_pack = {
+        "status": "PASS",
+        "statement_specs": {
+            "income_statement": {
+                "revenue_build_spec": revenue_build_spec,
+                "forecast_logic": {
+                    "cogs": {
+                        "assumptions": [
+                            "2026E: gross margin 48.0%",
+                            "2027E: gross margin 47.0%",
+                            "2028E: gross margin 46.0%",
+                        ]
+                    },
+                    "finance_expenses": {
+                        "assumptions": [
+                            "2026E: -4.5亿",
+                            "2027E: -5.5亿",
+                            "2028E: -6.5亿",
+                        ]
+                    }
+                },
+            },
+            "balance_sheet": {
+                "assumption_requirements": [
+                    {"name": "AR Days (DSO)", "forecast_values": {"2026E": 60, "2027E": 58, "2028E": 55}},
+                    {"name": "Inventory Days (DIO)", "forecast_values": {"2026E": 100, "2027E": 95, "2028E": 90}},
+                    {"name": "AP Days (DPO)", "forecast_values": {"2026E": 52, "2027E": 50, "2028E": 50}},
+                    {"name": "CapEx as % of Revenue", "forecast_values": {"2026E": 6, "2027E": 5, "2028E": 4}},
+                    {"name": "Dividend Payout Ratio", "forecast_values": {"2026E": "35% of NI", "2027E": "35% of NI", "2028E": "35% of NI"}},
+                ]
+            },
+            "cash_flow": {},
+        },
+    }
+    return {
+        **financial_facts,
+        "financial_facts": financial_facts,
+        "statement_spec_pack": statement_spec_pack,
+        "task2_context_packet": {
+            "company_metadata": {
+                "ticker": "300502.SZ",
+                "company": "新易盛",
+                "market": "A-share",
+                "currency": "CNY",
+                "reporting_unit": "亿元",
+                "fiscal_year_end": "12-31",
+            }
+        },
+    }
+
+
+def _write_model_source_files(model_dir, payload: dict) -> None:
+    financial_facts = payload.get("financial_facts") if isinstance(payload.get("financial_facts"), dict) else payload
+    context_packet = payload.get("task2_context_packet")
+    if not isinstance(context_packet, dict):
+        context_packet = {
+            "company_metadata": {
+                "company": financial_facts.get("company", "Example Co"),
+                "ticker": financial_facts.get("ticker", "EXM"),
+                "market": financial_facts.get("market", "US"),
+                "currency": financial_facts.get("currency", "USD"),
+                "reporting_unit": financial_facts.get("unit", "millions"),
+            },
+            "period_plan": {"forecast_horizon": "FY2024E-FY2025E"},
+            "canonical_row_keys": {
+                statement_type: list(tools.STATEMENT_CANONICAL_KEYS[statement_type])
+                for statement_type in tools.STATEMENT_JSON_ALLOWED_TYPES
+            },
+        }
+    statement_pack = payload.get("statement_spec_pack")
+    if not isinstance(statement_pack, dict):
+        statement_pack = {
+            "status": "PASS",
+            "critical_count": 0,
+            "warning_count": 0,
+            "builder_blocked": False,
+            "statement_specs": {},
+        }
+    model_dir.mkdir(parents=True, exist_ok=True)
+    (model_dir / "financial_facts.json").write_text(
+        json.dumps(financial_facts, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (model_dir / "statement_spec_pack.json").write_text(
+        json.dumps(statement_pack, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (model_dir / "task2_context_packet.json").write_text(
+        json.dumps(context_packet, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    revenue_build_spec = payload.get("revenue_build_spec")
+    if not isinstance(revenue_build_spec, dict):
+        income_spec = (statement_pack.get("statement_specs") or {}).get("income_statement")
+        if isinstance(income_spec, dict):
+            revenue_build_spec = income_spec.get("revenue_build_spec")
+    if isinstance(revenue_build_spec, dict):
+        (model_dir / "revenue_build_spec.json").write_text(
+            json.dumps(revenue_build_spec, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+
 def _write_task1_fixture(run_dir):
     (run_dir / "01_company_research").mkdir(parents=True, exist_ok=True)
     (run_dir / "01_company_research" / "company_research.md").write_text(
@@ -333,6 +638,35 @@ def test_coverage_run_and_artifact_tools(monkeypatch, tmp_path):
     manifest = json.loads((tmp_path / manifest_result).read_text(encoding="utf-8"))
     assert manifest["subagents_called"] == ["task1_company_researcher"]
 
+    oversized_json = json.dumps({"blob": "x" * tools.INLINE_JSON_MAX_BYTES})
+    json_failure = json.loads(
+        tools.write_json_artifact.invoke(
+            {
+                "data_json": oversized_json,
+                "filename": "too_large.json",
+                "subdir": "01_company_research",
+                "ticker": "000001.SZ",
+                "market": "A-share",
+                "run_dir": result["run_dir"],
+            }
+        )
+    )
+    assert json_failure["status"] == "FAIL"
+    assert json_failure["field"] == "data_json"
+
+    manifest_failure = json.loads(
+        tools.update_run_manifest.invoke(
+            {
+                "patch_json": oversized_json,
+                "ticker": "000001.SZ",
+                "market": "A-share",
+                "run_dir": result["run_dir"],
+            }
+        )
+    )
+    assert manifest_failure["status"] == "FAIL"
+    assert manifest_failure["field"] == "patch_json"
+
 
 def test_statement_json_tools_validate_write_and_read_context(monkeypatch, tmp_path):
     _clear_env(monkeypatch)
@@ -370,16 +704,18 @@ def test_statement_json_tools_validate_write_and_read_context(monkeypatch, tmp_p
     assert context["statement_type"] == "income_statement"
     assert context["missing_artifacts"] == []
     assert "net_income" in context["canonical_row_keys"]
+    assert "company_research" in context["artifacts"]
+    assert "company_research" not in json.dumps(context.get("historical_facts", []))
+    assert "annual report" not in json.dumps(context.get("artifacts", {}))
+    assert len(json.dumps(context, ensure_ascii=False)) < 10000
 
-    income_json = json.dumps(_statement_payload("income_statement"))
     validation = json.loads(
-        tools.validate_income_statement_json.invoke({"statement_json": income_json})
+        tools.validate_income_statement_json.invoke({"run_dir": str(run_dir)})
     )
     assert validation["status"] == "PASS"
     income_result = json.loads(
         tools.write_income_statement_json.invoke(
             {
-                "statement_json": income_json,
                 "ticker": "EXM",
                 "market": "US",
                 "run_dir": str(run_dir),
@@ -390,13 +726,11 @@ def test_statement_json_tools_validate_write_and_read_context(monkeypatch, tmp_p
     assert (run_dir / "02_financial_model" / "income_statement_spec.json").exists()
     assert (run_dir / "02_financial_model" / "revenue_build_spec.json").exists()
 
-    balance_json = json.dumps(_statement_payload("balance_sheet"))
     assert json.loads(
-        tools.validate_balance_sheet_json.invoke({"statement_json": balance_json})
+        tools.validate_balance_sheet_json.invoke({"run_dir": str(run_dir)})
     )["status"] == "PASS"
     tools.write_balance_sheet_json.invoke(
         {
-            "statement_json": balance_json,
             "ticker": "EXM",
             "market": "US",
             "run_dir": str(run_dir),
@@ -404,13 +738,11 @@ def test_statement_json_tools_validate_write_and_read_context(monkeypatch, tmp_p
     )
     assert (run_dir / "02_financial_model" / "balance_sheet_spec.json").exists()
 
-    cash_flow_json = json.dumps(_statement_payload("cash_flow"))
     assert json.loads(
-        tools.validate_cash_flow_json.invoke({"statement_json": cash_flow_json})
+        tools.validate_cash_flow_json.invoke({"run_dir": str(run_dir)})
     )["status"] == "PASS"
     tools.write_cash_flow_json.invoke(
         {
-            "statement_json": cash_flow_json,
             "ticker": "EXM",
             "market": "US",
             "run_dir": str(run_dir),
@@ -418,15 +750,88 @@ def test_statement_json_tools_validate_write_and_read_context(monkeypatch, tmp_p
     )
     assert (run_dir / "02_financial_model" / "cash_flow_statement_spec.json").exists()
 
-    bad_payload = _statement_payload("balance_sheet")
-    bad_payload["canonical_row_keys"] = []
-    bad_validation = json.loads(
-        tools.validate_balance_sheet_json.invoke(
-            {"statement_json": json.dumps(bad_payload)}
+
+def test_statement_tools_handle_nested_financial_facts_modeler_keys(
+    monkeypatch,
+    tmp_path,
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "coverage" / "a-share-nested" / "runs" / "20260604-120000"
+    facts = {
+        "company": "Nested Co",
+        "ticker": "NST",
+        "market": "A-share",
+        "currency": "CNY",
+        "unit": "亿元",
+        "historicals": [
+            {
+                "period": "FY2025",
+                "year": 2025,
+                "income_statement": {
+                    "revenue": 1581.79,
+                    "gross_margin": 0.2906,
+                    "ebit": 325.01,
+                    "ebitda": 460.05,
+                    "income_tax": 57.28,
+                    "net_income": 266.09,
+                    "source": "IS source",
+                },
+                "balance_sheet": {
+                    "total_assets": 2362.69,
+                    "total_liabilities": 988.62,
+                    "total_equity": 1374.07,
+                    "cash": 317.98,
+                    "short_term_debt": 16.39,
+                    "long_term_debt": 198.22,
+                    "total_debt": 214.61,
+                    "PP&E": 1047.26,
+                    "source": "BS source",
+                },
+                "cash_flow": {
+                    "operating_cf": 352.69,
+                    "capex": 170.63,
+                    "DA": 135.05,
+                    "dividends_paid": 217.82,
+                    "investing_cf": -95.23,
+                    "financing_cf": -246.04,
+                    "source": "CF source",
+                },
+            }
+        ],
+        "sources": ["financial_facts_modeler"],
+        "unsourced_items": ["retained earnings detail"],
+    }
+    _write_model_source_files(run_dir / "02_financial_model", facts)
+
+    for tool_call in (
+        tools.write_income_statement_json,
+        tools.write_balance_sheet_json,
+        tools.write_cash_flow_json,
+    ):
+        result = json.loads(
+            tool_call.invoke(
+                {
+                    "ticker": "NST",
+                    "market": "A-share",
+                    "run_dir": str(run_dir),
+                }
+            )
         )
-    )
-    assert bad_validation["status"] == "FAIL"
-    assert bad_validation["critical_count"] > 0
+        assert result["status"] == "OK"
+
+    def historical_value(path, key):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        for item in payload["historical_inputs"]:
+            if item["canonical_key"] == key:
+                return item["value"]
+        raise AssertionError(key)
+
+    model_dir = run_dir / "02_financial_model"
+    assert historical_value(model_dir / "income_statement_spec.json", "revenue_total") == 1581.79
+    assert historical_value(model_dir / "balance_sheet_spec.json", "total_assets") == 2362.69
+    assert historical_value(model_dir / "cash_flow_statement_spec.json", "cfo_total") == 352.69
 
 
 def test_resolve_task2_handoff_reuses_existing_task1_run(monkeypatch, tmp_path):
@@ -551,9 +956,7 @@ def test_statement_validation_allows_supplemental_parent_canonical_key():
         }
     )
 
-    validation = json.loads(
-        tools.validate_cash_flow_json.invoke({"statement_json": json.dumps(payload)})
-    )
+    validation = tools._validate_statement_payload(payload, "cash_flow")
     assert validation["status"] == "PASS"
     assert not [
         item
@@ -569,21 +972,18 @@ def test_reconcile_statement_specs_writes_pack_and_preserves_warnings(
     tools._ACTIVE_RUNS.clear()
     monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
     run_dir = tmp_path / "coverage" / "us-exm" / "runs" / "20260604-120000"
-    (run_dir / "02_financial_model").mkdir(parents=True)
+    payload = _minimal_model_input()
+    payload["unsourced"] = ["retained_earnings bridge"]
+    _write_model_source_files(run_dir / "02_financial_model", payload)
 
-    income_json = json.dumps(_statement_payload("income_statement"))
-    balance_payload = _statement_payload("balance_sheet")
-    balance_payload["unsourced_items"] = ["retained_earnings bridge"]
-    cash_flow_json = json.dumps(_statement_payload("cash_flow"))
-    for tool_call, statement_json in (
-        (tools.write_income_statement_json, income_json),
-        (tools.write_balance_sheet_json, json.dumps(balance_payload)),
-        (tools.write_cash_flow_json, cash_flow_json),
+    for tool_call in (
+        tools.write_income_statement_json,
+        tools.write_balance_sheet_json,
+        tools.write_cash_flow_json,
     ):
         result = json.loads(
             tool_call.invoke(
                 {
-                    "statement_json": statement_json,
                     "ticker": "EXM",
                     "market": "US",
                     "run_dir": str(run_dir),
@@ -631,15 +1031,14 @@ def test_reconcile_statement_specs_preserves_existing_financial_context(
         encoding="utf-8",
     )
 
-    for tool_call, statement_type in (
-        (tools.write_income_statement_json, "income_statement"),
-        (tools.write_balance_sheet_json, "balance_sheet"),
-        (tools.write_cash_flow_json, "cash_flow"),
+    for tool_call in (
+        tools.write_income_statement_json,
+        tools.write_balance_sheet_json,
+        tools.write_cash_flow_json,
     ):
         result = json.loads(
             tool_call.invoke(
                 {
-                    "statement_json": json.dumps(_statement_payload(statement_type)),
                     "ticker": "EXM",
                     "market": "US",
                     "run_dir": str(run_dir),
@@ -668,19 +1067,18 @@ def test_integrated_three_statement_builder_and_validator(monkeypatch, tmp_path)
     monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
     run_dir = tmp_path / "coverage" / "us-exm" / "runs" / "20260604-120000"
     run_dir.mkdir(parents=True)
+    _write_model_source_files(run_dir / "02_financial_model", _minimal_model_input())
 
     result = json.loads(
         tools.build_integrated_three_statement_model.invoke(
-            {
-                "model_input_json": json.dumps(_minimal_model_input()),
-                "run_dir": str(run_dir),
-            }
+            {"run_dir": str(run_dir)}
         )
     )
     workbook_path = tmp_path / result["workbook_path"]
 
     assert result["status"] == "OK"
     assert workbook_path.exists()
+    assert result["cached_formula_count"] > 0
     assert result["row_map"]["income_statement"]["revenue_total"] == 8
     assert result["row_map"]["balance_sheet"]["cash_and_equivalents"] == 8
     assert result["row_map"]["cash_flow"]["ending_cash"] == 25
@@ -697,6 +1095,11 @@ def test_integrated_three_statement_builder_and_validator(monkeypatch, tmp_path)
     assert all(name in set(wb.defined_names) for name in tools.REQUIRED_MODEL_NAMES)
     assert wb["DCF Inputs"]["D8"].value.startswith("=")
     assert wb["Checks"]["D9"].value.startswith("=")
+    wb_values = openpyxl.load_workbook(workbook_path, data_only=True)
+    revenue_total_row = result["row_map"]["revenue_build"]["revenue_total"]
+    assert wb_values["Revenue Build"].cell(row=revenue_total_row, column=4).value == 1050
+    assert wb_values["Income Statement"]["D8"].value == 1050
+    assert wb_values["Cash Flow Statement"]["D25"].value is not None
 
     validation = json.loads(
         tools.validate_integrated_three_statement_model.invoke(
@@ -710,18 +1113,478 @@ def test_integrated_three_statement_builder_and_validator(monkeypatch, tmp_path)
     assert validation["critical_count"] == 0
 
 
+def test_integrated_builder_handles_nested_a_share_facts_and_three_year_forecast(
+    monkeypatch,
+    tmp_path,
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "out" / "coverage" / "a-share-300502.sz" / "runs" / "nested"
+    model_dir = run_dir / "02_financial_model"
+    payload = _nested_a_share_model_input()
+    _write_model_source_files(model_dir, payload)
+
+    result = json.loads(
+        tools.build_integrated_three_statement_model.invoke(
+            {"run_dir": str(run_dir)}
+        )
+    )
+    workbook_path = tmp_path / result["workbook_path"]
+
+    assert result["status"] == "OK"
+    assert result["cached_formula_count"] > 0
+    assert result["period_columns"] == {
+        "FY2022A": "C",
+        "FY2023A": "D",
+        "FY2024A": "E",
+        "FY2025A": "F",
+        "FY2026E": "G",
+        "FY2027E": "H",
+        "FY2028E": "I",
+    }
+
+    import openpyxl
+
+    wb = openpyxl.load_workbook(workbook_path, data_only=False)
+    assert wb["Cover"]["B6"].value == "新易盛"
+    assert wb["Cover"]["B7"].value == "300502.SZ"
+    assert wb["Cover"]["B8"].value == "A-share"
+    assert wb["Cover"]["A3"].value == "Currency: CNY | Unit: 亿元"
+    assert [wb["Checks"].cell(row=5, column=col).value for col in range(3, 10)] == [
+        "FY2022A",
+        "FY2023A",
+        "FY2024A",
+        "FY2025A",
+        "FY2026E",
+        "FY2027E",
+        "FY2028E",
+    ]
+    assert [wb["Income Statement"].cell(row=8, column=col).value for col in range(3, 7)] == [
+        33.1057,
+        30.9761,
+        86.4683,
+        248.4185,
+    ]
+    assert [wb["Assumptions"].cell(row=40, column=col).value for col in range(7, 10)] == [190, 180, 160]
+    assert [wb["Assumptions"].cell(row=42, column=col).value for col in range(7, 10)] == [160, 290, 420]
+    assert [wb["Assumptions"].cell(row=44, column=col).value for col in range(7, 10)] == [30, 40, 60]
+    assert [wb["Revenue Build"].cell(row=8, column=1).value, wb["Revenue Build"].cell(row=13, column=1).value, wb["Revenue Build"].cell(row=18, column=1).value] == [
+        "800G Revenue Revenue",
+        "1.6T Revenue Revenue",
+        "Other Revenue Revenue",
+    ]
+    revenue_total_row = result["row_map"]["revenue_build"]["revenue_total"]
+    assert wb["Revenue Build"].cell(row=revenue_total_row, column=7).value == "=SUM(G8,G13,G18,G23)"
+    assert wb["Revenue Build"].cell(row=revenue_total_row, column=8).value == "=SUM(H8,H13,H18,H23)"
+    assert wb["Revenue Build"].cell(row=revenue_total_row, column=9).value == "=SUM(I8,I13,I18,I23)"
+    assert wb["Debt & Interest"]["F16"].value == '=IF(F12>MAX(F11*5,0.01),"CHECK SHORT-TERM RAW > TOTAL DEBT","OK")'
+    wb_values = openpyxl.load_workbook(workbook_path, data_only=True)
+    assert "Integrated 3-Statement Model" in wb_values["Cover"]["A1"].value
+    assert wb_values["Cover"]["B17"].value == "PASS"
+    assert [wb_values["Cover"].cell(row=23, column=col).value for col in range(7, 10)] == [
+        380,
+        510,
+        640,
+    ]
+    assert wb_values["Cover"]["A34"].value == "Workbook Navigation"
+    assert wb_values["Cover"]["A50"].value == "Formatting Legend"
+    assert [wb_values["Revenue Build"].cell(row=revenue_total_row, column=col).value for col in range(7, 10)] == [
+        380,
+        510,
+        640,
+    ]
+    assert [wb_values["Income Statement"].cell(row=8, column=col).value for col in range(7, 10)] == [
+        380,
+        510,
+        640,
+    ]
+    assert wb_values["Balance Sheet"]["F20"].value == 0.1493887
+    assert wb_values["Debt & Interest"]["F11"].value == 0.1493887
+    assert wb_values["Debt & Interest"]["F12"].value == 15.5258
+    assert wb_values["Debt & Interest"]["F16"].value == "CHECK SHORT-TERM RAW > TOTAL DEBT"
+    assert wb_values["DCF Inputs"]["F14"].value == 0.1493887
+    assert wb["DCF Inputs"]["F10"].value.startswith("=IF(")
+    assert wb_values["Income Statement"]["G22"].value is not None
+    assert wb_values["Checks"]["B4"].value == 0
+
+    validation = json.loads(
+        tools.validate_integrated_three_statement_model.invoke(
+            {
+                "excel_path": str(workbook_path),
+                "row_map_json": json.dumps(result["row_map"]),
+            }
+        )
+    )
+    assert validation["status"] == "PASS"
+    assert validation["critical_count"] == 0
+    assert "Debt Data Quality" in {item["category"] for item in validation["warnings"]}
+
+
+def test_integrated_builder_uses_standalone_spec_driven_components(
+    monkeypatch,
+    tmp_path,
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "coverage" / "us-platform" / "runs" / "dynamic"
+    model_dir = run_dir / "02_financial_model"
+    payload = _minimal_model_input()
+    payload["revenue_build_spec"] = {
+        "statement_type": "revenue_build",
+        "segments": [
+            {
+                "segment_id": "subscription",
+                "display_name": "Subscription",
+                "driver_type": "seat_count_x_arpu",
+                "historical": {"FY2023": {"revenue": 600, "cost": 210, "gross_profit": 390}},
+                "forecast_revenue": [
+                    {"period": "FY2024E", "value": 660},
+                    {"period": "FY2025E", "value": 720},
+                ],
+            },
+            {
+                "segment_id": "services",
+                "display_name": "Services",
+                "driver_type": "utilization_x_rate",
+                "historical": {"FY2023": {"revenue": 250, "cost": 150, "gross_profit": 100}},
+                "forecast_revenue": [
+                    {"period": "FY2024E", "value": 260},
+                    {"period": "FY2025E", "value": 275},
+                ],
+            },
+            {
+                "segment_id": "marketplace",
+                "display_name": "Marketplace",
+                "driver_type": "gmv_x_take_rate",
+                "historical": {"FY2023": {"revenue": 150, "cost": 40, "gross_profit": 110}},
+                "forecast_revenue": [
+                    {"period": "FY2024E", "value": 130},
+                    {"period": "FY2025E", "value": 155},
+                ],
+            },
+        ],
+        "total_revenue_reconciliation": {
+            "forecast": [
+                {"period": "FY2024E", "total": 1050},
+                {"period": "FY2025E", "total": 1150},
+            ]
+        },
+    }
+    _write_model_source_files(model_dir, payload)
+
+    result = json.loads(
+        tools.build_integrated_three_statement_model.invoke(
+            {"run_dir": str(run_dir)}
+        )
+    )
+    workbook_path = tmp_path / result["workbook_path"]
+
+    import openpyxl
+
+    wb = openpyxl.load_workbook(workbook_path, data_only=False)
+    labels = [
+        wb["Revenue Build"].cell(row=row, column=1).value
+        for row in range(1, wb["Revenue Build"].max_row + 1)
+    ]
+    assert "Subscription Revenue" in labels
+    assert "Services Revenue" in labels
+    assert "Marketplace Revenue" in labels
+    assert "800G Revenue" not in labels
+    assert "1.6T Revenue" not in labels
+    revenue_total_row = result["row_map"]["revenue_build"]["revenue_total"]
+    assert wb["Revenue Build"].cell(row=revenue_total_row, column=4).value == "=SUM(D8,D13,D18,D23)"
+
+    wb_values = openpyxl.load_workbook(workbook_path, data_only=True)
+    assert wb_values["Revenue Build"].cell(row=revenue_total_row, column=4).value == 1050
+    assert wb_values["Income Statement"]["D8"].value == 1050
+    validation = json.loads(
+        tools.validate_integrated_three_statement_model.invoke(
+            {
+                "excel_path": str(workbook_path),
+                "row_map_json": json.dumps(result["row_map"]),
+            }
+        )
+    )
+    assert validation["status"] == "PASS"
+
+
+def test_integrated_builder_consumes_five_component_spec_and_excludes_interim(
+    monkeypatch,
+    tmp_path,
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "out" / "coverage" / "a-share-601225.sh" / "runs" / "dynamic"
+    model_dir = run_dir / "02_financial_model"
+    payload = {
+        "company": "陕西煤业股份有限公司",
+        "ticker": "601225.SH",
+        "market": "A-share",
+        "currency": "CNY",
+        "unit": "million_CNY",
+        "fiscal_year_end": "12-31",
+        "historicals": [
+            {
+                "period": "FY2024",
+                "year": 2024,
+                "revenue": 1000,
+                "gross_profit": 360,
+                "operating_expenses": 80,
+                "da": 50,
+                "ebit": 230,
+                "pretax_income": 220,
+                "tax_expense": 40,
+                "net_income": 180,
+                "cash": 120,
+                "debt": 90,
+                "total_assets": 900,
+                "total_liabilities": 400,
+                "total_equity": 500,
+                "retained_earnings": 300,
+                "shares": 100,
+                "source": "FY2024 annual report",
+            },
+            {
+                "period": "FY2025",
+                "year": 2025,
+                "revenue": 1100,
+                "gross_profit": 410,
+                "operating_expenses": 90,
+                "da": 55,
+                "ebit": 265,
+                "pretax_income": 250,
+                "tax_expense": 45,
+                "net_income": 205,
+                "cash": 150,
+                "debt": 80,
+                "total_assets": 950,
+                "total_liabilities": 410,
+                "total_equity": 540,
+                "retained_earnings": 340,
+                "shares": 100,
+                "source": "FY2025 annual report",
+            },
+            {
+                "period": "Q1-2026",
+                "year": 2026,
+                "revenue": 260,
+                "gross_profit": 90,
+                "net_income": 40,
+                "source": "Q1-2026 interim report",
+            },
+        ],
+        "task2_context_packet": {
+            "company_metadata": {
+                "company": "陕西煤业股份有限公司",
+                "ticker": "601225.SH",
+                "market": "A-share",
+                "currency": "CNY",
+                "reporting_unit": "million_CNY",
+                "fiscal_year_end": "12-31",
+            },
+            "model_horizon": {
+                "forecast_years": ["FY2026E", "FY2027E", "FY2028E"],
+                "latest_interim": "Q1-2026",
+            },
+        },
+        "revenue_build_spec": {
+            "statement_type": "revenue_build",
+            "segments": [
+                {"segment_id": "raw", "display_name": "Raw Product", "historical": {"FY2024": {"revenue": 350, "cost": 180}, "FY2025": {"revenue": 380, "cost": 195}}},
+                {"segment_id": "trading", "display_name": "Trading Product", "historical": {"FY2024": {"revenue": 280, "cost": 270}, "FY2025": {"revenue": 300, "cost": 289}}},
+                {"segment_id": "processed", "display_name": "Processed Product", "historical": {"FY2024": {"revenue": 180, "cost": 90}, "FY2025": {"revenue": 200, "cost": 100}}},
+                {"segment_id": "power", "display_name": "Power Service", "historical": {"FY2024": {"revenue": 120, "cost": 95}, "FY2025": {"revenue": 140, "cost": 110}}},
+                {"segment_id": "other", "display_name": "Other Operations", "historical": {"FY2024": {"revenue": 70, "cost": 50}, "FY2025": {"revenue": 80, "cost": 60}}},
+            ],
+        },
+    }
+    _write_model_source_files(model_dir, payload)
+
+    result = json.loads(
+        tools.build_integrated_three_statement_model.invoke(
+            {"run_dir": str(run_dir)}
+        )
+    )
+    workbook_path = tmp_path / result["workbook_path"]
+
+    import openpyxl
+
+    wb = openpyxl.load_workbook(workbook_path, data_only=False)
+    assert result["period_columns"] == {
+        "FY2024A": "C",
+        "FY2025A": "D",
+        "FY2026E": "E",
+        "FY2027E": "F",
+        "FY2028E": "G",
+    }
+    assert "FY2026A" not in result["period_columns"]
+    labels = [
+        wb["Revenue Build"].cell(row=row, column=1).value
+        for row in range(1, wb["Revenue Build"].max_row + 1)
+    ]
+    for expected_label in (
+        "Raw Product Revenue",
+        "Trading Product Revenue",
+        "Processed Product Revenue",
+        "Power Service Revenue",
+        "Other Operations Revenue",
+    ):
+        assert expected_label in labels
+    assert "800G Revenue" not in labels
+    assert "1.6T Revenue" not in labels
+    assert any(
+        wb["Sources"].cell(row=row, column=1).value == "Q1-2026"
+        and wb["Sources"].cell(row=row, column=4).value == "Excluded from annual model columns"
+        for row in range(1, wb["Sources"].max_row + 1)
+    )
+
+    validation = json.loads(
+        tools.validate_integrated_three_statement_model.invoke(
+            {
+                "excel_path": str(workbook_path),
+                "row_map_json": json.dumps(result["row_map"]),
+            }
+        )
+    )
+    assert validation["status"] == "PASS"
+
+
+def test_integrated_validator_rejects_placeholder_shell_workbook(
+    monkeypatch,
+    tmp_path,
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "out" / "coverage" / "a-share-300502.sz" / "runs" / "bad"
+    model_dir = run_dir / "02_financial_model"
+    payload = _nested_a_share_model_input()
+    _write_model_source_files(model_dir, payload)
+
+    result = json.loads(
+        tools.build_integrated_three_statement_model.invoke(
+            {"run_dir": str(run_dir)}
+        )
+    )
+    workbook_path = tmp_path / result["workbook_path"]
+
+    import openpyxl
+
+    wb = openpyxl.load_workbook(workbook_path, data_only=False)
+    for ws in wb.worksheets:
+        ws.delete_cols(9)
+    wb["Cover"]["A3"] = "Currency: USD | Unit: millions"
+    wb["Cover"]["B6"] = "{'short_name': '新易盛'}"
+    wb["Cover"]["B7"] = "TICKER"
+    wb["Assumptions"]["A10"] = "Assumption 10"
+    for col in range(3, 7):
+        wb["Income Statement"].cell(row=8, column=col, value=0)
+    wb.save(workbook_path)
+
+    validation = json.loads(
+        tools.validate_integrated_three_statement_model.invoke(
+            {
+                "excel_path": str(workbook_path),
+                "row_map_json": json.dumps(result["row_map"]),
+            }
+        )
+    )
+    categories = {item["category"] for item in validation["critical"]}
+    assert validation["status"] == "FAIL"
+    assert "Default Metadata" in categories
+    assert "Missing Forecast Period" in categories
+    assert "Placeholder Assumption" in categories
+    assert "Historical Values Missing" in categories or "Historical Value Mismatch" in categories
+
+
+def test_integrated_validator_rejects_zero_workbook_debt_against_source(
+    monkeypatch,
+    tmp_path,
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "out" / "coverage" / "a-share-300502.sz" / "runs" / "debt-bad"
+    model_dir = run_dir / "02_financial_model"
+    payload = _nested_a_share_model_input()
+    _write_model_source_files(model_dir, payload)
+
+    result = json.loads(
+        tools.build_integrated_three_statement_model.invoke(
+            {"run_dir": str(run_dir)}
+        )
+    )
+    workbook_path = tmp_path / result["workbook_path"]
+
+    import openpyxl
+
+    wb = openpyxl.load_workbook(workbook_path, data_only=False)
+    wb["Balance Sheet"]["F20"] = 0
+    wb["Debt & Interest"]["F11"] = 0
+    wb.save(workbook_path)
+
+    validation = json.loads(
+        tools.validate_integrated_three_statement_model.invoke(
+            {
+                "excel_path": str(workbook_path),
+                "row_map_json": json.dumps(result["row_map"]),
+            }
+        )
+    )
+    categories = {item["category"] for item in validation["critical"]}
+    assert validation["status"] == "FAIL"
+    assert "Debt Source Mismatch" in categories
+    assert "Debt Schedule Mismatch" in categories
+
+
+def test_integrated_validator_rejects_missing_formula_cache(
+    monkeypatch,
+    tmp_path,
+):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    run_dir = tmp_path / "coverage" / "us-exm" / "runs" / "cacheless"
+    run_dir.mkdir(parents=True)
+    _write_model_source_files(run_dir / "02_financial_model", _minimal_model_input())
+    result = json.loads(
+        tools.build_integrated_three_statement_model.invoke(
+            {"run_dir": str(run_dir)}
+        )
+    )
+    workbook_path = tmp_path / result["workbook_path"]
+
+    import openpyxl
+
+    wb = openpyxl.load_workbook(workbook_path, data_only=False)
+    wb.save(workbook_path)
+
+    validation = json.loads(
+        tools.validate_integrated_three_statement_model.invoke(
+            {
+                "excel_path": str(workbook_path),
+                "row_map_json": json.dumps(result["row_map"]),
+            }
+        )
+    )
+    categories = {item["category"] for item in validation["critical"]}
+    assert validation["status"] == "FAIL"
+    assert "Formula Cache Missing" in categories
+
+
 def test_integrated_three_statement_validator_flags_missing_tab(monkeypatch, tmp_path):
     _clear_env(monkeypatch)
     tools._ACTIVE_RUNS.clear()
     monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
     run_dir = tmp_path / "coverage" / "us-exm" / "runs" / "20260604-120000"
     run_dir.mkdir(parents=True)
+    _write_model_source_files(run_dir / "02_financial_model", _minimal_model_input())
     result = json.loads(
         tools.build_integrated_three_statement_model.invoke(
-            {
-                "model_input_json": json.dumps(_minimal_model_input()),
-                "run_dir": str(run_dir),
-            }
+            {"run_dir": str(run_dir)}
         )
     )
     workbook_path = tmp_path / result["workbook_path"]
@@ -749,12 +1612,10 @@ def test_integrated_three_statement_validator_flags_hardcode_and_cash_break(
     monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
     run_dir = tmp_path / "coverage" / "us-exm" / "runs" / "20260604-120000"
     run_dir.mkdir(parents=True)
+    _write_model_source_files(run_dir / "02_financial_model", _minimal_model_input())
     result = json.loads(
         tools.build_integrated_three_statement_model.invoke(
-            {
-                "model_input_json": json.dumps(_minimal_model_input()),
-                "run_dir": str(run_dir),
-            }
+            {"run_dir": str(run_dir)}
         )
     )
     workbook_path = tmp_path / result["workbook_path"]
@@ -843,16 +1704,16 @@ def test_task2_artifact_flow_defaults_to_out_coverage_after_task1_fixture(
             "run_dir": run["run_dir"],
         }
     )
+    _write_model_source_files(run_dir / "02_financial_model", _minimal_model_input())
 
-    for tool_call, statement_type in (
-        (tools.write_income_statement_json, "income_statement"),
-        (tools.write_balance_sheet_json, "balance_sheet"),
-        (tools.write_cash_flow_json, "cash_flow"),
+    for tool_call in (
+        tools.write_income_statement_json,
+        tools.write_balance_sheet_json,
+        tools.write_cash_flow_json,
     ):
         result = json.loads(
             tool_call.invoke(
                 {
-                    "statement_json": json.dumps(_statement_payload(statement_type)),
                     "ticker": "300516.SZ",
                     "market": "SZ",
                     "run_dir": run["run_dir"],
@@ -877,7 +1738,7 @@ def test_task2_artifact_flow_defaults_to_out_coverage_after_task1_fixture(
 
     build = json.loads(
         tools.build_integrated_three_statement_model.invoke(
-            {"model_input_json": json.dumps(facts), "run_dir": run["run_dir"]}
+            {"run_dir": run["run_dir"]}
         )
     )
     assert build["status"] == "OK"
@@ -945,28 +1806,25 @@ def test_model_update_executor_tool_copies_prior_workbook_and_validates(
 
     prior_run = tmp_path / "out" / "coverage" / "us-exm" / "runs" / "prior"
     prior_run.mkdir(parents=True)
+    _write_model_source_files(prior_run / "02_financial_model", _minimal_model_input())
     prior_build = json.loads(
         tools.build_integrated_three_statement_model.invoke(
-            {
-                "model_input_json": json.dumps(_minimal_model_input()),
-                "run_dir": str(prior_run),
-            }
+            {"run_dir": str(prior_run)}
         )
     )
     prior_workbook = tmp_path / prior_build["workbook_path"]
     assert prior_workbook.exists()
 
     run_dir = tmp_path / "out" / "coverage" / "us-exm" / "runs" / "update"
-    (run_dir / "02_financial_model").mkdir(parents=True)
-    for tool_call, statement_type in (
-        (tools.write_income_statement_json, "income_statement"),
-        (tools.write_balance_sheet_json, "balance_sheet"),
-        (tools.write_cash_flow_json, "cash_flow"),
+    _write_model_source_files(run_dir / "02_financial_model", _minimal_model_input())
+    for tool_call in (
+        tools.write_income_statement_json,
+        tools.write_balance_sheet_json,
+        tools.write_cash_flow_json,
     ):
         result = json.loads(
             tool_call.invoke(
                 {
-                    "statement_json": json.dumps(_statement_payload(statement_type)),
                     "ticker": "EXM",
                     "market": "US",
                     "run_dir": str(run_dir),
@@ -980,14 +1838,12 @@ def test_model_update_executor_tool_copies_prior_workbook_and_validates(
             {"ticker": "EXM", "market": "US", "run_dir": str(run_dir)}
         )
     )
-    facts = json.loads((tmp_path / pack["financial_facts_path"]).read_text())
+    assert pack["status"] == "PASS"
     update = json.loads(
         tools.update_integrated_three_statement_model.invoke(
             {
                 "prior_workbook_path": str(prior_workbook),
                 "run_dir": str(run_dir),
-                "model_input_json": json.dumps(facts),
-                "statement_spec_pack_json": json.dumps(pack),
                 "update_scope_json": json.dumps({"trigger": "earnings_update"}),
             }
         )
@@ -1026,8 +1882,8 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     assert task2["parent"] == "single_stock_coverage"
     assert task2["level"] == 1
     assert task2["tool_groups"] == [
-        "coverage_artifact_tools",
         "task2_check_tools",
+        "run_manifest_tools",
     ]
     assert task2["tools"]["task2_check_tools"] == [
         "resolve_task2_handoff",
@@ -1035,6 +1891,7 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         "reconcile_statement_specs",
         "write_task2_model_audit",
     ]
+    assert task2["tools"]["run_manifest_tools"] == ["update_run_manifest"]
     assert task2["skills"] == {
         "single_stock_coverage": [
             "model-update",
@@ -1053,13 +1910,20 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         registry, "task2_financial_modeler", "mcp_tools", recursive=False
     )
     assert agent_uses_tool_group(registry, "task2_financial_modeler", "mcp_tools")
+    assert not agent_uses_tool_group(
+        registry, "task2_financial_modeler", "coverage_artifact_tools"
+    )
 
     financial_facts_modeler = describe_agent(registry, "financial_facts_modeler")
     assert financial_facts_modeler["parent"] == "task2_financial_modeler"
     assert financial_facts_modeler["tool_groups"] == [
         "mcp_tools",
-        "coverage_artifact_tools",
+        "task2_financial_fact_artifact_tools",
     ]
+    assert financial_facts_modeler["tools"]["task2_financial_fact_artifact_tools"] == [
+        "write_json_artifact"
+    ]
+    assert financial_facts_modeler["excluded_builtin_tools"] == ["task"]
     assert financial_facts_modeler["skills"] == {
         "single_stock_coverage": ["financial-data-normalization", "model-update"]
     }
@@ -1077,6 +1941,7 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         "validate_cash_flow_json",
         "write_cash_flow_json",
     ]
+    assert is_modeler["excluded_builtin_tools"] == ["task"]
     assert is_modeler["skills"] == {
         "single_stock_coverage": [
             "financial-data-normalization",
@@ -1090,6 +1955,7 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     assert bs_modeler["parent"] == "task2_financial_modeler"
     assert bs_modeler["level"] == 2
     assert bs_modeler["tool_groups"] == ["statement_modeling_tools"]
+    assert bs_modeler["excluded_builtin_tools"] == ["task"]
     assert bs_modeler["skills"] == {
         "single_stock_coverage": [
             "financial-data-normalization",
@@ -1104,6 +1970,7 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     assert cf_modeler["parent"] == "task2_financial_modeler"
     assert cf_modeler["level"] == 2
     assert cf_modeler["tool_groups"] == ["statement_modeling_tools"]
+    assert cf_modeler["excluded_builtin_tools"] == ["task"]
     assert cf_modeler["skills"] == {
         "single_stock_coverage": [
             "financial-data-normalization",
@@ -1119,12 +1986,16 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     assert workbook_builder["parent"] == "task2_financial_modeler"
     assert workbook_builder["tool_groups"] == [
         "workbook_authoring_tools",
-        "coverage_artifact_tools",
+        "task2_audit_artifact_tools",
     ]
     assert workbook_builder["tools"]["workbook_authoring_tools"] == [
         "build_integrated_three_statement_model",
         "validate_integrated_three_statement_model",
     ]
+    assert workbook_builder["tools"]["task2_audit_artifact_tools"] == [
+        "write_markdown_artifact"
+    ]
+    assert workbook_builder["excluded_builtin_tools"] == ["task"]
     assert workbook_builder["skills"] == {
         "single_stock_coverage": ["three-statement-model", "xlsx-author", "audit-xls"]
     }
@@ -1133,12 +2004,16 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     assert model_update_executor["parent"] == "task2_financial_modeler"
     assert model_update_executor["tool_groups"] == [
         "workbook_update_tools",
-        "coverage_artifact_tools",
+        "task2_audit_artifact_tools",
     ]
     assert model_update_executor["tools"]["workbook_update_tools"] == [
         "update_integrated_three_statement_model",
         "validate_integrated_three_statement_model",
     ]
+    assert model_update_executor["tools"]["task2_audit_artifact_tools"] == [
+        "write_markdown_artifact"
+    ]
+    assert model_update_executor["excluded_builtin_tools"] == ["task"]
     assert not agent_uses_tool_group(
         registry,
         "model_update_executor",
@@ -1176,6 +2051,18 @@ def test_statement_json_tool_groups_resolve_runtime_tools():
         "reconcile_statement_specs",
         "write_task2_model_audit",
     ]
+    assert [tool.name for tool in resolver.resolve(("run_manifest_tools",))] == [
+        "update_run_manifest",
+    ]
+    assert [
+        tool.name
+        for tool in resolver.resolve(("task2_financial_fact_artifact_tools",))
+    ] == [
+        "write_json_artifact",
+    ]
+    assert [tool.name for tool in resolver.resolve(("task2_audit_artifact_tools",))] == [
+        "write_markdown_artifact",
+    ]
     assert [tool.name for tool in resolver.resolve(("workbook_authoring_tools",))] == [
         "build_integrated_three_statement_model",
         "validate_integrated_three_statement_model",
@@ -1184,6 +2071,34 @@ def test_statement_json_tool_groups_resolve_runtime_tools():
         "update_integrated_three_statement_model",
         "validate_integrated_three_statement_model",
     ]
+    resolved_tools = {
+        tool.name: tool
+        for tool in resolver.resolve(
+            (
+                "statement_modeling_tools",
+                "workbook_authoring_tools",
+                "workbook_update_tools",
+            )
+        )
+    }
+    for name in (
+        "validate_income_statement_json",
+        "write_income_statement_json",
+        "validate_balance_sheet_json",
+        "write_balance_sheet_json",
+        "validate_cash_flow_json",
+        "write_cash_flow_json",
+    ):
+        assert "statement_json" not in resolved_tools[name].args
+    assert "model_input_json" not in resolved_tools[
+        "build_integrated_three_statement_model"
+    ].args
+    assert "model_input_json" not in resolved_tools[
+        "update_integrated_three_statement_model"
+    ].args
+    assert "statement_spec_pack_json" not in resolved_tools[
+        "update_integrated_three_statement_model"
+    ].args
 
 
 def test_task2_prompts_are_json_first_with_parent_gates():
@@ -1195,22 +2110,37 @@ def test_task2_prompts_are_json_first_with_parent_gates():
     assert "verify_task2_artifacts" in parent
     assert "write_task2_model_audit" in parent
     assert "reconcile_statement_specs" in parent
+    assert "must use exactly the `run_dir` returned by `resolve_task2_handoff`" in parent
     assert "assign `workbook_builder`" in parent.lower()
     assert "assign `model_update_executor`" in parent.lower()
     assert "build_integrated_three_statement_model" not in parent
     assert "validate_integrated_three_statement_model" not in parent
 
+    facts_prompt = _agent_prompt("task2-financial-facts-modeler.md")
+    assert "Use the canonical `run_dir` passed by the Task 2 parent" in facts_prompt
+    assert "Do not create a coverage run" in facts_prompt
+    assert "do not use generic filesystem write/edit tools" in facts_prompt
+    assert "passing the parent-provided `run_dir`" in facts_prompt
+    assert "parent owns artifact verification" in facts_prompt
+
     workbook_prompt = _agent_prompt("task2-workbook-builder.md")
     assert "only Task 2 agent allowed to create, open, edit, or save" in workbook_prompt
+    assert "Use the canonical `run_dir` passed by the Task 2 parent" in workbook_prompt
+    assert "do not use generic filesystem write/edit tools" in workbook_prompt
     assert "build_integrated_three_statement_model" in workbook_prompt
     assert "validate_integrated_three_statement_model" in workbook_prompt
+    assert "model_input_json" not in workbook_prompt
     assert "model_audit.md" in workbook_prompt
 
     update_prompt = _agent_prompt("task2-model-update-executor.md")
     assert "Do not call MCP tools" in update_prompt
     assert "Data retrieval belongs only to `financial_facts_modeler`" in update_prompt
+    assert "Use the canonical `run_dir` passed by the Task 2 parent" in update_prompt
+    assert "do not use generic filesystem write/edit tools" in update_prompt
     assert "update_integrated_three_statement_model" in update_prompt
     assert "validate_integrated_three_statement_model" in update_prompt
+    assert "model_input_json" not in update_prompt
+    assert "statement_spec_pack_json" not in update_prompt
 
     prompt_expectations = {
         "task2-is-modeler.md": (
@@ -1236,6 +2166,7 @@ def test_task2_prompts_are_json_first_with_parent_gates():
         assert "Do not read sibling statement JSON" in prompt
         assert "financial-data-normalization" in prompt
         assert "statement-json-checks" in prompt
+        assert "Do not construct or pass a full JSON payload" in prompt
         assert "period`, `canonical_key`, `value`, `source`" in prompt
         assert validate_tool in prompt
         assert write_tool in prompt
@@ -1315,6 +2246,7 @@ def test_graph_factories_import_in_test_mode(monkeypatch):
     assert bs_graph["agent_config"]["tool_groups"] == [
         "statement_modeling_tools",
     ]
+    assert bs_graph["agent_config"]["excluded_builtin_tools"] == ["task"]
     assert bs_graph["agent_config"]["skills"] == {
         "single_stock_coverage": [
             "financial-data-normalization",
@@ -1327,19 +2259,22 @@ def test_graph_factories_import_in_test_mode(monkeypatch):
     assert facts_graph["name"] == "financial_facts_modeler"
     assert facts_graph["agent_config"]["tool_groups"] == [
         "mcp_tools",
-        "coverage_artifact_tools",
+        "task2_financial_fact_artifact_tools",
     ]
+    assert facts_graph["agent_config"]["excluded_builtin_tools"] == ["task"]
 
     workbook_graph = asyncio.run(graph_module.task2_workbook_builder_graph())
     assert workbook_graph["name"] == "workbook_builder"
     assert workbook_graph["agent_config"]["tool_groups"] == [
         "workbook_authoring_tools",
-        "coverage_artifact_tools",
+        "task2_audit_artifact_tools",
     ]
+    assert workbook_graph["agent_config"]["excluded_builtin_tools"] == ["task"]
 
     update_graph = asyncio.run(graph_module.task2_model_update_executor_graph())
     assert update_graph["name"] == "model_update_executor"
     assert update_graph["agent_config"]["tool_groups"] == [
         "workbook_update_tools",
-        "coverage_artifact_tools",
+        "task2_audit_artifact_tools",
     ]
+    assert update_graph["agent_config"]["excluded_builtin_tools"] == ["task"]

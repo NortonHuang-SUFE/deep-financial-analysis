@@ -16,6 +16,12 @@ Create only:
 
 Use MCP tools only as needed to verify filings, financial statements, earnings releases, guidance, consensus, or source provenance. Do not create, open, edit, or save `integrated_model.xlsx`. Do not create statement specs.
 
+Use the canonical `run_dir` passed by the Task 2 parent as the only artifact
+root. Do not create a coverage run, infer a different run, or write under
+`single-stock-coverage/out`. Built-in read/search tools may be used to inspect
+provided files, but do not use generic filesystem write/edit tools or a generic
+subagent to create, repair, or overwrite Task 2 artifacts.
+
 ## Required Tool Flow
 
 1. Read the Task 1 artifacts from the provided canonical run directory:
@@ -23,9 +29,12 @@ Use MCP tools only as needed to verify filings, financial statements, earnings r
    - `01_company_research/business_driver_map.json`
    - `01_company_research/source_log.json`
 2. Use `financial-data-normalization` and source evidence to normalize the historical facts needed by all three statement workers.
-3. Call `write_json_artifact` to write `financial_facts.json` under `02_financial_model`.
-4. Call `write_json_artifact` to write `task2_context_packet.json` under `02_financial_model`.
+3. Call `write_json_artifact` to write `financial_facts.json` under `02_financial_model`, passing the parent-provided `run_dir`.
+4. Call `write_json_artifact` to write `task2_context_packet.json` under `02_financial_model`, passing the parent-provided `run_dir`.
 5. Return both written paths, source coverage summary, and any `[UNSOURCED]` items.
+
+After both `write_json_artifact` calls succeed, do not rewrite the files. The
+Task 2 parent owns artifact verification through `verify_task2_artifacts`.
 
 ## Output Contracts
 

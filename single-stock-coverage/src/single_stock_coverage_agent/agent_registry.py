@@ -35,6 +35,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
 AGENTS_DIR = PROJECT_ROOT / "agents"
 REGISTRY_PATH = AGENTS_DIR / "registry.yaml"
+_DEEPAGENTS_HARNESS_PROFILE_REGISTERED = False
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class AgentSpec:
     inputs: tuple[str, ...]
     outputs: tuple[str, ...]
     tool_groups: tuple[str, ...]
+    excluded_builtin_tools: tuple[str, ...]
     skills: dict[str, tuple[str, ...]]
     subagents: tuple[str, ...]
 
@@ -96,6 +98,12 @@ class ToolGroupResolver:
                 self._cache[group_name] = _dcf_execution_tools()
             elif group_name == "task2_check_tools":
                 self._cache[group_name] = _task2_check_tools()
+            elif group_name == "run_manifest_tools":
+                self._cache[group_name] = _run_manifest_tools()
+            elif group_name == "task2_financial_fact_artifact_tools":
+                self._cache[group_name] = _task2_financial_fact_artifact_tools()
+            elif group_name == "task2_audit_artifact_tools":
+                self._cache[group_name] = _task2_audit_artifact_tools()
             elif group_name == "statement_modeling_tools":
                 self._cache[group_name] = _statement_modeling_tools()
             elif group_name == "workbook_authoring_tools":
@@ -216,6 +224,7 @@ def describe_agent(registry: AgentRegistry, agent_name: str) -> dict[str, Any]:
         "inputs": list(spec.inputs),
         "outputs": list(spec.outputs),
         "tool_groups": list(spec.tool_groups),
+        "excluded_builtin_tools": list(spec.excluded_builtin_tools),
         "tools": {
             group_name: _configured_tool_names(registry, group_name)
             for group_name in spec.tool_groups
@@ -257,6 +266,7 @@ def create_registered_agent(
 ):
     from deepagents import create_deep_agent
 
+    _ensure_deepagents_harness_profile()
     spec = registry.agent(agent_name)
     subagents = [
         create_registered_subagent_spec(
@@ -275,10 +285,33 @@ def create_registered_agent(
         tools=tool_resolver.resolve(spec.tool_groups),
         subagents=subagents,
         skills=None,
-        middleware=_skills_middleware(registry, spec, backend) + list(middleware),
+        middleware=(
+            _skills_middleware(registry, spec, backend)
+            + list(middleware)
+            + _builtin_tool_exclusion_middleware(spec)
+        ),
         backend=backend,
         name=spec.name,
     )
+
+
+def _ensure_deepagents_harness_profile() -> None:
+    global _DEEPAGENTS_HARNESS_PROFILE_REGISTERED
+    if _DEEPAGENTS_HARNESS_PROFILE_REGISTERED:
+        return
+    from deepagents import (
+        GeneralPurposeSubagentProfile,
+        HarnessProfile,
+        register_harness_profile,
+    )
+
+    register_harness_profile(
+        "openai",
+        HarnessProfile(
+            general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
+        ),
+    )
+    _DEEPAGENTS_HARNESS_PROFILE_REGISTERED = True
 
 
 def create_registered_subagent_spec(
@@ -320,6 +353,9 @@ def _parse_agent_spec(name: str, data: dict[str, Any]) -> AgentSpec:
         inputs=tuple(str(item) for item in (data.get("inputs") or ())),
         outputs=tuple(str(item) for item in (data.get("outputs") or ())),
         tool_groups=tuple(data.get("tool_groups") or ()),
+        excluded_builtin_tools=tuple(
+            str(item) for item in (data.get("excluded_builtin_tools") or ())
+        ),
         skills=skills,
         subagents=tuple(data.get("subagents") or ()),
     )
@@ -362,6 +398,17 @@ def _skills_middleware(
     ]
 
 
+def _builtin_tool_exclusion_middleware(spec: AgentSpec) -> list[Any]:
+    if not spec.excluded_builtin_tools:
+        return []
+
+    from deepagents.middleware._tool_exclusion import _ToolExclusionMiddleware
+
+    return [
+        _ToolExclusionMiddleware(excluded=frozenset(spec.excluded_builtin_tools))
+    ]
+
+
 def _configured_tool_names(registry: AgentRegistry, group_name: str) -> list[str]:
     group = registry.tool_groups[group_name]
     if "tools" in group:
@@ -387,6 +434,24 @@ def _task2_check_tools() -> list[Any]:
         verify_task2_artifacts,
         reconcile_statement_specs,
         write_task2_model_audit,
+    ]
+
+
+def _run_manifest_tools() -> list[Any]:
+    return [
+        update_run_manifest,
+    ]
+
+
+def _task2_financial_fact_artifact_tools() -> list[Any]:
+    return [
+        write_json_artifact,
+    ]
+
+
+def _task2_audit_artifact_tools() -> list[Any]:
+    return [
+        write_markdown_artifact,
     ]
 
 

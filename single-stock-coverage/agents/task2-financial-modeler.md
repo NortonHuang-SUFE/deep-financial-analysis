@@ -51,6 +51,8 @@ Task 3 reads these paths by convention.
    Pass only the resolved run directory, ticker, market, task type, event/update context, prior workbook path if any, and required output paths. Require it to write:
    - `02_financial_model/financial_facts.json`
    - `02_financial_model/task2_context_packet.json`
+   The child must use exactly the `run_dir` returned by `resolve_task2_handoff`
+   and must not create or infer any other coverage run.
 
 4. Call `verify_task2_artifacts` with `stage="financial_facts"`.
    If this fails, call `write_task2_model_audit` with the structured findings and stop.
@@ -62,9 +64,10 @@ Task 3 reads these paths by convention.
    - `is_modeler`: `validate_income_statement_json`, `write_income_statement_json`
    - `bs_modeler`: `validate_balance_sheet_json`, `write_balance_sheet_json`
    - `cf_modeler`: `validate_cash_flow_json`, `write_cash_flow_json`
+   Tell each child that it may return to you only after its typed write tool reports success. A planning note, progress update, or "ready to build" message is not a completed child result.
 
 7. Call `verify_task2_artifacts` with `stage="statements"`.
-   If any statement JSON is missing or invalid, you may retry only the failed statement child once with a reduced, explicit scope. If it still fails, call `write_task2_model_audit` and stop. Do not write statement JSON yourself.
+   If any statement JSON is missing or invalid, you may retry only the failed statement child once with a reduced, explicit scope. The retry must still require the same typed validate/write tool; do not fall back to generic `write_file`. If it still fails, call `write_task2_model_audit` and stop. Do not write statement JSON yourself.
 
 8. Call `reconcile_statement_specs`.
    This writes `02_financial_model/statement_spec_pack.json` from the three statement specs.

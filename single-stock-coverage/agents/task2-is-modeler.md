@@ -19,15 +19,20 @@ Do not call MCP tools or perform broad duplicate data retrieval. `financial_fact
 
 ## Required Tool Flow
 
+Use `financial-data-normalization`, `income-statement-model`, and
+`statement-json-checks` only to review compact context and validation results.
+The typed tools own JSON generation and persistence.
+
 1. Call `read_statement_context` with `statement_type="income_statement"`.
-2. Build a JSON payload using `financial-data-normalization`, `income-statement-model`, and `statement-json-checks` from the compact context.
-3. Call `validate_income_statement_json`.
-4. If validation has Critical findings, fix the JSON and validate again.
-5. Call `write_income_statement_json`.
+2. Review the compact context for missing facts, source gaps, and assumptions. Do not construct or pass a full JSON payload as a tool argument.
+3. Call `validate_income_statement_json` with the parent-provided `run_dir`; the tool derives the spec from `financial_facts.json` and `task2_context_packet.json`.
+4. If validation has Critical findings, return the validation result to the parent. Do not use generic file tools or inline JSON to repair the spec.
+5. Call `write_income_statement_json` with ticker, market, and the parent-provided `run_dir`.
+6. Return to the parent only after `write_income_statement_json` reports success for both required files. Do not use a planning note, progress update, or "ready to build" message as your final response.
 
 ## JSON Contract
 
-The payload must include:
+The generated artifacts must include:
 
 ```json
 {
@@ -71,4 +76,4 @@ Required dependency declarations:
 - Segment/product/geography revenue drivers must come from Task 1 evidence when available.
 - Any missing driver, source gap, or unsupported assumption goes into `unsourced_items`.
 
-Return the written artifact paths and validation summary to the parent.
+Return the written artifact paths, the `write_income_statement_json` success result, and validation summary to the parent.

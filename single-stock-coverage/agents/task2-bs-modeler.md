@@ -18,15 +18,20 @@ Do not call MCP tools or perform broad duplicate data retrieval. `financial_fact
 
 ## Required Tool Flow
 
+Use `financial-data-normalization`, `balance-sheet-model`, and
+`statement-json-checks` only to review compact context and validation results.
+The typed tools own JSON generation and persistence.
+
 1. Call `read_statement_context` with `statement_type="balance_sheet"`.
-2. Build a JSON payload using `financial-data-normalization`, `balance-sheet-model`, and `statement-json-checks` from the compact context.
-3. Call `validate_balance_sheet_json`.
-4. If validation has Critical findings, fix the JSON and validate again.
-5. Call `write_balance_sheet_json`.
+2. Review the compact context for missing facts, source gaps, and assumptions. Do not construct or pass a full JSON payload as a tool argument.
+3. Call `validate_balance_sheet_json` with the parent-provided `run_dir`; the tool derives the spec from `financial_facts.json` and `task2_context_packet.json`.
+4. If validation has Critical findings, return the validation result to the parent. Do not use generic file tools or inline JSON to repair the spec.
+5. Call `write_balance_sheet_json` with ticker, market, and the parent-provided `run_dir`.
+6. Return to the parent only after `write_balance_sheet_json` reports success. Do not use a planning note, progress update, or "ready to build" message as your final response.
 
 ## JSON Contract
 
-The payload must include:
+The generated artifact must include:
 
 ```json
 {
@@ -68,4 +73,4 @@ Required dependency declarations:
 - Cash must be declared as dependent on Cash Flow Statement ending cash for forecast periods.
 - Any source gap, sign convention issue, or roll-forward uncertainty goes into `unsourced_items`.
 
-Return the written artifact path and validation summary to the parent.
+Return the written artifact path, the `write_balance_sheet_json` success result, and validation summary to the parent.

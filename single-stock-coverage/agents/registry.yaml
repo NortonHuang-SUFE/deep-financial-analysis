@@ -36,6 +36,21 @@ tool_groups:
       - reconcile_statement_specs
       - write_task2_model_audit
 
+  run_manifest_tools:
+    description: Run manifest update tool for parent coordinators after typed gates pass.
+    tools:
+      - update_run_manifest
+
+  task2_financial_fact_artifact_tools:
+    description: Task 2 financial facts JSON writer; must use the parent-resolved run_dir.
+    tools:
+      - write_json_artifact
+
+  task2_audit_artifact_tools:
+    description: Task 2 model audit Markdown writer; must use the parent-resolved run_dir.
+    tools:
+      - write_markdown_artifact
+
   statement_modeling_tools:
     description: Shared Task 2 statement JSON context, validation, and write tools.
     tools:
@@ -129,8 +144,8 @@ agents:
       - 02_financial_model/integrated_model.xlsx
       - 02_financial_model/model_audit.md
     tool_groups:
-      - coverage_artifact_tools
       - task2_check_tools
+      - run_manifest_tools
     skills:
       single_stock_coverage:
         - model-update
@@ -159,11 +174,13 @@ agents:
       - 02_financial_model/task2_context_packet.json
     tool_groups:
       - mcp_tools
-      - coverage_artifact_tools
+      - task2_financial_fact_artifact_tools
     skills:
       single_stock_coverage:
         - financial-data-normalization
         - model-update
+    excluded_builtin_tools:
+      - task
     subagents: []
 
   is_modeler:
@@ -185,6 +202,8 @@ agents:
         - financial-data-normalization
         - income-statement-model
         - statement-json-checks
+    excluded_builtin_tools:
+      - task
     subagents: []
 
   bs_modeler:
@@ -205,6 +224,8 @@ agents:
         - financial-data-normalization
         - balance-sheet-model
         - statement-json-checks
+    excluded_builtin_tools:
+      - task
     subagents: []
 
   cf_modeler:
@@ -225,6 +246,8 @@ agents:
         - financial-data-normalization
         - cash-flow-model
         - statement-json-checks
+    excluded_builtin_tools:
+      - task
     subagents: []
 
   model_update_executor:
@@ -243,13 +266,15 @@ agents:
       - 02_financial_model/model_audit.md
     tool_groups:
       - workbook_update_tools
-      - coverage_artifact_tools
+      - task2_audit_artifact_tools
     skills:
       single_stock_coverage:
         - model-update
         - three-statement-model
         - xlsx-author
         - audit-xls
+    excluded_builtin_tools:
+      - task
     subagents: []
 
   workbook_builder:
@@ -271,12 +296,14 @@ agents:
       - 02_financial_model/model_audit.md
     tool_groups:
       - workbook_authoring_tools
-      - coverage_artifact_tools
+      - task2_audit_artifact_tools
     skills:
       single_stock_coverage:
         - three-statement-model
         - xlsx-author
         - audit-xls
+    excluded_builtin_tools:
+      - task
     subagents: []
 
   task3_valuation_analyst:

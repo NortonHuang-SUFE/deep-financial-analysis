@@ -16,6 +16,12 @@ Create or update only:
 
 Do not call MCP tools. Do not fetch filings, market data, guidance, consensus, or source evidence. Data retrieval belongs only to `financial_facts_modeler`.
 
+Use the canonical `run_dir` passed by the Task 2 parent as the only artifact
+root. Do not create a coverage run, infer a different run, or write under
+`single-stock-coverage/out`. Built-in read/search tools may be used to inspect
+provided files, but do not use generic filesystem write/edit tools or a generic
+subagent to create, repair, or overwrite Task 2 artifacts.
+
 ## Required Inputs
 
 Before updating, confirm these paths exist:
@@ -31,10 +37,10 @@ If `statement_spec_pack.json` has Critical findings or `builder_blocked=true`, s
 ## Required Tool Flow
 
 1. Read the generated `financial_facts.json`, `task2_context_packet.json`, and `statement_spec_pack.json`.
-2. Build `model_input_json` and `update_scope_json` from the parent instructions and reconciled specs.
-3. Call `update_integrated_three_statement_model` with the prior workbook path, run directory, `model_input_json`, `statement_spec_pack_json`, and `update_scope_json`.
+2. Build only a compact `update_scope_json` from the parent instructions.
+3. Call `update_integrated_three_statement_model` with the prior workbook path, run directory, and `update_scope_json`; do not pass large model input or statement spec JSON payloads.
 4. Call `validate_integrated_three_statement_model` with the returned workbook path.
-5. Apply `model-update` and `audit-xls` to the validation output and write `02_financial_model/model_audit.md` with `write_markdown_artifact`.
+5. Apply `model-update` and `audit-xls` to the validation output and write `02_financial_model/model_audit.md` with `write_markdown_artifact`, passing the parent-provided `run_dir`.
 6. Return workbook path, audit path, validation status, Critical count, Warning count, and Task 3 handoff readiness.
 
 ## Audit Gate
