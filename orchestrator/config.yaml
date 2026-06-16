@@ -8,6 +8,6 @@ model:
   api_key: ""
   thinking: "auto"
 
-# The orchestrator has no tools/IO config of its own: it delegates to the 6
-# native subagents via the built-in `task` tool and writes its synthesis with
-# the built-in filesystem tools. Each subagent owns its own model/MCP config.
+# The orchestrator has no custom tools/IO config of its own: it delegates to
+# the 6 native subagents via the built-in `task` tool and runs on a
+# shell-enabled backend. Each subagent owns its own model/MCP config.

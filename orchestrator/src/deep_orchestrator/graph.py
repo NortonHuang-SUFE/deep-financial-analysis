@@ -3,7 +3,7 @@
 The orchestrator registers the financial-analysis agents as **native Deep
 Agents subagents**. It plans a request, then delegates to them with the
 built-in `task` tool (parallel `task` calls run the subagents concurrently)
-and writes its synthesis with the built-in filesystem tools. There are no
+and writes its synthesis with shell-enabled built-in tools. There are no
 custom invocation/IO tools — the Deep Agents runtime already provides them.
 
 When the user wants a social card / 头图 / 小红书图文 / 公众号封面, the agent
@@ -19,14 +19,16 @@ import importlib
 import inspect
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import SystemMessage, ToolMessage
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -34,7 +36,11 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from deep_orchestrator.config import WORKSPACE_ROOT, load_config  # noqa: E402
+from deep_orchestrator.config import (  # noqa: E402
+    WORKSPACE_ROOT,
+    file_storage_root,
+    load_config,
+)
 
 
 # ── Native subagent registry ──────────────────────────────────────────────────
@@ -89,6 +95,31 @@ _SUBAGENTS: dict[str, tuple[str, str, str]] = {
 
 
 # ── Tool error middleware (identical pattern to all sibling agents) ────────────
+
+
+def _make_runtime_context_middleware(context_factory):
+    """Append fresh runtime context to every model call."""
+    from deepagents.middleware.skills import SkillsMiddleware
+
+    AgentMiddleware = SkillsMiddleware.__mro__[1]
+
+    class RuntimeContextMiddleware(AgentMiddleware):
+        tools = []
+
+        def wrap_model_call(self, request, handler):
+            return handler(_request_with_runtime_context(request, context_factory()))
+
+        async def awrap_model_call(self, request, handler):
+            return await handler(_request_with_runtime_context(request, context_factory()))
+
+    return RuntimeContextMiddleware()
+
+
+def _request_with_runtime_context(request, runtime_context: str):
+    base_prompt = request.system_prompt or ""
+    return request.override(
+        system_message=SystemMessage(content=base_prompt + runtime_context)
+    )
 
 
 def _make_tool_error_middleware():
@@ -188,6 +219,19 @@ def _build_model(cfg):
     return init_chat_model(model_id, **model_kwargs)
 
 
+def _runtime_context_prompt() -> str:
+    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    return (
+        "\n\n## Runtime Context\n"
+        f"Current Beijing time: {now:%Y-%m-%d %H:%M:%S %Z}.\n"
+        f"Current Beijing date: {now:%Y-%m-%d}.\n"
+        "When a user says today/tonight/this morning/now, expand it from "
+        "this Beijing date/time. Include the concrete date/time in any "
+        "subagent task description, especially for morning_note. Do not invent "
+        "or reuse stale dates from examples or prior runs.\n"
+    )
+
+
 def _is_allowed_model_gateway(parsed_base_url) -> bool:
     host = parsed_base_url.hostname or ""
     if parsed_base_url.scheme == "https" and parsed_base_url.netloc:
@@ -246,11 +290,15 @@ def _build_subagent_specs() -> list[dict]:
 
 def _create_agent():
     if os.getenv("ORCHESTRATOR_TEST_MODE") == "1":
-        return {"name": "deep_orchestrator", "test_mode": True}
+        return {
+            "name": "deep_orchestrator",
+            "test_mode": True,
+            "backend_type": "localshell",
+        }
 
     try:
         from deepagents import create_deep_agent
-        from deepagents.backends import FilesystemBackend
+        from deepagents.backends import LocalShellBackend
     except ImportError as exc:
         raise ImportError(
             "deepagents is not installed. Run: pip install deepagents"
@@ -267,12 +315,16 @@ def _create_agent():
 
     model = _build_model(cfg)
     subagents = _build_subagent_specs()
-    backend = FilesystemBackend(root_dir=str(WORKSPACE_ROOT), virtual_mode=False)
+    backend = LocalShellBackend(
+        root_dir=str(file_storage_root()),
+        virtual_mode=False,
+        inherit_env=True,
+    )
 
     print(
         f"INFO: Deep Orchestrator — {len(subagents)} native subagents "
         f"({', '.join(s['name'] for s in subagents)}); no custom tools "
-        "(built-in `task` + filesystem tools only)."
+        "(built-in `task` + shell-enabled tools)."
     )
 
     return create_deep_agent(
@@ -281,7 +333,10 @@ def _create_agent():
         tools=[],
         subagents=subagents,
         skills=[str(PROJECT_ROOT / "skills")],
-        middleware=[_make_tool_error_middleware()],
+        middleware=[
+            _make_runtime_context_middleware(_runtime_context_prompt),
+            _make_tool_error_middleware(),
+        ],
         backend=backend,
         name="deep_orchestrator",
     )

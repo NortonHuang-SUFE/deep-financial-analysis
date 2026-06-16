@@ -36,6 +36,7 @@ if str(SRC_ROOT) not in sys.path:
 from market_researcher.config import (
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
+    file_storage_root,
     ifind_auth_headers,
     load_config,
 )
@@ -212,9 +213,16 @@ async def _get_mcp_tools(cfg) -> list:
 
 async def _create_agent():
     """Build and return the deep agent."""
+    if os.getenv("MARKET_RESEARCHER_TEST_MODE") == "1":
+        return {
+            "name": "market_researcher",
+            "test_mode": True,
+            "backend_type": "localshell",
+        }
+
     try:
         from deepagents import create_deep_agent
-        from deepagents.backends import FilesystemBackend
+        from deepagents.backends import LocalShellBackend
     except ImportError as e:
         raise ImportError(
             "deepagents is not installed. Run: pip install deepagents"
@@ -318,7 +326,11 @@ async def _create_agent():
         tools=all_tools,
         skills=[str(PROJECT_ROOT / "skills")],
         middleware=[_make_tool_error_middleware()],
-        backend=FilesystemBackend(root_dir=str(WORKSPACE_ROOT), virtual_mode=False),
+        backend=LocalShellBackend(
+            root_dir=str(file_storage_root()),
+            virtual_mode=False,
+            inherit_env=True,
+        ),
         name="market_researcher",
     )
     return agent

@@ -24,6 +24,18 @@ WORKSPACE_ROOT = PROJECT_ROOT.parent
 WORKSPACE_ENV_PATH = WORKSPACE_ROOT / ".env"
 
 
+def file_storage_root() -> Path:
+    """Return the shared artifact storage root for all workspace agents."""
+    raw_root = os.getenv("AGENT_FILE_STORAGE_ROOT")
+    if not raw_root:
+        return WORKSPACE_ROOT
+
+    path = Path(raw_root).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    return (WORKSPACE_ROOT / path).resolve()
+
+
 class ModelProfile(BaseModel):
     name: str
     max_tokens: int | None = None

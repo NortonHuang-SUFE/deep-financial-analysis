@@ -25,6 +25,7 @@ if str(SRC_ROOT) not in sys.path:
 from sector_research_agent.config import (  # noqa: E402
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
+    file_storage_root,
     load_config,
 )
 from sector_research_agent.tools import (  # noqa: E402
@@ -157,7 +158,11 @@ def _is_allowed_model_gateway(parsed_base_url) -> bool:
 
 async def _create_agent():
     if os.getenv("SECTOR_RESEARCH_TEST_MODE") == "1":
-        return {"name": "sector_research", "test_mode": True}
+        return {
+            "name": "sector_research",
+            "test_mode": True,
+            "backend_type": "filesystem",
+        }
 
     try:
         from deepagents import create_deep_agent
@@ -177,7 +182,7 @@ async def _create_agent():
         write_markdown_report,
         write_json_artifact,
     ]
-    backend = FilesystemBackend(root_dir=str(WORKSPACE_ROOT), virtual_mode=False)
+    backend = FilesystemBackend(root_dir=str(file_storage_root()), virtual_mode=False)
 
     print(
         f"INFO: Agent tools - MCP: {len(mcp_tools)}, Local: {len(local_tools)}"

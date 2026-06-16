@@ -7,7 +7,8 @@ fake tool-calling model and tiny compiled subagents to prove that:
    parallel `task` calls run the subagents *concurrently* (the headline
    requirement).
 2. The agent is wired with the built-in Deep Agents tools only
-   (`task` + filesystem + `write_todos`) and none of the old custom tools.
+   (`task` + shell-enabled built-in tools + `write_todos`) and none of the old
+   custom tools.
 3. The bundled `guizang-social-card-skill` is discovered and offered to the
    model, while the deleted `orchestration` skill is gone.
 4. The subagent registry is well-formed and matches the on-disk packages.
@@ -20,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -36,6 +38,11 @@ from langgraph.graph.message import add_messages
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
 SKILLS_DIR = PROJECT_ROOT / "skills"
+SRC_ROOT = PROJECT_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from deep_orchestrator.config import file_storage_root
 
 # Old custom tools that must no longer be registered on the orchestrator.
 _REMOVED_CUSTOM_TOOLS = {
@@ -48,7 +55,14 @@ _REMOVED_CUSTOM_TOOLS = {
 }
 
 # Built-in Deep Agents tools we expect the orchestrator to rely on instead.
-_EXPECTED_BUILTIN_TOOLS = {"task", "write_file", "read_file", "ls", "write_todos"}
+_EXPECTED_BUILTIN_TOOLS = {
+    "task",
+    "execute",
+    "write_file",
+    "read_file",
+    "ls",
+    "write_todos",
+}
 
 
 # ── Test doubles ──────────────────────────────────────────────────────────────
@@ -131,11 +145,14 @@ class _ScriptedToolModel(BaseChatModel):
 
 def _build_agent(model, subagents, *, with_skills: bool = False):
     from deepagents import create_deep_agent
-    from deepagents.backends import FilesystemBackend
+    from deepagents.backends import LocalShellBackend
 
-    # Root the backend at the workspace, exactly like production, so the
-    # SkillsMiddleware can read skills under orchestrator/skills/.
-    backend = FilesystemBackend(root_dir=str(WORKSPACE_ROOT), virtual_mode=False)
+    # Root the backend at the shared storage root, exactly like production.
+    backend = LocalShellBackend(
+        root_dir=str(file_storage_root()),
+        virtual_mode=False,
+        inherit_env=True,
+    )
     return create_deep_agent(
         model=model,
         tools=[],
@@ -163,6 +180,7 @@ def test_subagent_registry_matches_disk():
         "single_stock_coverage",
     }
     assert set(orch._SUBAGENTS) == expected
+    assert orch.graph["backend_type"] == "localshell"
 
     for name, (folder, package, description) in orch._SUBAGENTS.items():
         graph_file = WORKSPACE_ROOT / folder / "src" / package / "graph.py"
@@ -191,6 +209,18 @@ def test_loader_resolves_async_graph_factory(monkeypatch):
     )
 
     assert orch._load_subagent_runnable("dummy-folder", "dummy_package") is expected
+
+
+def test_runtime_context_prompt_includes_beijing_time():
+    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"
+    from deep_orchestrator import graph as orch
+
+    context = orch._runtime_context_prompt()
+
+    assert "Current Beijing time:" in context
+    assert "Current Beijing date:" in context
+    assert "morning_note" in context
+    assert "Do not invent" in context
 
 
 def test_parallel_subagents_run_concurrently():

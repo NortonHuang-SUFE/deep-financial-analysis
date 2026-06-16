@@ -5,12 +5,28 @@ from stock_screen_agent.config import (
     PROJECT_ROOT,
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
+    file_storage_root,
     load_config,
 )
 from stock_screen_agent import tools
 
 
 def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
+    for env_name in [
+        "MODEL_NAME",
+        "MODEL_GATEWAY_BASE_URL",
+        "MODEL_GATEWAY_API_KEY",
+        "MODEL_RELAY_BASE_URL",
+        "MODEL_RELAY_API_KEY",
+        "MODEL_BASE_URL",
+        "MODEL_API_KEY",
+        "MODEL_THINKING",
+        "MODEL_MAX_TOKENS",
+        "DASHSCOPE_API_KEY",
+        "ALIBABA_API_KEY",
+    ]:
+        monkeypatch.delenv(env_name, raising=False)
+    monkeypatch.setattr(config_module, "WORKSPACE_ENV_PATH", tmp_path / "missing.env")
     monkeypatch.chdir(tmp_path)
 
     cfg = load_config()
@@ -75,6 +91,7 @@ mcp: {}
 
 def test_timestamped_output_dir_is_workspace_relative(monkeypatch):
     tools._TASK_OUTPUT_DIRS.clear()
+    monkeypatch.delenv("AGENT_FILE_STORAGE_ROOT", raising=False)
     monkeypatch.setenv("STOCK_SCREEN_OUTPUT_TIMESTAMP", "20260602-150000")
 
     out_dir = tools._timestamped_output_dir("./out")
@@ -87,8 +104,26 @@ def test_timestamped_output_dir_is_workspace_relative(monkeypatch):
     assert explicit_dir == WORKSPACE_ROOT / "out" / "20260602-151500"
 
 
+def test_agent_file_storage_root_controls_output_dir(monkeypatch, tmp_path):
+    tools._TASK_OUTPUT_DIRS.clear()
+    storage_root = tmp_path / "clean-storage"
+    monkeypatch.setenv("AGENT_FILE_STORAGE_ROOT", str(storage_root))
+    monkeypatch.setenv("STOCK_SCREEN_OUTPUT_TIMESTAMP", "20260602-160000")
+
+    out_dir = tools._timestamped_output_dir("./out")
+    markdown_path = tools.write_markdown_report.invoke(
+        {"markdown": "# Screen\n", "filename": "screen.md", "output_dir": "./out"}
+    )
+
+    assert file_storage_root() == storage_root
+    assert out_dir == storage_root / "out" / "20260602-160000"
+    assert markdown_path == "out/20260602-160000/screen.md"
+    assert (storage_root / markdown_path).read_text(encoding="utf-8") == "# Screen\n"
+
+
 def test_write_artifacts_return_workspace_relative_paths(monkeypatch):
     tools._TASK_OUTPUT_DIRS.clear()
+    monkeypatch.delenv("AGENT_FILE_STORAGE_ROOT", raising=False)
     monkeypatch.setenv("STOCK_SCREEN_OUTPUT_TIMESTAMP", "20260602-153000")
 
     out_path = tools.create_task_output_dir.invoke({"output_dir": "./out"})
@@ -114,4 +149,8 @@ def test_graph_imports_in_test_mode(monkeypatch):
     monkeypatch.setenv("STOCK_SCREEN_TEST_MODE", "1")
     module = importlib.import_module("stock_screen_agent.graph")
 
-    assert module.graph == {"name": "stock_screen", "test_mode": True}
+    assert module.graph == {
+        "name": "stock_screen",
+        "test_mode": True,
+        "backend_type": "filesystem",
+    }

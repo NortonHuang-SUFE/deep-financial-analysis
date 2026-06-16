@@ -225,6 +225,8 @@ Task 3 logic.
 2. Pass the following inputs to the child:
    - Full text content of the audited `assumption_pack.md`.
    - Full content of `value_driver_map.json`.
+   - The canonical active `run_dir` and the exact DCF output directory:
+     `{run_dir}/03_valuation`.
    - Task 2 DCF Inputs data (from `02_financial_model/integrated_model.xlsx`
      and `02_financial_model/financial_facts.json`).
    - Full content of `financial_facts.json`.

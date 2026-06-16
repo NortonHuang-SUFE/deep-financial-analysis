@@ -35,8 +35,18 @@ from single_stock_coverage_agent.agent_registry import (  # noqa: E402
 )
 from single_stock_coverage_agent.config import (  # noqa: E402
     enabled_mcp_server_configs,
+    file_storage_root,
     load_config,
 )
+
+
+LOCAL_SHELL_AGENT_NAMES = {
+    "single_stock_coverage",
+    "workbook_builder",
+    "model_update_executor",
+    "dcf_execution",
+    "task4_chart_pack_generator",
+}
 
 
 def _make_tool_error_middleware():
@@ -166,10 +176,12 @@ async def _create_agent(agent_name: str):
             "name": agent_name,
             "test_mode": True,
             "agent_config": describe_agent(registry, agent_name),
+            "backend_type": _backend_type_for_agent(agent_name),
+            "backend_map": _agent_backend_type_map(registry, agent_name),
         }
 
     try:
-        from deepagents.backends import FilesystemBackend
+        from deepagents.backends import FilesystemBackend, LocalShellBackend
     except ImportError as exc:
         raise ImportError("deepagents is not installed. Run: pip install deepagents") from exc
 
@@ -180,7 +192,24 @@ async def _create_agent(agent_name: str):
     if needs_mcp and os.getenv("SINGLE_STOCK_COVERAGE_DISABLE_MCP") != "1":
         mcp_tools = await _get_mcp_tools(cfg)
 
-    backend = FilesystemBackend(root_dir=str(WORKSPACE_ROOT), virtual_mode=False)
+    backend_cache: dict[str, object] = {}
+
+    def backend_resolver(name: str):
+        if name not in backend_cache:
+            root_dir = str(file_storage_root())
+            if _uses_local_shell_backend(name):
+                backend_cache[name] = LocalShellBackend(
+                    root_dir=root_dir,
+                    virtual_mode=False,
+                    inherit_env=True,
+                )
+            else:
+                backend_cache[name] = FilesystemBackend(
+                    root_dir=root_dir,
+                    virtual_mode=False,
+                )
+        return backend_cache[name]
+
     tool_resolver = ToolGroupResolver(mcp_tools=mcp_tools)
     middleware = [_make_tool_error_middleware()]
     runnable = create_registered_agent(
@@ -188,16 +217,33 @@ async def _create_agent(agent_name: str):
         registry=registry,
         model=model,
         tool_resolver=tool_resolver,
-        backend=backend,
+        backend_resolver=backend_resolver,
         middleware=middleware,
     )
     agent_config = describe_agent(registry, agent_name)
     print(
         f"INFO: Single Stock Coverage agent '{agent_name}' ready; "
         f"tool groups: {agent_config['tool_groups']}; "
-        f"subagents: {agent_config['subagents']}; MCP: {len(mcp_tools)}."
+        f"subagents: {agent_config['subagents']}; "
+        f"backend: {_backend_type_for_agent(agent_name)}; MCP: {len(mcp_tools)}."
     )
     return runnable
+
+
+def _uses_local_shell_backend(agent_name: str) -> bool:
+    return agent_name in LOCAL_SHELL_AGENT_NAMES
+
+
+def _backend_type_for_agent(agent_name: str) -> str:
+    return "localshell" if _uses_local_shell_backend(agent_name) else "filesystem"
+
+
+def _agent_backend_type_map(registry, agent_name: str) -> dict[str, str]:
+    spec = registry.agent(agent_name)
+    backend_map = {agent_name: _backend_type_for_agent(agent_name)}
+    for child_name in spec.subagents:
+        backend_map.update(_agent_backend_type_map(registry, child_name))
+    return backend_map
 
 
 async def graph():

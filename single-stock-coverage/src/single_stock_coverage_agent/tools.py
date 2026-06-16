@@ -15,6 +15,8 @@ from xml.etree import ElementTree as ET
 
 from langchain_core.tools import tool
 
+from single_stock_coverage_agent.config import file_storage_root
+
 
 DEFAULT_OUTPUT_DIR = "./out/coverage"
 INLINE_JSON_MAX_BYTES = 32768
@@ -256,7 +258,7 @@ def _project_root() -> Path:
 
 
 def _workspace_root() -> Path:
-    return _project_root().parent
+    return file_storage_root()
 
 
 def _resolve_workspace_path(path: str | Path) -> Path:

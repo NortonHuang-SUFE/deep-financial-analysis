@@ -96,6 +96,11 @@ Write outputs under the active run directory:
   chart_index.json
 ```
 
+If you use Python or temporary scripts through local shell execution, keep the
+script files, temporary extracts, chart data, and generated images inside the
+active run's `04_charts/` directory. Do not write helper scripts or generated
+chart artifacts elsewhere in the workspace.
+
 Use stable, descriptive filenames, for example:
 
 ```text

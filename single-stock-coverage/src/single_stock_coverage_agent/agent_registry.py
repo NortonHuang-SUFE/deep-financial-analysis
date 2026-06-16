@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -261,20 +262,25 @@ def create_registered_agent(
     registry: AgentRegistry,
     model: Any,
     tool_resolver: ToolGroupResolver,
-    backend: Any,
+    backend: Any | None = None,
+    backend_resolver: Callable[[str], Any] | None = None,
     middleware: list[Any],
 ):
     from deepagents import create_deep_agent
 
     _ensure_deepagents_harness_profile()
     spec = registry.agent(agent_name)
+    agent_backend = backend_resolver(agent_name) if backend_resolver else backend
+    if agent_backend is None:
+        raise ValueError(f"No backend configured for agent: {agent_name}")
     subagents = [
         create_registered_subagent_spec(
             child_name,
             registry=registry,
             model=model,
             tool_resolver=tool_resolver,
-            backend=backend,
+            backend=agent_backend,
+            backend_resolver=backend_resolver,
             middleware=middleware,
         )
         for child_name in spec.subagents
@@ -286,11 +292,11 @@ def create_registered_agent(
         subagents=subagents,
         skills=None,
         middleware=(
-            _skills_middleware(registry, spec, backend)
+            _skills_middleware(registry, spec, agent_backend)
             + list(middleware)
             + _builtin_tool_exclusion_middleware(spec)
         ),
-        backend=backend,
+        backend=agent_backend,
         name=spec.name,
     )
 
@@ -320,7 +326,8 @@ def create_registered_subagent_spec(
     registry: AgentRegistry,
     model: Any,
     tool_resolver: ToolGroupResolver,
-    backend: Any,
+    backend: Any | None = None,
+    backend_resolver: Callable[[str], Any] | None = None,
     middleware: list[Any],
 ) -> dict[str, Any]:
     spec = registry.agent(agent_name)
@@ -333,6 +340,7 @@ def create_registered_subagent_spec(
             model=model,
             tool_resolver=tool_resolver,
             backend=backend,
+            backend_resolver=backend_resolver,
             middleware=middleware,
         ),
     }

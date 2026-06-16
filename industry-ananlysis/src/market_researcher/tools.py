@@ -21,6 +21,8 @@ from typing import Any
 
 from langchain_core.tools import tool
 
+from market_researcher.config import file_storage_root
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -33,7 +35,7 @@ def _project_root() -> Path:
 
 
 def _workspace_root() -> Path:
-    return _project_root().parent
+    return file_storage_root()
 
 
 def _resolve_output_dir(output_dir: str) -> Path:
@@ -464,7 +466,7 @@ def _skill_dir() -> Path:
 
 def _rel(path: Path) -> str:
     try:
-        return str(path.resolve().relative_to(Path.cwd().resolve()))
+        return str(path.resolve().relative_to(_workspace_root()))
     except ValueError:
         return str(path)
 

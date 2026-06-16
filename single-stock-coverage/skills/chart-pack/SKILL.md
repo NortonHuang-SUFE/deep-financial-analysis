@@ -118,6 +118,10 @@ PNG is the default report-ready format. SVG and CSV chart data extracts may be
 added when useful for auditability or downstream document assembly, but do not
 replace the PNG chart files.
 
+If Python or local shell execution is used, keep helper scripts, temporary data
+extracts, and generated chart files inside the active run's `04_charts/`
+directory.
+
 ## chart_index.json Schema
 
 `chart_index.json` must include the source artifact, data fields, and chart

@@ -8,4 +8,8 @@ def test_graph_imports_in_test_mode(monkeypatch):
 
     graph_module = importlib.import_module("thesis_tracker_agent.graph")
 
-    assert graph_module.graph == {"name": "thesis_tracker", "test_mode": True}
+    assert graph_module.graph == {
+        "name": "thesis_tracker",
+        "test_mode": True,
+        "backend_type": "filesystem",
+    }

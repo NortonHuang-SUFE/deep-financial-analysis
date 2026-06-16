@@ -11,6 +11,8 @@ from typing import Any
 
 from langchain_core.tools import tool
 
+from sector_research_agent.config import file_storage_root
+
 
 _TASK_OUTPUT_DIRS: dict[str, Path] = {}
 
@@ -20,7 +22,7 @@ def _project_root() -> Path:
 
 
 def _workspace_root() -> Path:
-    return _project_root().parent
+    return file_storage_root()
 
 
 def _resolve_output_dir(output_dir: str) -> Path:
@@ -106,4 +108,3 @@ def write_json_artifact(
         encoding="utf-8",
     )
     return _relative_to_workspace(path)
-

@@ -7,14 +7,16 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import SystemMessage, ToolMessage
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -25,6 +27,7 @@ if str(SRC_ROOT) not in sys.path:
 from morning_note_agent.config import (  # noqa: E402
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
+    file_storage_root,
     load_config,
 )
 from morning_note_agent.tools import (  # noqa: E402
@@ -32,6 +35,31 @@ from morning_note_agent.tools import (  # noqa: E402
     write_json_artifact,
     write_markdown_report,
 )
+
+
+def _make_runtime_context_middleware(context_factory):
+    """Append fresh runtime context to every model call."""
+    from deepagents.middleware.skills import SkillsMiddleware
+
+    AgentMiddleware = SkillsMiddleware.__mro__[1]
+
+    class RuntimeContextMiddleware(AgentMiddleware):
+        tools = []
+
+        def wrap_model_call(self, request, handler):
+            return handler(_request_with_runtime_context(request, context_factory()))
+
+        async def awrap_model_call(self, request, handler):
+            return await handler(_request_with_runtime_context(request, context_factory()))
+
+    return RuntimeContextMiddleware()
+
+
+def _request_with_runtime_context(request, runtime_context: str):
+    base_prompt = request.system_prompt or ""
+    return request.override(
+        system_message=SystemMessage(content=base_prompt + runtime_context)
+    )
 
 
 def _make_tool_error_middleware():
@@ -153,6 +181,21 @@ def _build_model(cfg):
     return init_chat_model(model_id, **model_kwargs)
 
 
+def _runtime_context_prompt(cfg) -> str:
+    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    return (
+        "\n\n## Runtime Context\n"
+        f"Current Beijing time: {now:%Y-%m-%d %H:%M:%S %Z}.\n"
+        f"Current Beijing date: {now:%Y-%m-%d}.\n"
+        f"Default output base directory: {cfg.output.dir}.\n"
+        f"Shared file storage root: {file_storage_root()}.\n"
+        "Resolve relative market dates from this Beijing date/time. Write all "
+        "artifacts through the provided artifact tools and report the absolute "
+        "paths returned by those tools. Do not reuse artifact paths from previous "
+        "runs unless the user explicitly asks to inspect an old run.\n"
+    )
+
+
 def _is_allowed_model_gateway(parsed_base_url) -> bool:
     host = parsed_base_url.hostname or ""
     if parsed_base_url.scheme == "https" and parsed_base_url.netloc:
@@ -162,7 +205,11 @@ def _is_allowed_model_gateway(parsed_base_url) -> bool:
 
 async def _create_agent():
     if os.getenv("MORNING_NOTE_TEST_MODE") == "1":
-        return {"name": "morning_note", "test_mode": True}
+        return {
+            "name": "morning_note",
+            "test_mode": True,
+            "backend_type": "filesystem",
+        }
 
     try:
         from deepagents import create_deep_agent
@@ -186,7 +233,7 @@ async def _create_agent():
         write_markdown_report,
         write_json_artifact,
     ]
-    backend = FilesystemBackend(root_dir=str(WORKSPACE_ROOT), virtual_mode=False)
+    backend = FilesystemBackend(root_dir=str(file_storage_root()), virtual_mode=False)
     all_tools = mcp_tools + local_tools
 
     print(
@@ -198,7 +245,10 @@ async def _create_agent():
         system_prompt=system_prompt,
         tools=all_tools,
         skills=[str(PROJECT_ROOT / "skills")],
-        middleware=[_make_tool_error_middleware()],
+        middleware=[
+            _make_runtime_context_middleware(lambda: _runtime_context_prompt(cfg)),
+            _make_tool_error_middleware(),
+        ],
         backend=backend,
         name="morning_note",
     )

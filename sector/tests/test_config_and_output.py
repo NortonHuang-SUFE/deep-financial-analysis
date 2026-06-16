@@ -3,6 +3,7 @@ from sector_research_agent.config import (
     PROJECT_ROOT,
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
+    file_storage_root,
     load_config,
 )
 from sector_research_agent import tools
@@ -23,6 +24,7 @@ def _clear_env(monkeypatch):
         "ALIBABA_API_KEY",
         "IFIND_MCP_AUTHORIZATION",
         "IFIND_MCP_TOKEN",
+        "AGENT_FILE_STORAGE_ROOT",
         "SECTOR_RESEARCH_DISABLE_MCP",
         "SECTOR_RESEARCH_OUTPUT_TIMESTAMP",
     ]:
@@ -99,9 +101,35 @@ def test_timestamped_output_dir_is_workspace_relative(monkeypatch):
     assert explicit_dir == WORKSPACE_ROOT / "out" / "20260602-130000"
 
 
+def test_agent_file_storage_root_controls_output_dir(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    tools._TASK_OUTPUT_DIRS.clear()
+    storage_root = tmp_path / "clean-storage"
+    monkeypatch.setenv("AGENT_FILE_STORAGE_ROOT", str(storage_root))
+    monkeypatch.setenv("SECTOR_RESEARCH_OUTPUT_TIMESTAMP", "20260602-140000")
+
+    out_dir = tools._timestamped_output_dir("./out")
+    markdown_path = tools.write_markdown_report.invoke(
+        {
+            "filename": "sector.md",
+            "markdown": "# Sector\n",
+            "output_dir": "./out",
+        }
+    )
+
+    assert file_storage_root() == storage_root
+    assert out_dir == storage_root / "out" / "20260602-140000"
+    assert markdown_path == "out/20260602-140000/sector.md"
+    assert (storage_root / markdown_path).read_text(encoding="utf-8") == "# Sector\n"
+
+
 def test_graph_imports_in_test_mode(monkeypatch):
     _clear_env(monkeypatch)
     monkeypatch.setenv("SECTOR_RESEARCH_TEST_MODE", "1")
     import sector_research_agent.graph as graph_module
 
-    assert graph_module.graph == {"name": "sector_research", "test_mode": True}
+    assert graph_module.graph == {
+        "name": "sector_research",
+        "test_mode": True,
+        "backend_type": "filesystem",
+    }

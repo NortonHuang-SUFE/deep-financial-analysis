@@ -28,7 +28,12 @@ from dcf_builder.assumption_research import (
     ASSUMPTION_MCP_SERVER_NAMES,
     create_assumption_research_subagent_spec,
 )
-from dcf_builder.config import WORKSPACE_ROOT, enabled_mcp_server_configs, load_config
+from dcf_builder.config import (
+    WORKSPACE_ROOT,
+    enabled_mcp_server_configs,
+    file_storage_root,
+    load_config,
+)
 from dcf_builder.tools import (
     build_comps_excel,
     build_dcf_model,
@@ -226,11 +231,15 @@ def _is_allowed_model_gateway(parsed_base_url) -> bool:
 
 async def _create_agent():
     if os.getenv("DCF_BUILDER_TEST_MODE") == "1":
-        return {"name": "dcf_builder", "test_mode": True}
+        return {
+            "name": "dcf_builder",
+            "test_mode": True,
+            "backend_type": "localshell",
+        }
 
     try:
         from deepagents import create_deep_agent
-        from deepagents.backends import FilesystemBackend
+        from deepagents.backends import LocalShellBackend
     except ImportError as exc:
         raise ImportError("deepagents is not installed. Run: pip install deepagents") from exc
 
@@ -253,7 +262,11 @@ async def _create_agent():
         validate_dcf_model,
         write_valuation_summary,
     ]
-    backend = FilesystemBackend(root_dir=str(WORKSPACE_ROOT), virtual_mode=False)
+    backend = LocalShellBackend(
+        root_dir=str(file_storage_root()),
+        virtual_mode=False,
+        inherit_env=True,
+    )
     assumption_tools = assumption_mcp_tools + search_tools + [write_assumption_analysis]
     assumption_subagent = create_assumption_research_subagent_spec(
         model=model,

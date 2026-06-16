@@ -11,6 +11,8 @@ from typing import Any
 
 from langchain_core.tools import tool
 
+from dcf_builder.config import file_storage_root
+
 
 _TASK_OUTPUT_DIRS: dict[str, Path] = {}
 
@@ -20,7 +22,7 @@ def _project_root() -> Path:
 
 
 def _workspace_root() -> Path:
-    return _project_root().parent
+    return file_storage_root()
 
 
 def _resolve_output_dir(output_dir: str) -> Path:
@@ -34,8 +36,12 @@ def _ensure_out_dir(output_dir: str) -> Path:
     return out
 
 
-def _timestamped_output_dir(output_dir: str) -> Path:
+def _timestamped_output_dir(output_dir: str, exact_output_dir: bool = False) -> Path:
     base = _resolve_output_dir(output_dir)
+    if exact_output_dir:
+        base.mkdir(parents=True, exist_ok=True)
+        return base
+
     if re.fullmatch(r"\d{8}-\d{6}(?:-\d+)?", base.name):
         base.mkdir(parents=True, exist_ok=True)
         return base
@@ -606,13 +612,21 @@ def _formula_cell(cell, formula: str, fmt: str = "", link: bool = False) -> None
 
 
 @tool
-def build_comps_excel(data_json: str, sector: str, output_dir: str = "./out") -> str:
+def build_comps_excel(
+    data_json: str,
+    sector: str,
+    output_dir: str = "./out",
+    exact_output_dir: bool = False,
+) -> str:
     """Build a comparable company analysis workbook.
 
     Args:
         data_json: JSON list or {"companies": [...]} with raw peer data.
         sector: Sector or peer-set label used in the file name.
-        output_dir: Base output directory. A task timestamp subdirectory is reused.
+        output_dir: Base output directory. A task timestamp subdirectory is reused
+            unless exact_output_dir is true.
+        exact_output_dir: When true, write directly into output_dir and use
+            the canonical filename comps.xlsx.
 
     Returns:
         Path to the written workbook.
@@ -628,8 +642,13 @@ def build_comps_excel(data_json: str, sector: str, output_dir: str = "./out") ->
         raise ValueError("data_json must contain a non-empty company list")
     _validate_comps_inputs(companies)
 
-    out_dir = _timestamped_output_dir(output_dir)
-    filepath = out_dir / f"comps-{_slugify(sector, 'sector')}-{datetime.now().strftime('%Y%m%d')}.xlsx"
+    out_dir = _timestamped_output_dir(output_dir, exact_output_dir)
+    filename = (
+        "comps.xlsx"
+        if exact_output_dir
+        else f"comps-{_slugify(sector, 'sector')}-{datetime.now().strftime('%Y%m%d')}.xlsx"
+    )
+    filepath = out_dir / filename
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -728,13 +747,20 @@ def build_comps_excel(data_json: str, sector: str, output_dir: str = "./out") ->
 
 
 @tool
-def build_dcf_model(dcf_json: str, output_dir: str = "./out") -> str:
+def build_dcf_model(
+    dcf_json: str,
+    output_dir: str = "./out",
+    exact_output_dir: bool = False,
+) -> str:
     """Build a deterministic DCF workbook from structured JSON.
 
     Args:
         dcf_json: JSON object containing company, historicals, market_data,
             scenarios, and optional comps_summary.
-        output_dir: Base output directory. A task timestamp subdirectory is reused.
+        output_dir: Base output directory. A task timestamp subdirectory is reused
+            unless exact_output_dir is true.
+        exact_output_dir: When true, write directly into output_dir and use
+            the canonical filename dcf_model.xlsx.
 
     Returns:
         Path to the written workbook.
@@ -774,8 +800,13 @@ def build_dcf_model(dcf_json: str, output_dir: str = "./out") -> str:
         "Bull": _normalize_case(_scenario(scenarios, "Bull"), periods, "Bull"),
     }
 
-    out_dir = _timestamped_output_dir(output_dir)
-    filepath = out_dir / f"{_slugify(ticker, 'ticker')}_DCF_Model_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    out_dir = _timestamped_output_dir(output_dir, exact_output_dir)
+    filename = (
+        "dcf_model.xlsx"
+        if exact_output_dir
+        else f"{_slugify(ticker, 'ticker')}_DCF_Model_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    )
+    filepath = out_dir / filename
 
     wb = openpyxl.Workbook()
     styles = _styles()
@@ -1351,13 +1382,17 @@ def _compute_base_case_from_workbook(wb) -> dict[str, float] | None:
 
 
 @tool
-def write_valuation_summary(summary_json: str, output_dir: str = "./out") -> str:
+def write_valuation_summary(
+    summary_json: str,
+    output_dir: str = "./out",
+    exact_output_dir: bool = False,
+) -> str:
     """Write a concise valuation summary markdown file."""
     payload = _parse_json(summary_json, "summary_json")
     if not isinstance(payload, dict):
         raise ValueError("summary_json must be a JSON object")
 
-    out_dir = _timestamped_output_dir(output_dir)
+    out_dir = _timestamped_output_dir(output_dir, exact_output_dir)
     filepath = out_dir / "valuation-summary.md"
     validation = payload.get("validation")
     if not validation:
@@ -1413,6 +1448,7 @@ def write_assumption_analysis(
     assumption_markdown: str,
     output_dir: str = "./out",
     filename: str = "assumption-analysis.md",
+    exact_output_dir: bool = False,
 ) -> str:
     """Write the DCF assumption analysis Markdown pack to the task output dir."""
     if not isinstance(assumption_markdown, str) or not assumption_markdown.strip():
@@ -1422,7 +1458,7 @@ def write_assumption_analysis(
     if not safe_name.endswith(".md"):
         safe_name += ".md"
 
-    out_dir = _timestamped_output_dir(output_dir)
+    out_dir = _timestamped_output_dir(output_dir, exact_output_dir)
     filepath = out_dir / safe_name
     filepath.write_text(assumption_markdown.rstrip() + "\n", encoding="utf-8")
     return str(filepath)

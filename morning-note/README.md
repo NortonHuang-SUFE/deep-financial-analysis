@@ -78,13 +78,13 @@ cd morning-note
 
 ## 输出
 
-本地工具会写入 workspace 根目录：
+本地工具默认写入 `config.yaml` 的 `output.dir`，相对路径会从共享文件根目录解析；如果 `.env` 设置了 `AGENT_FILE_STORAGE_ROOT`，则以它为根目录：
 
 ```text
-out/<YYYYMMDD-HHMMSS>/
+${AGENT_FILE_STORAGE_ROOT:-workspace}/out/<YYYYMMDD-HHMMSS>/
 ```
 
-同一次任务复用同一个时间戳目录。需要固定输出目录时设置：
+同一次 LangGraph run/thread 会复用同一个时间戳目录；没有 run/thread 标识时，进程级缓存只短时间复用，避免长跑服务串到旧任务。需要固定输出目录时设置：
 
 ```bash
 MORNING_NOTE_OUTPUT_TIMESTAMP=20260602-083000
@@ -96,7 +96,7 @@ MORNING_NOTE_OUTPUT_TIMESTAMP=20260602-083000
 - `write_markdown_report`
 - `write_json_artifact`
 
-最终 Markdown Morning Note 会保存到对应时间戳目录；来源日志、公司事件、今日日程等结构化数据可以保存为 JSON artifact。
+最终 Markdown Morning Note 会保存到对应时间戳目录；来源日志、公司事件、今日日程等结构化数据可以保存为 JSON artifact。工具返回绝对路径，方便 orchestrator 和 Studio 日志直接定位真实文件。
 
 ## 测试
 

@@ -25,6 +25,7 @@ if str(SRC_ROOT) not in sys.path:
 from stock_screen_agent.config import (  # noqa: E402
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
+    file_storage_root,
     load_config,
 )
 from stock_screen_agent.tools import (  # noqa: E402
@@ -165,7 +166,11 @@ def _is_allowed_model_gateway(parsed_base_url) -> bool:
 
 async def _create_agent():
     if os.getenv("STOCK_SCREEN_TEST_MODE") == "1":
-        return {"name": "stock_screen", "test_mode": True}
+        return {
+            "name": "stock_screen",
+            "test_mode": True,
+            "backend_type": "filesystem",
+        }
 
     try:
         from deepagents import create_deep_agent
@@ -198,7 +203,7 @@ async def _create_agent():
         tools=all_tools,
         skills=[str(PROJECT_ROOT / "skills")],
         middleware=[_make_tool_error_middleware()],
-        backend=FilesystemBackend(root_dir=str(WORKSPACE_ROOT), virtual_mode=False),
+        backend=FilesystemBackend(root_dir=str(file_storage_root()), virtual_mode=False),
         name="stock_screen",
     )
 

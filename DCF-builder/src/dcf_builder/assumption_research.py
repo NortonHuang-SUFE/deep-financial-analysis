@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from dcf_builder.config import PROJECT_ROOT, WORKSPACE_ROOT
+from dcf_builder.config import PROJECT_ROOT, file_storage_root
 
 
 ASSUMPTION_SUBAGENT_NAME = "dcf-assumption-researcher"
@@ -101,10 +101,14 @@ def create_assumption_research_agent(
 ):
     """Create a standalone Deep Agent for testing or direct assumption research."""
     from deepagents import create_deep_agent
-    from deepagents.backends import FilesystemBackend
+    from deepagents.backends import LocalShellBackend
 
     if backend is None:
-        backend = FilesystemBackend(root_dir=str(WORKSPACE_ROOT), virtual_mode=False)
+        backend = LocalShellBackend(
+            root_dir=str(file_storage_root()),
+            virtual_mode=False,
+            inherit_env=True,
+        )
 
     return create_deep_agent(
         model=model,

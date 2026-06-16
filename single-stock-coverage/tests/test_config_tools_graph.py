@@ -1,6 +1,8 @@
 import asyncio
 import importlib
 import json
+import sys
+from pathlib import Path
 
 import single_stock_coverage_agent.config as config_module
 from single_stock_coverage_agent.agent_registry import (
@@ -13,9 +15,14 @@ from single_stock_coverage_agent.config import (
     PROJECT_ROOT,
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
+    file_storage_root,
     load_config,
 )
 from single_stock_coverage_agent import tools
+
+DCF_SRC_ROOT = WORKSPACE_ROOT / "DCF-builder" / "src"
+if str(DCF_SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(DCF_SRC_ROOT))
 
 
 def _statement_payload(statement_type: str) -> dict:
@@ -524,6 +531,7 @@ def _clear_env(monkeypatch):
         "ALIBABA_API_KEY",
         "IFIND_MCP_AUTHORIZATION",
         "IFIND_MCP_TOKEN",
+        "AGENT_FILE_STORAGE_ROOT",
         "SINGLE_STOCK_COVERAGE_DISABLE_MCP",
         "SINGLE_STOCK_COVERAGE_TEST_MODE",
         "SINGLE_STOCK_COVERAGE_OUTPUT_TIMESTAMP",
@@ -666,6 +674,177 @@ def test_coverage_run_and_artifact_tools(monkeypatch, tmp_path):
     )
     assert manifest_failure["status"] == "FAIL"
     assert manifest_failure["field"] == "patch_json"
+
+
+def test_agent_file_storage_root_controls_coverage_artifacts(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    storage_root = tmp_path / "clean-storage"
+    monkeypatch.setenv("AGENT_FILE_STORAGE_ROOT", str(storage_root))
+    monkeypatch.setenv("SINGLE_STOCK_COVERAGE_OUTPUT_TIMESTAMP", "20260604-123000")
+
+    result = json.loads(
+        tools.create_coverage_run_dir.invoke(
+            {
+                "company": "Example",
+                "ticker": "EXM",
+                "market": "US",
+                "task_type": "initiation",
+            }
+        )
+    )
+    markdown_path = tools.write_markdown_artifact.invoke(
+        {
+            "markdown": "# Research\n",
+            "filename": "company_research.md",
+            "subdir": "01_company_research",
+            "ticker": "EXM",
+            "market": "US",
+            "run_dir": result["run_dir"],
+        }
+    )
+
+    assert file_storage_root() == storage_root
+    assert result["run_dir"] == "out/coverage/us-exm/runs/20260604-123000"
+    assert (storage_root / result["manifest_path"]).exists()
+    assert markdown_path == (
+        "out/coverage/us-exm/runs/20260604-123000/"
+        "01_company_research/company_research.md"
+    )
+    assert (storage_root / markdown_path).read_text(encoding="utf-8") == "# Research\n"
+
+
+def test_dcf_builder_exact_output_dir_writes_task3_artifacts_together(tmp_path):
+    from dcf_builder import tools as dcf_tools
+
+    valuation_dir = (
+        tmp_path
+        / "out"
+        / "coverage"
+        / "us-exm"
+        / "runs"
+        / "20260604-123000"
+        / "03_valuation"
+    )
+    dcf_payload = {
+        "company": "Example Co",
+        "ticker": "EXM",
+        "currency": "USD",
+        "unit": "millions",
+        "projection_periods": 5,
+        "market_data": {
+            "source": "test source",
+            "current_stock_price": 10,
+            "debt": 100,
+            "cash": 50,
+            "shares_outstanding": 100,
+            "beta": 1.1,
+            "risk_free_rate": 0.03,
+            "equity_risk_premium": 0.05,
+            "pretax_cost_of_debt": 0.04,
+            "tax_rate": 0.25,
+        },
+        "historicals": [
+            {
+                "year": 2024,
+                "revenue": 900,
+                "ebit": 108,
+                "da": 27,
+                "capex": 35,
+                "nwc_change": 5,
+                "debt": 100,
+                "cash": 50,
+                "shares_outstanding": 100,
+                "source": "test source",
+            },
+            {
+                "year": 2025,
+                "revenue": 1000,
+                "ebit": 120,
+                "da": 30,
+                "capex": 40,
+                "nwc_change": 6,
+                "debt": 100,
+                "cash": 50,
+                "shares_outstanding": 100,
+                "source": "test source",
+            },
+        ],
+        "scenarios": {
+            name: {
+                "source": "test source",
+                "revenue_growth": growth,
+                "ebit_margin": margin,
+                "tax_rate": [0.25] * 5,
+                "da_pct_revenue": [0.03] * 5,
+                "capex_pct_revenue": [0.04] * 5,
+                "nwc_pct_delta_revenue": [0.06] * 5,
+                "wacc": [wacc] * 5,
+                "terminal_growth": [terminal_growth] * 5,
+            }
+            for name, growth, margin, wacc, terminal_growth in [
+                ("Bear", [0.02] * 5, [0.10] * 5, 0.11, 0.01),
+                ("Base", [0.05] * 5, [0.12] * 5, 0.10, 0.02),
+                ("Bull", [0.08] * 5, [0.15] * 5, 0.09, 0.025),
+            ]
+        },
+    }
+    comps_payload = {
+        "companies": [
+            {
+                "company": "Example Co",
+                "ticker": "EXM",
+                "revenue": 1000,
+                "revenue_growth": 0.05,
+                "ebitda": 150,
+                "net_income": 80,
+                "market_cap": 1000,
+                "enterprise_value": 1050,
+                "source": "test source",
+            },
+            {
+                "company": "Peer Co",
+                "ticker": "PEER",
+                "revenue": 1200,
+                "revenue_growth": 0.04,
+                "ebitda": 180,
+                "net_income": 90,
+                "market_cap": 1100,
+                "enterprise_value": 1150,
+                "source": "test source",
+            },
+        ]
+    }
+
+    dcf_path = Path(
+        dcf_tools.build_dcf_model.invoke(
+            {
+                "dcf_json": json.dumps(dcf_payload),
+                "output_dir": str(valuation_dir),
+                "exact_output_dir": True,
+            }
+        )
+    )
+    comps_path = Path(
+        dcf_tools.build_comps_excel.invoke(
+            {
+                "data_json": json.dumps(comps_payload),
+                "sector": "example",
+                "output_dir": str(valuation_dir),
+                "exact_output_dir": True,
+            }
+        )
+    )
+    validation = json.loads(
+        dcf_tools.validate_dcf_model.invoke({"excel_path": str(dcf_path)})
+    )
+
+    assert dcf_path == valuation_dir / "dcf_model.xlsx"
+    assert comps_path == valuation_dir / "comps.xlsx"
+    assert Path(validation["validation_path"]) == valuation_dir / "validation.json"
+    assert dcf_path.exists()
+    assert comps_path.exists()
+    assert not (valuation_dir / "20260604-123000").exists()
 
 
 def test_statement_json_tools_validate_write_and_read_context(monkeypatch, tmp_path):
@@ -2239,6 +2418,13 @@ def test_graph_factories_import_in_test_mode(monkeypatch):
         "task4_chart_pack_generator",
         "task5_report_assembler",
     ]
+    assert root_graph["backend_type"] == "localshell"
+    assert root_graph["backend_map"]["single_stock_coverage"] == "localshell"
+    assert root_graph["backend_map"]["task4_chart_pack_generator"] == "localshell"
+    assert root_graph["backend_map"]["dcf_execution"] == "localshell"
+    assert root_graph["backend_map"]["workbook_builder"] == "localshell"
+    assert root_graph["backend_map"]["model_update_executor"] == "localshell"
+    assert root_graph["backend_map"]["task3_valuation_analyst"] == "filesystem"
 
     bs_graph = asyncio.run(graph_module.task2_bs_modeler_graph())
     assert bs_graph["name"] == "bs_modeler"
