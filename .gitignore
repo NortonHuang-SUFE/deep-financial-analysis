@@ -6,8 +6,11 @@
 !/.gitignore
 !/.env.example
 !/README.md
+!/README.en.md
 !/langgraph.json
 !/single-stock-coverage-plan.md
+!/docs/
+!/docs/**
 !/DCF-builder/
 !/DCF-builder/**
 !/industry-ananlysis/
