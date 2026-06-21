@@ -10,7 +10,7 @@ A multi-agent research system for China public markets. It connects pre-market i
 
 ## 1. What This Project Is
 
-`Deep Financial Analysis` is not a chat demo. It decomposes China-market equity research into specialized agents and lets them collaborate around one research task.
+`Deep Financial Analysis` is designed as a local equity-research workflow system for China public markets. It decomposes research work into specialized agents and lets them collaborate around one research task.
 
 It currently covers:
 
@@ -37,7 +37,7 @@ The data layer is built around Tonghuashun iFind MCP. Model calls go through an 
 
 ## 3. Public Examples
 
-Only three representative examples are kept in `docs/examples/`, so they remain readable on GitHub:
+The following three examples represent the system's current core capabilities and are directly readable on GitHub:
 
 | Example | Link | Capability |
 |---|---|---|
@@ -45,11 +45,11 @@ Only three representative examples are kept in `docs/examples/`, so they remain 
 | Sector research | [MLCC sector research](docs/examples/mlcc-sector-research.md) | Supply-demand, value chain, competitive landscape, key stocks, and risks |
 | Single-stock research | [Shaanxi Coal company research](docs/examples/shaanxi-coal-company-research.md) | Business model, cost structure, governance, moat, and risks |
 
-## 4. Why It Exists: Compared With Anthropic Financial Agents
+## 4. Design Positioning: Compared With Anthropic Financial Agents
 
 On May 5, 2026, Anthropic released ten ready-to-run financial-services agent templates for investment banking, asset management, finance, and compliance workflows. See [Agents for financial services](https://www.anthropic.com/news/finance-agents) and [anthropics/financial-services](https://github.com/anthropics/financial-services).
 
-Anthropic's agents are closer to an enterprise financial-workflow template marketplace: pitch builder, meeting preparer, earnings reviewer, market researcher, model builder, valuation reviewer, statement auditor, KYC screener, and related workflows.
+Anthropic's agents are positioned closer to an enterprise financial-workflow template marketplace: pitch builder, meeting preparer, earnings reviewer, market researcher, model builder, valuation reviewer, statement auditor, KYC screener, and related workflows.
 
 `Deep Financial Analysis` starts from a different premise. It is organized around China public-market research rather than a general collection of financial skills.
 
@@ -136,7 +136,7 @@ Implemented:
 
 Next:
 
-- Polish final single-stock research reports
+- Improve final single-stock research reports
 - Stabilize stock screens and watchlist explanations
 - Standardize source logs, citations, and public samples
 - Add portfolio tracking, backtesting, and automatic investment-logic scorecard updates

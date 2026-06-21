@@ -10,9 +10,9 @@
 
 ## 1. 这是一个什么项目
 
-`Deep Financial Analysis` 的目标不是做一个聊天式问答 demo，而是把中国市场投研工作拆成多个专业 agent，并让它们围绕同一个研究任务协作。
+`Deep Financial Analysis` 是一个面向中国二级市场的本地投研工作流系统。它将中国市场投研工作拆成多个专业 agent，并让它们围绕同一个研究任务协作。
 
-它当前覆盖：
+当前覆盖：
 
 - 盘前晨报：隔夜市场、政策、公告、资金面和交易线索
 - 行业研究：产业链、竞争格局、重点标的和风险变量
@@ -21,7 +21,7 @@
 - 财务模型与估值：三表模型、模型审计、DCF、可比公司和估值调和
 - 图表与报告：图表包、PPT/Markdown 研究材料和最终综合报告
 
-底层优先使用同花顺 iFind MCP 数据；模型通过 OpenAI-compatible gateway 接入，默认 DashScope/Qwen，也可以替换。
+数据层优先接入同花顺 iFind MCP；模型通过 OpenAI-compatible gateway 接入，默认 DashScope/Qwen，也可以替换。
 
 ## 2. 它能产出什么
 
@@ -37,7 +37,7 @@
 
 ## 3. 公开案例
 
-只保留 3 个最能代表能力边界的样例，放在 `docs/examples/`，推到 GitHub 后可以直接打开：
+以下 3 个样例代表当前系统的主要能力边界，并可直接在 GitHub 浏览：
 
 | 案例 | 链接 | 代表能力 |
 |---|---|---|
@@ -45,15 +45,15 @@
 | 行业研究 | [MLCC 行业综合研究](docs/examples/mlcc-sector-research.md) | 行业供需、价值链、竞争格局、重点标的和风险变量 |
 | 个股研究 | [陕西煤业公司研究](docs/examples/shaanxi-coal-company-research.md) | 公司身份、业务模式、成本结构、治理、护城河和风险 |
 
-## 4. 为什么要做它：和 A 社 Financial Agents 的区别
+## 4. 设计取舍：与 Anthropic Financial Agents 的区别
 
-Anthropic（A 社）在 2026-05-05 发布了面向金融服务的 10 个 ready-to-run agent templates，覆盖投行、资管、财务和合规场景。官方资料见 [Agents for financial services](https://www.anthropic.com/news/finance-agents) 和 [anthropics/financial-services](https://github.com/anthropics/financial-services)。
+Anthropic 在 2026-05-05 发布了面向金融服务的 10 个 ready-to-run agent templates，覆盖投行、资管、财务和合规场景。官方资料见 [Agents for financial services](https://www.anthropic.com/news/finance-agents) 和 [anthropics/financial-services](https://github.com/anthropics/financial-services)。
 
-A 社的 agents 更像“企业金融工作流模板市场”：包括 pitch builder、meeting preparer、earnings reviewer、market researcher、model builder、valuation reviewer、statement auditor、KYC screener 等，适合嵌入投行、审计、财务和合规流程。
+Anthropic 的 Financial Agents 定位更接近“企业金融工作流模板市场”：包括 pitch builder、meeting preparer、earnings reviewer、market researcher、model builder、valuation reviewer、statement auditor、KYC screener 等，适合嵌入投行、审计、财务和合规流程。
 
 `Deep Financial Analysis` 的出发点不同：它不是把一组 skills 拼起来，而是按中国二级市场投研流程组织。
 
-| 维度 | A 社 Financial Agents | Deep Financial Analysis |
+| 维度 | Anthropic Financial Agents | Deep Financial Analysis |
 |---|---|---|
 | 定位 | 通用金融服务 agent templates | 面向中国二级市场的投研生产系统 |
 | 平台依赖 | 主要依赖 Claude Cowork、Claude Code plugin 或 Managed Agents | 基于 Python、LangGraph 和本地文件系统；模型网关可替换 |
@@ -63,7 +63,7 @@ A 社的 agents 更像“企业金融工作流模板市场”：包括 pitch bui
 | 产出形态 | 偏企业工作流和 Office 审阅 | 直接输出 Markdown、JSON、Excel、PPT、PNG 图表和最终综合报告 |
 | 可复盘性 | 平台日志为主 | artifacts 全量落盘，包含 source log、run manifest、model audit、valuation state 等 |
 
-一句话：A 社强在“企业级通用金融模板”，这个项目强在“面向中国股票投研的完整本地工作流”。
+简言之：Anthropic Financial Agents 更偏企业级通用金融模板；`Deep Financial Analysis` 更偏面向中国股票投研的完整本地工作流。
 
 ## 5. 配置方法
 
@@ -136,7 +136,7 @@ IFIND_MCP_AUTHORIZATION=Bearer ...
 
 下一步：
 
-- polish 个股研究最终报告
+- 完善个股研究最终报告
 - 稳定股票筛选和 watchlist 解释
 - 标准化 source log、引用和公开样例库
 - 增加组合跟踪、回测和投资逻辑 scorecard 自动更新
