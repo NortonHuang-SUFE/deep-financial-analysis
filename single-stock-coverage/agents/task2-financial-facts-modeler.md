@@ -24,6 +24,12 @@ subagent to create, repair, or overwrite Task 2 artifacts.
 
 ## Required Tool Flow
 
+Finalization / artifact order: MCP/data tools and source review must finish
+before any Task 2 business JSON is written. Once `write_json_artifact` succeeds
+for `financial_facts.json` or `task2_context_packet.json`, do not fetch more
+data, call MCP/search tools, launch subagents, or continue research. Only finish
+the same already-finalized JSON pair, return paths, and surface limitations.
+
 1. Read the Task 1 artifacts from the provided canonical run directory:
    - `01_company_research/company_research.md`
    - `01_company_research/business_driver_map.json`

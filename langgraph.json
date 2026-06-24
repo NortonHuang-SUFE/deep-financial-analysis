@@ -7,6 +7,7 @@
     "sector_research": "./sector/src/sector_research_agent/graph.py:graph",
     "thesis_tracker": "./thesis/src/thesis_tracker_agent/graph.py:graph",
     "deep_orchestrator": "./orchestrator/src/deep_orchestrator/graph.py:graph",
+    "html_image_renderer": "./html-image-renderer/src/html_image_renderer_agent/graph.py:graph",
     "single_stock_coverage": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:graph",
     "single_stock_coverage_task1_company_researcher": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task1_company_researcher_graph",
     "single_stock_coverage_task2_financial_modeler": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_financial_modeler_graph",
@@ -32,6 +33,7 @@
     "./sector",
     "./thesis",
     "./orchestrator",
+    "./html-image-renderer",
     "./single-stock-coverage"
   ]
 }

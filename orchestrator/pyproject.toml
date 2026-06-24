@@ -1,7 +1,7 @@
 [project]
 name = "deep-orchestrator"
 version = "0.1.0"
-description = "LangGraph Deep Agents top-level orchestrator that fans out to all 6 financial analysis sub-agents and aggregates outputs into final-out/."
+description = "LangGraph Deep Agents top-level orchestrator that fans out to financial analysis and rendering subagents and aggregates outputs into final-out/."
 requires-python = ">=3.11"
 dependencies = [
     "deepagents>=0.6.1",

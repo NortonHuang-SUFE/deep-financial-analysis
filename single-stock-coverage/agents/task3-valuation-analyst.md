@@ -58,6 +58,20 @@ Write `precedent_transactions.xlsx` when M&A precedent data is applicable and
 available, but do not force it when the sector/company has no relevant
 transaction set.
 
+Finalization / artifact order: Task 3 may use subagents, MCP/data tools, and
+research skills, but all evidence review, value-driver mapping, assumption
+generation, audit loops, DCF/comps execution, and valuation reconciliation must
+be complete before Task 3 writes its Markdown/JSON business artifacts. Keep
+`evidence_sufficiency.md`, `value_driver_map.json`, `assumption_pack.md`,
+`assumption_audit.md`, `valuation_analysis.md`, and `valuation_state.json` as
+draft content until finalization, except when a blocker is the final output.
+Once any Task 3 business artifact is written or the `dcf_execution` child starts
+the workbook artifact batch, do not launch new research, call MCP/search tools,
+or start new assumption subagent work. Only finish the same finalized artifact
+batch, run deterministic validation/audit, and return paths plus limitations.
+If a gap is discovered after writing, report it or recommend rerun; do not
+research after the write.
+
 ## Required Skills
 
 Use these Task 3 skills in order:
@@ -87,7 +101,7 @@ Read Task 1 and Task 2 artifacts before doing any valuation work. Validate:
   cash, diluted shares, and forecast summary.
 - Source coverage and `[UNSOURCED]` gaps.
 
-Write `evidence_sufficiency.md` with:
+Draft `evidence_sufficiency.md` content with:
 
 - `Proceed / Do Not Proceed` decision.
 - Required inputs found and missing.
@@ -96,13 +110,15 @@ Write `evidence_sufficiency.md` with:
 - `[UNSOURCED]` list and whether each gap blocks valuation.
 - Exact artifact paths read.
 
-If the decision is `Do Not Proceed`, stop and return the blocker. Do not
-continue to assumptions or model execution.
+If the decision is `Do Not Proceed`, finalization may write only the blocker
+evidence gate artifact, then stop and return the blocker. Do not continue to
+assumptions or model execution.
 
 ### 3.2 Value Driver Map
 
 Transform Task 1 business facts and Task 2 financial facts into a valuation
-driver map. Write `value_driver_map.json`.
+driver map. Draft `value_driver_map.json` content, but defer writing the file
+until finalization.
 
 The JSON must map operating evidence to model variables:
 
@@ -137,8 +153,8 @@ skill and returns the full assumption pack as text.
 
 1. Call `assumption_generator` via the task tool with `subagent_type="assumption_generator"`.
 2. Pass the following inputs to the child:
-   - Full text content of `evidence_sufficiency.md` (written in 3.1).
-   - Full content of `value_driver_map.json` (written in 3.2).
+   - Full text content of `evidence_sufficiency.md` (drafted in 3.1).
+   - Full content of `value_driver_map.json` (drafted in 3.2).
    - Absolute paths to all Task 1 artifacts:
      `01_company_research/company_research.md`,
      `01_company_research/business_driver_map.json`,
@@ -149,8 +165,9 @@ skill and returns the full assumption pack as text.
      `02_financial_model/model_audit.md`.
 3. Receive from the child: the complete `assumption_pack.md` content as text in
    the child's final message. The child does NOT write the file to disk.
-4. Write `assumption_pack.md` to the Task 3 output directory yourself using
-   `write_markdown_artifact`. You are responsible for disk persistence.
+4. Keep the returned `assumption_pack.md` content as the current draft until
+   finalization. You are responsible for disk persistence after the audit loop
+   and model execution are complete.
 
 The `assumption_pack.md` must contain these top-level sections:
 
@@ -187,7 +204,8 @@ Required assumption content:
 ### 3.4 Assumption Audit
 
 Run the `assumption-audit` skill on the `assumption_pack.md` content received
-from `assumption_generator`. Write `assumption_audit.md` after each audit run.
+from `assumption_generator`. Draft `assumption_audit.md` content after each
+audit run, but defer writing it until finalization or a blocker stop.
 
 Audit must challenge:
 
@@ -203,10 +221,11 @@ Audit must challenge:
 
 - If the audit verdict is `Revise Before Execution`: re-call `assumption_generator`
   via the task tool, passing BOTH the original evidence inputs (as in 3.3) AND
-  the full text content of `assumption_audit.md` so the child can address each
+  the full draft content of `assumption_audit.md` so the child can address each
   finding. The child returns a revised `assumption_pack.md` as text; you
-  overwrite the file on disk and re-run the audit. Repeat until the verdict is
-  `Pass` or `Pass with Warnings`.
+  replace the in-memory draft and re-run the audit. Repeat until the verdict is
+  `Pass` or `Pass with Warnings`. Do not write the assumption pack to disk
+  during revision rounds.
 - If the audit verdict is `Do Not Proceed`: stop immediately. Write the blocker
   findings to `assumption_audit.md` and return the blocker to the orchestrator.
   Do not continue to model execution.
@@ -257,6 +276,12 @@ Use `valuation-reconciliation` and `valuation-methodologies` to reconcile:
 - Historical multiples.
 - Market-implied expectations.
 - Sanity checks.
+
+After model execution and reconciliation are complete, finalize the artifact
+batch by writing the drafted `evidence_sufficiency.md`, `value_driver_map.json`,
+audited `assumption_pack.md`, final `assumption_audit.md`,
+`valuation_analysis.md`, and `valuation_state.json`. Do not perform new
+research after this finalization batch begins.
 
 Write `valuation_analysis.md` with:
 

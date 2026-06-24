@@ -36,6 +36,13 @@ If `statement_spec_pack.json` has Critical findings or `builder_blocked=true`, s
 
 ## Required Tool Flow
 
+Finalization / artifact order: workbook inspection, update scope preparation,
+and validation planning must finish before writing Task 2 business artifacts.
+Once `update_integrated_three_statement_model` or `write_markdown_artifact`
+succeeds, do not fetch data, call MCP/search tools, launch subagents, or
+continue research. Only validate the same updated workbook, write the matching
+audit, return paths, and surface limitations.
+
 1. Read the generated `financial_facts.json`, `task2_context_packet.json`, and `statement_spec_pack.json`.
 2. Build only a compact `update_scope_json` from the parent instructions.
 3. Call `update_integrated_three_statement_model` with the prior workbook path, run directory, and `update_scope_json`; do not pass large model input or statement spec JSON payloads.

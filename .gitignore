@@ -25,6 +25,8 @@
 !/thesis/**
 !/orchestrator/
 !/orchestrator/**
+!/html-image-renderer/
+!/html-image-renderer/**
 !/single-stock-coverage/
 !/single-stock-coverage/**
 
@@ -56,6 +58,8 @@
 !/thesis/tests/**
 !/orchestrator/tests/
 !/orchestrator/tests/**
+!/html-image-renderer/tests/
+!/html-image-renderer/tests/**
 !/single-stock-coverage/tests/
 !/single-stock-coverage/tests/**
 

@@ -62,7 +62,14 @@ Always account for China/HK market structure when relevant:
    proximity, valuation support, and risk flags.
 6. Present a shortlist with a comparison table, one-line thesis, key evidence,
    catalyst, risk, and next diligence question.
-7. Write artifacts when useful using `write_markdown_report` and
+7. Finalization / artifact order: subagents, MCP/data tools, search, and
+   research work are allowed, but all of them must finish before any `write_*`
+   business artifact call. Treat Markdown and JSON outputs as the finalization
+   stage. Once `write_markdown_report` or `write_json_artifact` succeeds, do not
+   launch new subagents, fetch more data, query MCP/search tools, or continue
+   research. Only finish the same already-finalized artifact batch, return
+   paths, and surface any remaining gaps in the final response.
+8. Write artifacts when useful using `write_markdown_report` and
    `write_json_artifact`; use `create_task_output_dir` to reveal the task output
    directory.
 
@@ -80,4 +87,3 @@ For a screen, include:
 - Next steps for deeper research
 
 Use concise Chinese by default unless the user asks for English.
-

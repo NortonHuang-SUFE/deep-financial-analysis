@@ -18,30 +18,45 @@ timestamped output directory under the workspace-level `./out`:
 
 ## Workflow
 
+Finalization / artifact order: subagents, MCP/data tools, search, and research
+work are allowed, but all of them must finish before any business artifact is
+written or generated. Treat Markdown, Excel, JSON, and other valuation/model
+outputs as the finalization stage. Once `build_comps_excel`, `build_dcf_model`,
+`write_valuation_summary`, `write_assumption_analysis`, or another artifact
+call succeeds, do not launch new subagents, fetch more data, query MCP/search
+tools, or continue research. Only finish the same already-finalized artifact
+batch, run required deterministic validation/audit, and return paths plus
+limitations. If a gap is discovered after writing, report it in the final
+response or recommend a rerun; do not research after the write.
+
 1. Identify the target company, exchange ticker, reporting currency, fiscal year
    end, requested valuation date, and shared output directory.
 2. Use the `data-collector` skill to gather the company, market, macro/news,
    risk, historical financial, and peer evidence needed for the model.
 3. If a required figure is unavailable, mark it `[UNSOURCED]` or ask for an
    assumption. Do not fabricate numbers.
-4. Use the `comps-analysis` skill to build the comparable-company workbook
-   before assumption research.
+4. Use the `comps-analysis` skill to complete comparable-company analysis before
+   assumption research. Keep the peer table and workbook inputs in draft form;
+   defer `build_comps_excel` until finalization.
 5. Call the `dcf-assumption-researcher` subagent through `task` after comps are
-   built. The task must summarize the evidence collected so far, including
+   analyzed. The task must summarize the evidence collected so far, including
    target historicals, peer data, comps outputs, market data, industry
    observations, source strings, any `[UNSOURCED]` gaps, the shared output
    directory, and whether the user asked for the assumption analysis as an
    artifact. Do not call `write_assumption_analysis` yourself; the subagent
-   writes that artifact when requested.
-6. Use the `dcf-model` skill to turn all evidence into the DCF workbook and run
-   validation. Treat the subagent's assumptions as evidence, not the only source;
+   writes that artifact during its own finalization when requested.
+6. Use the `dcf-model` skill to prepare the final DCF inputs and validation
+   plan. Treat the subagent's assumptions as evidence, not the only source;
    resolve omissions or conflicts from historicals, market data, comps, and
-   industry/news context, marking any `[UNSOURCED]` adjustment.
-7. Use the `audit-xls` skill to inspect every generated Excel workbook. Use
-   model scope for the DCF workbook and surface all Critical and Warning
-   findings.
-8. Use the `valuation-summary` skill to write the final summary from the model,
-   sources, validation output, and Excel audit findings.
+   industry/news context, marking any `[UNSOURCED]` adjustment. Defer
+   `build_dcf_model` until finalization.
+7. Prepare the `audit-xls` review plan for every workbook that will be
+   generated. Run the actual workbook audit during finalization after the Excel
+   artifacts exist, and surface all Critical and Warning findings.
+8. Finalize the artifact batch: call `build_comps_excel`, `build_dcf_model`,
+   deterministic validation/audit tools, and `write_valuation_summary` only
+   after all research, subagent work, assumptions, and summary content are
+   complete.
 
 ## Modeling Guardrails
 

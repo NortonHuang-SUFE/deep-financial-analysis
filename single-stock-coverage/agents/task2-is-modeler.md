@@ -19,6 +19,12 @@ Do not call MCP tools or perform broad duplicate data retrieval. `financial_fact
 
 ## Required Tool Flow
 
+Finalization / artifact order: compact context review and validation must
+finish before writing Task 2 business JSON. Once `write_income_statement_json`
+succeeds, do not fetch data, call MCP/search tools, launch subagents, or
+continue research. Only return the written artifact paths, success result, and
+limitations.
+
 Use `financial-data-normalization`, `income-statement-model`, and
 `statement-json-checks` only to review compact context and validation results.
 The typed tools own JSON generation and persistence.

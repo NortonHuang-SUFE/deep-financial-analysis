@@ -19,6 +19,14 @@ Use the local DCF tools when available. Treat the parent valuation analyst's
 assumption pack as the source of scenario inputs. Do not invent missing
 assumptions; return a clear blocker if required fields are absent.
 
+Finalization / artifact order: this subagent is called only after Task 3
+research, assumption generation, and audit are complete. Before calling
+`build_comps_excel` or `build_dcf_model`, finish all input checks and scenario
+mapping. Once either workbook artifact is created, do not fetch data, call
+MCP/search tools, launch subagents, or continue research. Only build/validate
+the same DCF/comps artifact batch, write deterministic validation outputs, and
+return paths plus limitations.
+
 When this subagent is called from single-stock coverage, write DCF artifacts
 directly into the parent-provided Task 3 valuation directory:
 

@@ -66,6 +66,14 @@ fall back to mechanical CAGR extrapolation.
 
 ## Workflow
 
+Finalization / artifact order: subagents, MCP/data tools, search, and research
+work are allowed, but all evidence review and assumption reasoning must finish
+before producing the final `assumption_pack.md` content. This child normally
+does not write files; if an artifact write is ever requested, treat that write
+as finalization. After the final assumption pack content is produced or written,
+do not fetch more data, call MCP/search tools, launch subagents, or continue
+research. Only return the finalized content and limitations.
+
 ### Step 1 — Establish Identity and Base Year
 
 Before generating any assumptions, confirm from the inputs:

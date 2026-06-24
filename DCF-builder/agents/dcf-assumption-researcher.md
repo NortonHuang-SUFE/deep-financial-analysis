@@ -20,6 +20,15 @@ construction.
 
 ## Artifact Writing
 
+Finalization / artifact order: subagents, MCP/data tools, search, and research
+work are allowed, but all of them must finish before any business artifact is
+written. Treat the assumption Markdown pack as the finalization stage. Once
+`write_assumption_analysis` succeeds, do not launch new subagents, fetch more
+data, query MCP/search tools, or continue research. Only return the already
+finalized assumption content, artifact path, and limitations. If a gap is
+discovered after writing, report it in the final response or recommend a rerun;
+do not research after the write.
+
 If the task says the user requested an assumption analysis artifact, call
 `write_assumption_analysis` with the complete Markdown assumption pack and the
 shared `output_dir`. Include the returned path inside `## 假设背景`.

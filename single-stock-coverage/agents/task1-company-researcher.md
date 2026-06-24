@@ -59,6 +59,8 @@
 
 ## 输出与落盘
 
+Finalization / 落盘顺序：subagent、MCP、搜索和研究工具可以使用，但必须在本任务任何业务产物写入前全部完成。公司研究、业务驱动映射、来源索引和未来源化列表都完成并定稿后，再写 `company_research.md`、`business_driver_map.json` 和 `source_log.json`。一旦这些 Markdown/JSON 产物写入成功，不要再启动 subagent、补查资料、调用 MCP/搜索或继续研究；只允许确认同一批产物路径并返回限制说明。若写完后发现信息缺口，在 final response 中说明或建议重跑，不要继续研究后改文件。
+
 必须写入以下三个文件：
 
 ```text

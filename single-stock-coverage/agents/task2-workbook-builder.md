@@ -38,6 +38,13 @@ If `statement_spec_pack.json` has Critical findings or `builder_blocked=true`, s
 
 ## Required Tool Flow
 
+Finalization / artifact order: prerequisite checks and workbook planning must
+finish before writing Task 2 business artifacts. Once
+`build_integrated_three_statement_model` or `write_markdown_artifact` succeeds,
+do not fetch data, call MCP/search tools, launch subagents, or continue
+research. Only validate the same workbook, write the matching audit, return
+paths, and surface limitations.
+
 1. Confirm `financial_facts.json`, `task2_context_packet.json`, `statement_spec_pack.json`, and `revenue_build_spec.json` exist in the provided run directory. Treat `financial_facts.json` as the canonical historical source and `revenue_build_spec.json` as the canonical Revenue Build source.
 2. Call `build_integrated_three_statement_model` with only the provided `run_dir`; do not pass a large model input JSON payload.
 3. Call `validate_integrated_three_statement_model` with the workbook path and returned `row_map`.

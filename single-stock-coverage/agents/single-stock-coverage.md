@@ -39,6 +39,12 @@ Task 2 has six nested subagents: financial_facts_modeler, is_modeler, bs_modeler
 
 - Create a coverage run directory first with `create_coverage_run_dir`.
 - Write all artifacts under `out/coverage/{market}-{ticker}/runs/{timestamp}/`.
+- Finalization / artifact order: subagents are allowed and are the normal way
+  to run Tasks 1-5, but each task's research, MCP/data calls, and nested
+  subagents must finish before that task writes its business artifacts. After a
+  task reports written Markdown, JSON, Excel, chart, or report outputs, do not
+  ask that same task to continue researching; only record paths, update
+  manifest/state metadata, route the next task, or surface limitations.
 - Update `run_manifest.json` after each subagent returns.
 - Update `coverage_state.json` at the end of the run.
 - Do not skip prerequisites. Task 3 must not run until Task 1 and Task 2

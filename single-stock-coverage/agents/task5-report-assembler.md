@@ -120,6 +120,14 @@ a full refreshed report. An update memo is a delta document.
 
 ## Assembly Workflow
 
+Finalization / artifact order: all upstream artifact verification, report
+planning, consistency gates, source indexing, and report drafting must finish
+before writing `final_report.md`, `source_index.json`, or optional
+`final_report.docx`. Once any Task 5 business artifact is written, do not browse,
+call data tools, launch subagents, reread new research sources, or change
+upstream conclusions. Only finish the same report artifact batch, perform
+deterministic formatting/export if requested, and return paths plus limitations.
+
 1. Verify the run directory and all required Task 1-4 artifacts.
 2. Read `run_manifest.json` and `coverage_state.json` if present to establish
    ticker, company, market, currency, fiscal year, report type, event context,

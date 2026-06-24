@@ -172,6 +172,14 @@ Minimum structure:
 
 ## Execution Workflow
 
+Finalization / artifact order: all upstream artifact verification, data
+extraction, chart planning, and chart data mapping must finish before writing
+chart files or `chart_index.json`. Once any chart PNG/SVG/CSV or
+`chart_index.json` is written, do not read new sources beyond the already
+verified upstream artifacts, call research/data tools, launch subagents, or
+reinterpret valuation conclusions. Only finish the same chart artifact batch,
+validate file/index consistency, and return paths plus limitations.
+
 1. Verify Task 1-3 artifact presence and confirm no required upstream output is
    missing.
 2. Extract chart data from the owning artifacts. Prefer structured JSON and Excel

@@ -9,8 +9,8 @@ fake tool-calling model and tiny compiled subagents to prove that:
 2. The agent is wired with the built-in Deep Agents tools only
    (`task` + shell-enabled built-in tools + `write_todos`) and none of the old
    custom tools.
-3. The bundled `guizang-social-card-skill` is discovered and offered to the
-   model, while the deleted `orchestration` skill is gone.
+3. Visual/image requests are routed to the `html_image_renderer` subagent with
+   artifact paths, and the orchestrator no longer mounts its own skills.
 4. The subagent registry is well-formed and matches the on-disk packages.
 
 A separate, opt-in integration test (`ORCHESTRATOR_RUN_INTEGRATION=1`) builds
@@ -20,6 +20,7 @@ the real orchestrator graph end to end.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import os
 import sys
 import time
@@ -37,7 +38,6 @@ from langgraph.graph.message import add_messages
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
-SKILLS_DIR = PROJECT_ROOT / "skills"
 SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
@@ -143,7 +143,7 @@ class _ScriptedToolModel(BaseChatModel):
         return self
 
 
-def _build_agent(model, subagents, *, with_skills: bool = False):
+def _build_agent(model, subagents):
     from deepagents import create_deep_agent
     from deepagents.backends import LocalShellBackend
 
@@ -157,7 +157,7 @@ def _build_agent(model, subagents, *, with_skills: bool = False):
         model=model,
         tools=[],
         subagents=subagents,
-        skills=[str(SKILLS_DIR)] if with_skills else None,
+        skills=None,
         backend=backend,
         name="orchestrator_under_test",
     )
@@ -178,6 +178,7 @@ def test_subagent_registry_matches_disk():
         "sector_research",
         "thesis_tracker",
         "single_stock_coverage",
+        "html_image_renderer",
     }
     assert set(orch._SUBAGENTS) == expected
     assert orch.graph["backend_type"] == "localshell"
@@ -271,21 +272,37 @@ def test_builtin_tools_present_and_no_custom_tools():
     assert not leaked, f"removed custom tools still present: {leaked}"
 
 
-def test_social_card_skill_discovered_and_orchestration_skill_gone():
-    """The guizang social-card skill is offered; the old orchestration skill is gone."""
-    dummy, _ = _make_marker_subagent("single_stock_coverage", sleep_s=0.0)
+def test_orchestrator_does_not_mount_skills():
+    """Production orchestrator delegates visual work instead of loading skills."""
+    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"
+    from deep_orchestrator import graph as orch
+
+    source = inspect.getsource(orch._create_agent)
+    assert "skills=None" in source
+    assert "PROJECT_ROOT / \"skills\"" not in source
+
+    dummy, _ = _make_marker_subagent("html_image_renderer", sleep_s=0.0)
     model = _ScriptedToolModel(tool_calls=[], captured={})
     agent = _build_agent(
         model,
-        [{"name": "single_stock_coverage", "description": "d", "runnable": dummy}],
-        with_skills=True,
+        [{"name": "html_image_renderer", "description": "d", "runnable": dummy}],
     )
     asyncio.run(agent.ainvoke({"messages": [{"role": "user", "content": "make a 头图"}]}))
 
     context = model.captured.get("context_text", "")
-    assert "guizang-social-card-skill" in context
-    # The deleted skill directory must not exist on disk either.
-    assert not (SKILLS_DIR / "orchestration").exists()
+    assert "guizang-social-card-skill" not in context
+
+
+def test_orchestrator_prompt_routes_images_by_artifact_paths():
+    """Visual requests must pass artifact file paths to html_image_renderer."""
+    prompt = (PROJECT_ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
+
+    assert "html_image_renderer" in prompt
+    assert "source_paths" in prompt
+    assert "file addresses" in prompt
+    assert "not full file contents" in prompt
+    assert "Never paste an entire upstream Markdown/CSV" in prompt
+    assert "guizang-social-card-skill" not in prompt
 
 
 @pytest.mark.skipif(
@@ -293,7 +310,7 @@ def test_social_card_skill_discovered_and_orchestration_skill_gone():
     reason="set ORCHESTRATOR_RUN_INTEGRATION=1 to build the real graph (needs model key + sibling deps)",
 )
 def test_real_orchestrator_graph_builds():
-    """Integration: the real orchestrator graph builds with 6 native subagents."""
+    """Integration: the real orchestrator graph builds with native subagents."""
     os.environ.pop("ORCHESTRATOR_TEST_MODE", None)
     import importlib
 

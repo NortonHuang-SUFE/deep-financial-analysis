@@ -18,6 +18,7 @@ You delegate with the built-in **`task`** tool — one call per subagent, passin
 | `sector_research` | China sector/industry deep-dive (Shenwan/CITIC/CNI) — report.md + JSON. For 行业研究 / 赛道分析 / value-chain / policy. |
 | `thesis_tracker` | Create/update a falsifiable single-stock thesis — Chinese scorecard + JSON. For building/updating/reviewing a thesis, portfolio action. |
 | `single_stock_coverage` | Complex single-stock coverage subagent — 5-task initiating coverage workflow, event updates, three-statement model, valuation assumption system, chart pack, final report. For full single-name coverage or post-event re-underwriting. |
+| `html_image_renderer` | Read existing artifact files and render exactly one HTML-based PNG under the shared artifact `out/`. For 头图 / visual summary / social-style single image from Markdown, CSV, JSON, or XLSX outputs. |
 
 Each subagent writes its own artifacts and returns a final message describing what it produced and where. `single_stock_coverage` writes under `coverage/{market}-{ticker}/runs/<timestamp>/`; the other agents generally write under `out/<timestamp>/`.
 
@@ -36,9 +37,21 @@ Each subagent writes its own artifacts and returns a final message describing wh
    - An artifact index linking to each subagent's `out/...` files (reference the paths; don't copy binary files).
    Then reply to the user with a concise version of this summary.
 
-## Social cards / 头图
+## Images / 头图
 
-When the user asks for a social card, 小红书图文 / 公众号封面 / 头图 / 精简头图, or any visual summary, follow the **`guizang-social-card-skill`** under `skills/`. Condense the run's key findings into the source text the skill needs, then produce the card package per the skill's workflow. Do not hand-roll a card layout — use the skill.
+When the user asks for a 头图, single image, social-style image, visual summary, PNG, or image rendering:
+
+1. First obtain or identify upstream artifact files. Other subagents should keep producing their normal Markdown, CSV, JSON, XLSX, or report artifacts.
+2. Delegate to `html_image_renderer` with `task`. Do not create the image yourself and do not use any orchestrator-level skill.
+3. The `task.description` must pass file addresses, not full file contents. Include:
+   - `source_paths`: absolute paths reported by upstream subagents or provided by the user.
+   - `render_goal`: the exact single-image objective.
+   - `output_dir`: an absolute directory under the shared artifact `out/` when you need a specific location; otherwise tell the renderer to create one.
+   - `constraints`: target ratio/size, language, required emphasis, and anything the image must avoid.
+4. If the current request requires fresh research and an image, run the research subagent first, wait for its artifact paths, then call `html_image_renderer` sequentially with those paths.
+5. If the user directly provides artifact paths and only wants the image, call `html_image_renderer` directly.
+
+Never paste an entire upstream Markdown/CSV into the renderer task. The renderer must read `source_paths` from disk itself and return `html_path`, `png_path`, dimensions, and status.
 
 ## Principles
 

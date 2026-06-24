@@ -4,8 +4,6 @@
 
 面向中国二级市场的多 Agent 投研系统。它把盘前信息、行业研究、股票筛选、个股研究、三表模型、DCF 估值和图表包串成一条本地可复盘的生产线。
 
-![系统拓扑图](docs/assets/system-topology.png)
-
 > 免责声明：本项目生成的是投研工作底稿和分析材料，不构成投资建议。所有结论都应由具备资质的专业人士复核。
 
 ## 1. 这是一个什么项目
@@ -19,7 +17,7 @@
 - 股票筛选：A 股 / 港股主题筛选、风格筛选和 watchlist
 - 个股研究：公司研究、商业模式、成本结构、治理、护城河和风险
 - 财务模型与估值：三表模型、模型审计、DCF、可比公司和估值调和
-- 图表与报告：图表包、PPT/Markdown 研究材料和最终综合报告
+- 图表与报告：图表包、PPT/Markdown/HTML/PNG 研究材料和最终综合报告
 
 数据层优先接入同花顺 iFind MCP；模型通过 OpenAI-compatible gateway 接入，默认 DashScope/Qwen，也可以替换。
 
@@ -34,16 +32,22 @@
 | `integrated_model.xlsx` | 三表联动模型、收入拆分、营运资本、PP&E、债务和 DCF inputs |
 | 估值分析 | DCF、交易可比、历史倍数、市场隐含、估值调和和情景分析 |
 | 图表包 | 估值足球场、敏感性分析、情景对比、风险矩阵、催化时间线等 |
+| HTML 图片 | 基于 HTML Anything 风格模板渲染出的单页 PNG、卡片、海报、报告图和演示页 |
 
-## 3. 公开案例
+## 3. 主要 Agent
 
-以下 3 个样例代表当前系统的主要能力边界，并可直接在 GitHub 浏览：
+当前项目按投研流程拆成多个可独立运行的 LangGraph agent，也可以通过顶层 orchestrator 串联执行：
 
-| 案例 | 链接 | 代表能力 |
+| Agent | 入口 | 代表能力 |
 |---|---|---|
-| 盘前晨报 | [A 股开盘前 Morning Note](docs/examples/a-share-morning-note.md) | 隔夜市场、政策、公告、资金面和当日交易主线 |
-| 行业研究 | [MLCC 行业综合研究](docs/examples/mlcc-sector-research.md) | 行业供需、价值链、竞争格局、重点标的和风险变量 |
-| 个股研究 | [陕西煤业公司研究](docs/examples/shaanxi-coal-company-research.md) | 公司身份、业务模式、成本结构、治理、护城河和风险 |
+| `deep_orchestrator` | `orchestrator/` | 分发投研任务、调度子 agent、汇总最终产出 |
+| `morning_note` | `morning-note/` | 盘前晨报、政策公告、资金面和交易线索 |
+| `market_researcher` / `sector_research` | `industry-ananlysis/`、`sector/` | 行业研究、主题研究、竞争格局和重点标的 |
+| `stock_screen` | `screen/` | 股票筛选、watchlist 和事件驱动候选池 |
+| `single_stock_coverage` | `single-stock-coverage/` | 个股研究、三表建模、DCF 估值、图表包和报告组装 |
+| `dcf_builder` | `DCF-builder/` | DCF 假设研究、模型构建、估值调和和审计 |
+| `html_image_renderer` | `html-image-renderer/` | 基于 HTML Anything 风格模板生成 HTML 并渲染单页 PNG |
+| `thesis_tracker` | `thesis/` | 投资 thesis 跟踪、证据更新和观点复盘 |
 
 ## 4. 设计取舍：与 Anthropic Financial Agents 的区别
 
@@ -81,7 +85,7 @@ python3.11 -m venv .venv
 pip install -U pip
 pip install -e ./DCF-builder -e ./industry-ananlysis -e ./morning-note \
   -e ./screen -e ./sector -e ./thesis -e ./orchestrator \
-  -e ./single-stock-coverage
+  -e ./html-image-renderer -e ./single-stock-coverage
 ```
 
 配置：
@@ -132,7 +136,12 @@ IFIND_MCP_AUTHORIZATION=Bearer ...
 - 顶层 orchestrator 和核心投研 agent
 - 同花顺 iFind MCP 统一数据接入
 - 晨报、行业研究、资金扫描、公告扫描、个股研究、三表模型、DCF 和图表包
-- 本地 Markdown / JSON / Excel / PPT / PNG artifacts 输出
+- 本地 Markdown / JSON / Excel / PPT / HTML / PNG artifacts 输出
+- HTML 图片渲染 agent，可把既有研究材料转成单页视觉稿
+
+致谢：
+
+- HTML 图片渲染能力参考并使用了 [HTML Anything](https://github.com/nexu-io/html-anything) 项目的模板和 agentic HTML 工作流。
 
 下一步：
 

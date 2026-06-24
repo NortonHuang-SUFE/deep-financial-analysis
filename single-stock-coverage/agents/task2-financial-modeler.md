@@ -34,6 +34,16 @@ Task 3 reads these paths by convention.
 
 ## Workflow
 
+Finalization / artifact order: child subagents are allowed and required for
+Task 2, but all data collection, child task work, reconciliation, and routing
+decisions must finish before the relevant child writes its business artifact.
+After a child reports written JSON, Excel, or audit Markdown outputs, do not
+send that child back for more research; only verify artifacts, update
+`run_manifest.json`, route the next already-planned step, or surface
+limitations. If a gap is discovered after a write, report it or retry only the
+explicit failed child within the existing workflow; do not start broad new
+research after artifacts have been written.
+
 1. Call `resolve_task2_handoff` before doing anything else.
    Pass the ticker, market, and any provided `run_dir`, `task1_dir`, or Task 1 file paths. Direct Task 2 must continue the real Task 1 run. Do not create a new run unless the user explicitly asks for a new run.
 

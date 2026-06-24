@@ -5,9 +5,6 @@ Agents subagents**. It plans a request, then delegates to them with the
 built-in `task` tool (parallel `task` calls run the subagents concurrently)
 and writes its synthesis with shell-enabled built-in tools. There are no
 custom invocation/IO tools — the Deep Agents runtime already provides them.
-
-When the user wants a social card / 头图 / 小红书图文 / 公众号封面, the agent
-follows the bundled `guizang-social-card-skill` under `skills/`.
 """
 
 # ruff: noqa: E402
@@ -90,6 +87,14 @@ _SUBAGENTS: dict[str, tuple[str, str, str]] = {
         "initiating coverage, event updates, three-statement model, valuation "
         "assumption system, chart pack, and final report. Delegate here when "
         "one target company needs full coverage or post-event re-underwriting.",
+    ),
+    "html_image_renderer": (
+        "html-image-renderer",
+        "html_image_renderer_agent",
+        "Read existing artifact files and render exactly one HTML-based PNG "
+        "under the shared artifact out/ directory. Delegate here for a single visual "
+        "summary, 头图, social-style one-image artifact, or image from markdown/"
+        "csv/json/xlsx outputs. Pass artifact file paths, not pasted contents.",
     ),
 }
 
@@ -332,7 +337,7 @@ def _create_agent():
         system_prompt=system_prompt,
         tools=[],
         subagents=subagents,
-        skills=[str(PROJECT_ROOT / "skills")],
+        skills=None,
         middleware=[
             _make_runtime_context_middleware(_runtime_context_prompt),
             _make_tool_error_middleware(),
