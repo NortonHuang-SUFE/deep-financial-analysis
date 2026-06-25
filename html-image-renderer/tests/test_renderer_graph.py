@@ -110,7 +110,8 @@ def test_renderer_prompt_contains_skill_selection_rules():
     assert "poster-hero" in prompt
     assert "deck-swiss-international" in prompt
     assert "single static image" in prompt
-    assert "exactly one element matching `#image-root`" in prompt
+    assert "exactly one element matching" in prompt
+    assert "`#image-root`" in prompt
     assert "Never ask the orchestrator to paste full file contents" in prompt
     assert "read the selected skill's full `SKILL.md`" in prompt
     assert "example.html" in prompt
@@ -121,6 +122,10 @@ def test_renderer_prompt_contains_skill_selection_rules():
     assert "generic dark financial dashboard" in prompt
     assert "Keep the final response terse" in prompt
     assert "Do not invent calendar fields" in prompt
+    assert "output_dir/html/" in prompt
+    assert "output_dir/png/" in prompt
+    assert "three-digit sequence numbers" in prompt
+    assert "html/002.html` pairs with `png/002.png" in prompt
 
 
 def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
@@ -141,6 +146,10 @@ def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
     assert "read its SKILL.md" in context
     assert "example.html in bounded structural slices" in context
     assert "data-html-anything-skill" in context
+    assert "html/<seq>.html and png/<seq>.png" in context
+    assert "html/001.html" in context
+    assert "png/001.png" in context
+    assert "Never overwrite an existing sequence" in context
     assert "seed template" not in context
     assert "routing reference" not in context
 
@@ -212,9 +221,10 @@ def test_render_html_requires_one_image_root(tmp_path):
     from html_image_renderer_agent.render_html import render_html_file
 
     out_dir = tmp_path / "out" / "20260623-090000"
-    html_path = out_dir / "index.html"
-    png_path = out_dir / "image.png"
-    out_dir.mkdir(parents=True)
+    html_path = out_dir / "html" / "001.html"
+    png_path = out_dir / "png" / "001.png"
+    html_path.parent.mkdir(parents=True)
+    png_path.parent.mkdir(parents=True)
     html_path.write_text(
         """<!doctype html>
 <html lang="zh-CN">
@@ -243,9 +253,10 @@ def test_render_html_to_single_png(tmp_path):
     csv_path.write_text("ticker,signal\n000001,buy watch\n", encoding="utf-8")
 
     out_dir = tmp_path / "out" / "20260623-090000"
-    html_path = out_dir / "index.html"
-    png_path = out_dir / "image.png"
-    out_dir.mkdir(parents=True)
+    html_path = out_dir / "html" / "001.html"
+    png_path = out_dir / "png" / "001.png"
+    html_path.parent.mkdir(parents=True)
+    png_path.parent.mkdir(parents=True)
     html_path.write_text(
         """<!doctype html>
 <html lang="zh-CN">
@@ -299,5 +310,5 @@ def test_render_html_to_single_png(tmp_path):
     assert png_path.exists()
     assert png_path.stat().st_size > 0
 
-    pngs = list(out_dir.glob("*.png"))
+    pngs = list((out_dir / "png").glob("*.png"))
     assert pngs == [png_path]
