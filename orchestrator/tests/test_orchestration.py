@@ -42,7 +42,7 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from deep_orchestrator.config import file_storage_root
+from deep_orchestrator.config import file_storage_root  # noqa: E402
 
 # Old custom tools that must no longer be registered on the orchestrator.
 _REMOVED_CUSTOM_TOOLS = {
@@ -137,10 +137,24 @@ class _ScriptedToolModel(BaseChatModel):
         return "scripted-tool-model"
 
     def bind_tools(self, tools, **kw):
-        self.captured["bound_tools"] = sorted(
-            getattr(t, "name", getattr(t, "__name__", str(t))) for t in tools
-        )
+        tool_info = [_tool_info(t) for t in tools]
+        self.captured["bound_tools"] = sorted(name for name, _ in tool_info)
+        self.captured["tool_descriptions"] = dict(tool_info)
         return self
+
+    def _get_ls_params(self, stop=None, **kwargs):
+        return {"ls_provider": "openai", "ls_model_name": "scripted-tool-model"}
+
+
+def _tool_info(tool) -> tuple[str, str]:
+    if isinstance(tool, dict):
+        function = tool.get("function") or {}
+        name = tool.get("name") or function.get("name") or str(tool)
+        description = tool.get("description") or function.get("description") or ""
+        return str(name), str(description)
+    name = getattr(tool, "name", getattr(tool, "__name__", str(tool)))
+    description = getattr(tool, "description", "")
+    return str(name), str(description)
 
 
 def _build_agent(model, subagents):
@@ -272,6 +286,46 @@ def test_builtin_tools_present_and_no_custom_tools():
     assert not leaked, f"removed custom tools still present: {leaked}"
 
 
+def test_orchestrator_task_tool_excludes_general_purpose(monkeypatch, tmp_path):
+    """The top-level task tool must reject the auto-added GP subagent."""
+    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"
+    from deep_orchestrator import graph as orch
+
+    monkeypatch.delenv("ORCHESTRATOR_TEST_MODE", raising=False)
+    dummy, _ = _make_marker_subagent("market_researcher", sleep_s=0.0)
+    model = _ScriptedToolModel(
+        tool_calls=[
+            (
+                "task",
+                {
+                    "description": "try the disabled generic route",
+                    "subagent_type": "general-purpose",
+                },
+            )
+        ],
+        captured={},
+    )
+
+    monkeypatch.setattr(orch, "_build_model", lambda cfg: model)
+    monkeypatch.setattr(
+        orch,
+        "_build_subagent_specs",
+        lambda: [{"name": "market_researcher", "description": "d", "runnable": dummy}],
+    )
+    monkeypatch.setattr(orch, "file_storage_root", lambda: tmp_path)
+
+    agent = orch._create_agent()
+    result = asyncio.run(
+        agent.ainvoke({"messages": [{"role": "user", "content": "hi"}]})
+    )
+
+    task_description = model.captured["tool_descriptions"]["task"]
+    assert "market_researcher" in task_description
+    texts = " ".join(str(getattr(m, "content", "")) for m in result["messages"])
+    assert "We cannot invoke subagent general-purpose" in texts
+    assert "only allowed types are `market_researcher`" in texts
+
+
 def test_orchestrator_does_not_mount_skills():
     """Production orchestrator delegates visual work instead of loading skills."""
     os.environ["ORCHESTRATOR_TEST_MODE"] = "1"
@@ -303,6 +357,13 @@ def test_orchestrator_prompt_routes_images_by_artifact_paths():
     assert "not full file contents" in prompt
     assert "Never paste an entire upstream Markdown/CSV" in prompt
     assert "guizang-social-card-skill" not in prompt
+
+
+def test_orchestrator_prompt_forbids_general_purpose_subagent():
+    prompt = (PROJECT_ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
+
+    assert "must never call or request a `general-purpose` subagent" in prompt
+    assert "only valid synchronous `task.subagent_type` values" in prompt
 
 
 @pytest.mark.skipif(

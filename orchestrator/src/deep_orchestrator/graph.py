@@ -16,6 +16,7 @@ import importlib
 import inspect
 import os
 import sys
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -162,6 +163,39 @@ def _tool_error_message(request, exc: Exception) -> ToolMessage:
         tool_call_id=request.tool_call.get("id", ""),
         status="error",
     )
+
+
+# ── Deep Agents harness profile ───────────────────────────────────────────────
+
+
+@contextmanager
+def _general_purpose_subagent_disabled(model):
+    """Temporarily disable Deep Agents' auto-added general-purpose subagent."""
+    from deepagents import (
+        GeneralPurposeSubagentProfile,
+        HarnessProfile,
+        register_harness_profile,
+    )
+    from deepagents._models import get_model_provider
+    from deepagents.profiles.harness import harness_profiles
+
+    harness_profiles._ensure_harness_profiles_loaded()
+    original_profiles = dict(harness_profiles._HARNESS_PROFILES)
+    provider = get_model_provider(model) or "openai"
+
+    try:
+        register_harness_profile(
+            provider,
+            HarnessProfile(
+                general_purpose_subagent=GeneralPurposeSubagentProfile(
+                    enabled=False
+                ),
+            ),
+        )
+        yield
+    finally:
+        harness_profiles._HARNESS_PROFILES.clear()
+        harness_profiles._HARNESS_PROFILES.update(original_profiles)
 
 
 # ── Model builder (identical pattern to all sibling agents) ───────────────────
@@ -332,19 +366,20 @@ def _create_agent():
         "(built-in `task` + shell-enabled tools)."
     )
 
-    return create_deep_agent(
-        model=model,
-        system_prompt=system_prompt,
-        tools=[],
-        subagents=subagents,
-        skills=None,
-        middleware=[
-            _make_runtime_context_middleware(_runtime_context_prompt),
-            _make_tool_error_middleware(),
-        ],
-        backend=backend,
-        name="deep_orchestrator",
-    )
+    with _general_purpose_subagent_disabled(model):
+        return create_deep_agent(
+            model=model,
+            system_prompt=system_prompt,
+            tools=[],
+            subagents=subagents,
+            skills=None,
+            middleware=[
+                _make_runtime_context_middleware(_runtime_context_prompt),
+                _make_tool_error_middleware(),
+            ],
+            backend=backend,
+            name="deep_orchestrator",
+        )
 
 
 # NOTE: `_create_agent` is synchronous on purpose. The orchestrator needs no
