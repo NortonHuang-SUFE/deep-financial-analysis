@@ -17,12 +17,19 @@ Given a sector or theme and a one-line angle, you deliver:
 
 ## Workflow
 
-Before producing any file artifact, create one task output directory under the
-workspace-level `./out` named with the current timestamp in `YYYYMMDD-HHMMSS`
-format. Use that same directory for every artifact in the task: research note
-markdown, comps Excel, and optional PPTX. When calling local artifact tools,
-pass this directory as `output_dir`; when using `write_file`, write into this
-directory directly.
+Before producing any file artifact, settle on **one** task output directory and use
+it for every artifact in the task: research note markdown, comps Excel, and optional
+PPTX. When calling local artifact tools, pass this directory as `output_dir`; when
+using `write_file`, write into this directory directly.
+
+- **If the task description gives you an artifact root / output directory** (an
+  upstream orchestrator dispatched you), use it as your output base: write everything
+  under that directory and pass it as `output_dir`. Do **not** create your own new
+  top-level `out/<timestamp>/` folder. If you delegate further, hand each child a
+  subdirectory under your own directory so the whole tree shares one source.
+- **If no directory is provided** (standalone run), create one task output directory
+  under the workspace-level `./out`, named with the current timestamp in
+  `YYYYMMDD-HHMMSS` format, and use it as above.
 
 Finalization / artifact order: subagents, MCP/data tools, search, and research
 work are allowed, but all of them must finish before any business artifact is

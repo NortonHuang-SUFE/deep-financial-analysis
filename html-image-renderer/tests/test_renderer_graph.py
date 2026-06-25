@@ -126,6 +126,8 @@ def test_renderer_prompt_contains_skill_selection_rules():
     assert "output_dir/png/" in prompt
     assert "three-digit sequence numbers" in prompt
     assert "html/002.html` pairs with `png/002.png" in prompt
+    assert "treat it as your artifact root" in prompt
+    assert "do not create a new top-level" in prompt
 
 
 def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
@@ -150,6 +152,8 @@ def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
     assert "html/001.html" in context
     assert "png/001.png" in context
     assert "Never overwrite an existing sequence" in context
+    assert "treat it as your artifact root" in context
+    assert "do not create a new top-level out/<timestamp>/ folder" in context
     assert "seed template" not in context
     assert "routing reference" not in context
 

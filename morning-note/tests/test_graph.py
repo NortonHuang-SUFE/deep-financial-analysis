@@ -83,3 +83,25 @@ def test_morning_note_prompt_forbids_general_purpose_subagent():
 
     assert "禁止调用或请求 `general-purpose` subagent" in prompt
     assert "禁止调用或请求 `general-purpose` subagent" in skill
+
+
+def test_morning_note_prompt_and_runtime_define_artifact_root():
+    prompt = (PROJECT_ROOT / "agents" / "morning-note.md").read_text(
+        encoding="utf-8"
+    )
+    skill = (PROJECT_ROOT / "skills" / "morning-note" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    assert "若 task 描述提供了上游产物根目录" in prompt
+    assert "若 task 描述提供了上游产物根目录" in skill
+    assert "不要再调用 `create_task_output_dir`" in skill
+
+    from morning_note_agent import graph as morning_graph
+
+    cfg = morning_graph.load_config()
+    context = morning_graph._runtime_context_prompt(cfg)
+    assert (
+        "Artifact root: if the task description provides an output directory"
+        in context
+    )
+    assert "do not create your own new top-level out/<timestamp>/ folder" in context

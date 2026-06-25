@@ -260,6 +260,7 @@ def _build_model(cfg):
 
 def _runtime_context_prompt() -> str:
     now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    artifact_base = file_storage_root() / "out"
     return (
         "\n\n## Runtime Context\n"
         f"Current Beijing time: {now:%Y-%m-%d %H:%M:%S %Z}.\n"
@@ -268,6 +269,14 @@ def _runtime_context_prompt() -> str:
         "this Beijing date/time. Include the concrete date/time in any "
         "subagent task description, especially for morning_note. Do not invent "
         "or reuse stale dates from examples or prior runs.\n"
+        f"Artifact base directory: {artifact_base}.\n"
+        "Fix ONE mother folder for this whole run — "
+        f"{artifact_base}/<YYYYMMDD-HHMMSS>/ — on your first delegation and reuse the "
+        "identical path on every later turn (use the time above to name it once, not a "
+        "value to recompute). In each subagent task description, name an explicit output "
+        "directory <mother>/<subdir>/ for that subagent and tell it to write there; "
+        "subagents must not create their own new top-level out/<timestamp>/ folder. "
+        "Write your own orchestration summary into the same mother folder.\n"
     )
 
 

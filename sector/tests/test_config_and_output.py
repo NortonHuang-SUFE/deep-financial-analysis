@@ -9,6 +9,16 @@ from sector_research_agent.config import (
 from sector_research_agent import tools
 
 
+def test_sector_prompt_defines_artifact_root():
+    prompt = (PROJECT_ROOT / "agents" / "sector.md").read_text(encoding="utf-8")
+    skill = (PROJECT_ROOT / "skills" / "sector-overview" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    assert "若 task 描述提供了上游产物根目录" in prompt
+    assert "若 task 描述提供了上游产物根目录" in skill
+    assert "不要再调用 `create_task_output_dir`" in skill
+
+
 def _clear_env(monkeypatch):
     for env_name in [
         "MODEL_NAME",
@@ -121,6 +131,35 @@ def test_agent_file_storage_root_controls_output_dir(monkeypatch, tmp_path):
     assert out_dir == storage_root / "out" / "20260602-140000"
     assert markdown_path == "out/20260602-140000/sector.md"
     assert (storage_root / markdown_path).read_text(encoding="utf-8") == "# Sector\n"
+
+
+def test_orchestrator_output_dir_is_used_exactly(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    tools._TASK_OUTPUT_DIRS.clear()
+    storage_root = tmp_path / "clean-storage"
+    monkeypatch.setenv("AGENT_FILE_STORAGE_ROOT", str(storage_root))
+
+    output_dir = storage_root / "out" / "20260625-101500" / "sector"
+    out_path = tools.create_task_output_dir.invoke({"output_dir": str(output_dir)})
+    markdown_path = tools.write_markdown_report.invoke(
+        {
+            "filename": "sector.md",
+            "markdown": "# Sector\n",
+            "output_dir": str(output_dir),
+        }
+    )
+    json_path = tools.write_json_artifact.invoke(
+        {
+            "filename": "sector.json",
+            "data_json": '{"sector": "banking"}',
+            "output_dir": str(output_dir),
+        }
+    )
+
+    assert out_path == "out/20260625-101500/sector"
+    assert markdown_path == "out/20260625-101500/sector/sector.md"
+    assert json_path == "out/20260625-101500/sector/sector.json"
+    assert not any(path.is_dir() for path in output_dir.glob("20??????-??????*"))
 
 
 def test_graph_imports_in_test_mode(monkeypatch):

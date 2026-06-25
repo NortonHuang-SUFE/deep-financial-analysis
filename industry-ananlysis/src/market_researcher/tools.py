@@ -28,6 +28,7 @@ from market_researcher.config import file_storage_root
 
 
 _TASK_OUTPUT_DIRS: dict[str, Path] = {}
+_TIMESTAMP_DIR_RE = re.compile(r"\d{8}-\d{6}(?:-\d+)?")
 
 
 def _project_root() -> Path:
@@ -50,11 +51,13 @@ def _ensure_out_dir(output_dir: str) -> Path:
 
 
 def _timestamped_output_dir(output_dir: str) -> Path:
-    """Return this process task's timestamped artifact directory under output_dir."""
-    import re
+    """Return the task artifact directory for output_dir.
 
+    If output_dir already points inside an orchestrator task timestamp directory,
+    use it exactly; otherwise create or reuse a timestamped child directory.
+    """
     base = _resolve_output_dir(output_dir)
-    if re.fullmatch(r"\d{8}-\d{6}(?:-\d+)?", base.name):
+    if _contains_task_timestamp_dir(base):
         base.mkdir(parents=True, exist_ok=True)
         return base
 
@@ -78,6 +81,10 @@ def _timestamped_output_dir(output_dir: str) -> Path:
     candidate.mkdir(parents=True, exist_ok=True)
     _TASK_OUTPUT_DIRS[key] = candidate
     return candidate
+
+
+def _contains_task_timestamp_dir(path: Path) -> bool:
+    return any(_TIMESTAMP_DIR_RE.fullmatch(part) for part in path.parts)
 
 
 def _slugify(text: str) -> str:
@@ -115,8 +122,9 @@ def build_comps_excel(data_json: str, sector: str, output_dir: str = "./out") ->
                 "extra_metrics": {}              # dict of {label: value}
             }
         sector: Sector name used in the file name (e.g. "fintech-payments").
-        output_dir: Base directory to write the file into. A timestamped
-            subdirectory is created automatically under this directory.
+        output_dir: Base/output directory to write the file into. If the path
+            already contains a task timestamp directory, it is used exactly;
+            otherwise a timestamped subdirectory is created automatically.
 
     Returns:
         Relative path of the written .xlsx file.
@@ -904,8 +912,9 @@ def build_pptx(slides_json: str, output_name: str, output_dir: str = "./out",
                 ]
             }
         output_name: Filename without extension.
-        output_dir: Base directory or existing timestamp directory. The tool
-            writes artifacts under `<timestamp>/ppt/`.
+        output_dir: Base directory, existing timestamp directory, or an
+            orchestrator-assigned child under a timestamp directory. The tool
+            writes artifacts under the resolved task directory's `ppt/` child.
         template_path: Deprecated; ignored.
 
     Returns:

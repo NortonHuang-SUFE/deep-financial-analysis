@@ -70,8 +70,13 @@ Always account for China/HK market structure when relevant:
    research. Only finish the same already-finalized artifact batch, return
    paths, and surface any remaining gaps in the final response.
 8. Write artifacts when useful using `write_markdown_report` and
-   `write_json_artifact`; use `create_task_output_dir` to reveal the task output
-   directory.
+   `write_json_artifact`. Artifact directory: if the task description gives you an
+   artifact root / output directory (an upstream orchestrator dispatched you), write
+   everything under that directory and pass it as `output_dir`; do **not** create
+   your own new top-level `out/<timestamp>/` folder, and if you delegate further,
+   nest each child under your own directory. If no directory is provided (standalone
+   run), use `create_task_output_dir` to create the task output directory under
+   `./out`.
 
 ## Output Shape
 

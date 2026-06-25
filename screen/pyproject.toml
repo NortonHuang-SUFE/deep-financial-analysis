@@ -1,6 +1,6 @@
 [project]
 name = "stock-screen-agent"
-version = "0.1.0"
+version = "0.1.1"
 description = "LangGraph Deep Agents stock screening system for China A-share and Hong Kong equity research."
 requires-python = ">=3.11"
 dependencies = [
@@ -36,4 +36,3 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-

@@ -15,6 +15,7 @@ from thesis_tracker_agent.config import file_storage_root
 
 
 _TASK_OUTPUT_DIRS: dict[str, Path] = {}
+_TIMESTAMP_DIR_RE = re.compile(r"\d{8}-\d{6}(?:-\d+)?")
 
 
 def _project_root() -> Path:
@@ -32,7 +33,7 @@ def _resolve_output_dir(output_dir: str) -> Path:
 
 def _timestamped_output_dir(output_dir: str = "./out") -> Path:
     base = _resolve_output_dir(output_dir)
-    if re.fullmatch(r"\d{8}-\d{6}(?:-\d+)?", base.name):
+    if _contains_task_timestamp_dir(base):
         base.mkdir(parents=True, exist_ok=True)
         return base
 
@@ -58,6 +59,10 @@ def _timestamped_output_dir(output_dir: str = "./out") -> Path:
     return candidate
 
 
+def _contains_task_timestamp_dir(path: Path) -> bool:
+    return any(_TIMESTAMP_DIR_RE.fullmatch(part) for part in path.parts)
+
+
 def _slugify(text: str, fallback: str = "artifact") -> str:
     slug = re.sub(r"[^A-Za-z0-9._-]+", "-", str(text).strip()).strip("-").lower()
     return slug or fallback
@@ -76,7 +81,8 @@ def create_task_output_dir(output_dir: str = "./out") -> str:
 
     Args:
         output_dir: Base output directory. Relative paths resolve from the
-            workspace root. Defaults to ./out.
+            workspace root. If the path already contains a task timestamp
+            directory, it is used exactly. Defaults to ./out.
 
     Returns:
         Workspace-relative path to the timestamped output directory.
@@ -97,8 +103,9 @@ def write_markdown_report(
         title: Report title, used for the filename when filename is omitted.
         markdown: Complete markdown report content.
         filename: Optional .md filename.
-        output_dir: Base output directory. Relative paths resolve from the
-            workspace root. Defaults to ./out.
+        output_dir: Base/output directory. Relative paths resolve from the
+            workspace root. If the path already contains a task timestamp
+            directory, write directly into it. Defaults to ./out.
 
     Returns:
         Workspace-relative path to the written markdown file.
@@ -123,8 +130,9 @@ def write_json_artifact(
     Args:
         data_json: Valid JSON string to persist.
         filename: Optional .json filename.
-        output_dir: Base output directory. Relative paths resolve from the
-            workspace root. Defaults to ./out.
+        output_dir: Base/output directory. Relative paths resolve from the
+            workspace root. If the path already contains a task timestamp
+            directory, write directly into it. Defaults to ./out.
 
     Returns:
         Workspace-relative path to the written JSON file.

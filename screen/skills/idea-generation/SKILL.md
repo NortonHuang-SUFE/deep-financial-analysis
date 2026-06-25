@@ -124,7 +124,7 @@ Use local tools when the user asks for deliverables or when the screen is substa
 
 - `write_markdown_report`: methodology, ranked shortlist, tables, idea notes, risk appendix
 - `write_json_artifact`: machine-readable criteria, candidates, scores, source fields, risk flags
-- `create_task_output_dir`: return the shared task directory under `out/<YYYYMMDD-HHMMSS>/`
+- `create_task_output_dir`: use only for standalone runs without an upstream output directory. If the task description provides an artifact root / output directory, pass that exact path as `output_dir` to the write tools and do not create a new top-level `out/<YYYYMMDD-HHMMSS>/`.
 
 ## Important Notes
 
@@ -134,4 +134,3 @@ Use local tools when the user asks for deliverables or when the screen is substa
 - For shorts, require stronger evidence and explicitly disclose borrow/squeeze/suspension/price-limit risk.
 - Contrarian and turnaround ideas need a catalyst; cheap without a catalyst is usually a watchlist item.
 - Keep a record of excluded names and failed criteria so the shortlist is auditable.
-

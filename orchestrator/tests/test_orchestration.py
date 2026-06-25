@@ -366,6 +366,28 @@ def test_orchestrator_prompt_forbids_general_purpose_subagent():
     assert "only valid synchronous `task.subagent_type` values" in prompt
 
 
+def test_orchestrator_prompt_defines_single_artifact_root():
+    prompt = (PROJECT_ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
+
+    assert "Artifact root" in prompt
+    assert "single mother folder" in prompt
+    assert "Fix one mother folder at the start of the run" in prompt
+    assert "`<mother>/<subdir>/`" in prompt
+    assert "to create its own new top-level `out/<timestamp>/` folder" in prompt
+
+
+def test_runtime_context_prompt_defines_artifact_root():
+    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"
+    from deep_orchestrator import graph as orch
+
+    context = orch._runtime_context_prompt()
+
+    assert "Artifact base directory:" in context
+    assert "Fix ONE mother folder for this whole run" in context
+    assert "<mother>/<subdir>/" in context
+    assert "must not create their own new top-level" in context
+
+
 @pytest.mark.skipif(
     os.getenv("ORCHESTRATOR_RUN_INTEGRATION") != "1",
     reason="set ORCHESTRATOR_RUN_INTEGRATION=1 to build the real graph (needs model key + sibling deps)",

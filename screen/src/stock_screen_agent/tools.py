@@ -15,6 +15,7 @@ from stock_screen_agent.config import file_storage_root
 
 
 _TASK_OUTPUT_DIRS: dict[str, Path] = {}
+_TIMESTAMP_DIR_RE = re.compile(r"\d{8}-\d{6}(?:-\d+)?")
 
 
 def _project_root() -> Path:
@@ -32,7 +33,7 @@ def _resolve_output_dir(output_dir: str = "./out") -> Path:
 
 def _timestamped_output_dir(output_dir: str = "./out") -> Path:
     base = _resolve_output_dir(output_dir)
-    if re.fullmatch(r"\d{8}-\d{6}(?:-\d+)?", base.name):
+    if _contains_task_timestamp_dir(base):
         base.mkdir(parents=True, exist_ok=True)
         return base
 
@@ -58,6 +59,10 @@ def _timestamped_output_dir(output_dir: str = "./out") -> Path:
     return candidate
 
 
+def _contains_task_timestamp_dir(path: Path) -> bool:
+    return any(_TIMESTAMP_DIR_RE.fullmatch(part) for part in path.parts)
+
+
 def _slugify(text: str, fallback: str) -> str:
     slug = re.sub(r"[^A-Za-z0-9._-]+", "-", str(text).strip()).strip("-").lower()
     return slug or fallback
@@ -76,7 +81,8 @@ def create_task_output_dir(output_dir: str = "./out") -> str:
 
     The directory is written under the workspace root by default:
     out/<YYYYMMDD-HHMMSS>/. Set STOCK_SCREEN_OUTPUT_TIMESTAMP to force a stable
-    timestamp during tests or reproducible runs.
+    timestamp during tests or reproducible runs. If output_dir already points
+    inside a task timestamp directory, it is used exactly.
     """
     return _relative_to_workspace(_timestamped_output_dir(output_dir))
 
@@ -87,7 +93,11 @@ def write_markdown_report(
     filename: str = "stock-screen-report.md",
     output_dir: str = "./out",
 ) -> str:
-    """Write a markdown stock screening report into the task output directory."""
+    """Write a markdown stock screening report into the task output directory.
+
+    If output_dir already points inside a task timestamp directory, it is used
+    exactly instead of creating another timestamp child.
+    """
     out_dir = _timestamped_output_dir(output_dir)
     safe_name = _slugify(filename, "stock-screen-report.md")
     if not safe_name.endswith(".md"):
@@ -103,7 +113,11 @@ def write_json_artifact(
     filename: str = "stock-screen-artifact.json",
     output_dir: str = "./out",
 ) -> str:
-    """Validate and write a JSON artifact into the task output directory."""
+    """Validate and write a JSON artifact into the task output directory.
+
+    If output_dir already points inside a task timestamp directory, it is used
+    exactly instead of creating another timestamp child.
+    """
     try:
         data: Any = json.loads(data_json)
     except json.JSONDecodeError as exc:

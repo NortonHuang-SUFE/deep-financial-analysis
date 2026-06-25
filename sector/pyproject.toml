@@ -1,6 +1,6 @@
 [project]
 name = "sector-research-agent"
-version = "0.1.0"
+version = "0.1.1"
 description = "LangGraph Deep Agents China sector research agent powered by iFind MCP data."
 requires-python = ">=3.11"
 dependencies = [
@@ -36,4 +36,3 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-

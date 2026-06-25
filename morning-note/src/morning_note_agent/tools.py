@@ -16,6 +16,7 @@ from morning_note_agent.config import file_storage_root, load_config
 
 _TASK_OUTPUT_DIRS: dict[str, tuple[Path, datetime]] = {}
 _CACHE_TTL_SECONDS = 15 * 60
+_TIMESTAMP_DIR_RE = re.compile(r"\d{8}-\d{6}(?:-\d+)?")
 
 
 def _configured_output_dir() -> str:
@@ -37,7 +38,7 @@ def _resolve_output_dir(output_dir: str) -> Path:
 
 def _timestamped_output_dir(output_dir: str | None = None) -> Path:
     base = _resolve_output_dir(output_dir or _configured_output_dir())
-    if re.fullmatch(r"\d{8}-\d{6}(?:-\d+)?", base.name):
+    if _contains_task_timestamp_dir(base):
         base.mkdir(parents=True, exist_ok=True)
         return base
 
@@ -63,6 +64,10 @@ def _timestamped_output_dir(output_dir: str | None = None) -> Path:
     candidate.mkdir(parents=True, exist_ok=True)
     _TASK_OUTPUT_DIRS[key] = (candidate, datetime.now())
     return candidate
+
+
+def _contains_task_timestamp_dir(path: Path) -> bool:
+    return any(_TIMESTAMP_DIR_RE.fullmatch(part) for part in path.parts)
 
 
 def _task_cache_key(base: Path) -> str:
@@ -100,7 +105,9 @@ def create_task_output_dir(output_dir: str | None = None) -> str:
 
     Args:
         output_dir: Optional base output directory. Relative paths are resolved
-            from the shared file storage root. Defaults to config.yaml output.dir.
+            from the shared file storage root. If the path already contains a
+            task timestamp directory, it is used exactly. Defaults to
+            config.yaml output.dir.
 
     Returns:
         Absolute path of the task output directory.
@@ -120,8 +127,9 @@ def write_markdown_report(
     Args:
         markdown: Full markdown report text.
         filename: Output filename. Unsafe characters are normalized.
-        output_dir: Optional base output directory resolved from the shared file
-            storage root. Defaults to config.yaml output.dir.
+        output_dir: Optional base/output directory resolved from the shared file
+            storage root. If the path already contains a task timestamp
+            directory, write directly into it. Defaults to config.yaml output.dir.
 
     Returns:
         Absolute path of the written markdown file.
@@ -144,8 +152,9 @@ def write_json_artifact(
     Args:
         data_json: Valid JSON string to pretty-print and persist.
         filename: Output filename. Unsafe characters are normalized.
-        output_dir: Optional base output directory resolved from the shared file
-            storage root. Defaults to config.yaml output.dir.
+        output_dir: Optional base/output directory resolved from the shared file
+            storage root. If the path already contains a task timestamp
+            directory, write directly into it. Defaults to config.yaml output.dir.
 
     Returns:
         Absolute path of the written JSON file.

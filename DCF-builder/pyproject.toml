@@ -1,6 +1,6 @@
 [project]
 name = "dcf-builder"
-version = "0.1.0"
+version = "0.1.1"
 description = "LangGraph Deep Agents DCF valuation system — powered by ifind MCP data."
 requires-python = ">=3.11"
 dependencies = [

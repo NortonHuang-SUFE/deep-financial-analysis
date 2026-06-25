@@ -37,8 +37,14 @@ Task 2 has six nested subagents: financial_facts_modeler, is_modeler, bs_modeler
 
 ## Orchestration Rules
 
-- Create a coverage run directory first with `create_coverage_run_dir`.
-- Write all artifacts under `out/coverage/{market}-{ticker}/runs/{timestamp}/`.
+- Create a coverage run directory first with `create_coverage_run_dir`. If the task
+  description gives you an artifact root / output directory (an upstream orchestrator
+  dispatched you), pass it as that tool's `output_dir` so the coverage run nests under
+  the shared mother folder; otherwise (standalone) default to `./out/coverage`. Never
+  open a new top-level source folder when a root is provided.
+- Write all artifacts under the returned coverage run directory
+  (`{output_base}/coverage/{market}-{ticker}/runs/{timestamp}/`), and pass that
+  `run_dir` to every child task so the whole tree shares one source.
 - Finalization / artifact order: subagents are allowed and are the normal way
   to run Tasks 1-5, but each task's research, MCP/data calls, and nested
   subagents must finish before that task writes its business artifacts. After a

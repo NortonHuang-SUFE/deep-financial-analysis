@@ -125,7 +125,21 @@ After startup, choose either the top-level orchestrator or an individual researc
 
 ## 6. Version, Roadmap, and Contact
 
-Current version: `v0.1 research-preview`, as of 2026-06-21.
+Current version: `v0.1.1 research-preview`, as of 2026-06-25.
+
+### Change Log
+
+#### v0.1.1 - 2026-06-25
+
+- Unified the artifact directory contract between the orchestrator and subagents: each composite run now uses one mother folder, with all subagent outputs nested recursively underneath it.
+- Made upstream `output_dir` values exact task directories for `morning_note`, `stock_screen`, `sector_research`, `thesis_tracker`, and `market_researcher`, avoiding accidental second-level timestamp folders.
+- Updated `html_image_renderer` orchestration rules so it writes `html/` and `png/` directly under the assigned renderer subdirectory.
+- Synchronized mounted skill documentation so skills no longer instruct agents to create a separate top-level `out/<timestamp>` directory during orchestrated runs.
+- Added regression coverage for artifact root / output directory behavior.
+
+#### v0.1.0 - 2026-06-21
+
+- Initial research-preview with core research agents, Tonghuashun iFind MCP access, local artifact output, three-statement modeling, DCF, chart packs, and HTML image rendering.
 
 Implemented:
 

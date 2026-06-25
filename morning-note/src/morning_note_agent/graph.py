@@ -226,6 +226,11 @@ def _runtime_context_prompt(cfg) -> str:
         "artifacts through the provided artifact tools and report the absolute "
         "paths returned by those tools. Do not reuse artifact paths from previous "
         "runs unless the user explicitly asks to inspect an old run.\n"
+        "Artifact root: if the task description provides an output directory / "
+        "artifact root (an upstream orchestrator dispatched you), pass it as "
+        "output_dir to the artifact tools and write everything under it; do not "
+        "create your own new top-level out/<timestamp>/ folder. If none is provided "
+        "(standalone run), create your own out/<timestamp>/ as the source.\n"
     )
 
 

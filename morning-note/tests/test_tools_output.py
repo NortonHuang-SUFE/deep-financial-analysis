@@ -44,3 +44,23 @@ def test_artifact_tools_default_to_configured_storage_root_and_return_absolute_p
     assert md_path == str((tmp_path / "out" / "20260616-091500" / "morning-note.md").resolve())
     assert json_path == str((tmp_path / "out" / "20260616-091500" / "morning-note-sources.json").resolve())
     assert Path(md_path).read_text(encoding="utf-8") == "# Note\n"
+
+
+def test_orchestrator_output_dir_is_used_exactly(monkeypatch, tmp_path):
+    tools._TASK_OUTPUT_DIRS.clear()
+    monkeypatch.setenv("AGENT_FILE_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.delenv("MORNING_NOTE_OUTPUT_TIMESTAMP", raising=False)
+
+    output_dir = tmp_path / "out" / "20260625-101500" / "morning-note"
+    out_path = tools.create_task_output_dir.invoke({"output_dir": str(output_dir)})
+    md_path = tools.write_markdown_report.invoke(
+        {"markdown": "# Note\n", "output_dir": str(output_dir)}
+    )
+    json_path = tools.write_json_artifact.invoke(
+        {"data_json": "{\"ok\": true}", "output_dir": str(output_dir)}
+    )
+
+    assert out_path == str(output_dir.resolve())
+    assert md_path == str((output_dir / "morning-note.md").resolve())
+    assert json_path == str((output_dir / "morning-note-sources.json").resolve())
+    assert not any(path.is_dir() for path in output_dir.glob("20??????-??????*"))

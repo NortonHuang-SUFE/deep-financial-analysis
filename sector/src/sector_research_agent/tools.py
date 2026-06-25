@@ -15,6 +15,7 @@ from sector_research_agent.config import file_storage_root
 
 
 _TASK_OUTPUT_DIRS: dict[str, Path] = {}
+_TIMESTAMP_DIR_RE = re.compile(r"\d{8}-\d{6}(?:-\d+)?")
 
 
 def _project_root() -> Path:
@@ -32,7 +33,7 @@ def _resolve_output_dir(output_dir: str) -> Path:
 
 def _timestamped_output_dir(output_dir: str = "./out") -> Path:
     base = _resolve_output_dir(output_dir)
-    if re.fullmatch(r"\d{8}-\d{6}(?:-\d+)?", base.name):
+    if _contains_task_timestamp_dir(base):
         base.mkdir(parents=True, exist_ok=True)
         return base
 
@@ -58,6 +59,10 @@ def _timestamped_output_dir(output_dir: str = "./out") -> Path:
     return candidate
 
 
+def _contains_task_timestamp_dir(path: Path) -> bool:
+    return any(_TIMESTAMP_DIR_RE.fullmatch(part) for part in path.parts)
+
+
 def _safe_filename(name: str, suffix: str) -> str:
     stem = re.sub(r"[^\w\u4e00-\u9fff.-]+", "-", name.strip(), flags=re.UNICODE)
     stem = stem.strip(".-") or "artifact"
@@ -75,7 +80,11 @@ def _relative_to_workspace(path: Path) -> str:
 
 @tool
 def create_task_output_dir(output_dir: str = "./out") -> str:
-    """Create or return the current task output directory under workspace out/."""
+    """Create or return the current task output directory under workspace out/.
+
+    If output_dir already points inside a task timestamp directory, it is used
+    exactly instead of creating another timestamp child.
+    """
     out_dir = _timestamped_output_dir(output_dir)
     return _relative_to_workspace(out_dir)
 
@@ -86,7 +95,11 @@ def write_markdown_report(
     markdown: str,
     output_dir: str = "./out",
 ) -> str:
-    """Write a Markdown sector research report to the task output directory."""
+    """Write a Markdown sector research report to the task output directory.
+
+    If output_dir already points inside a task timestamp directory, it is used
+    exactly instead of creating another timestamp child.
+    """
     out_dir = _timestamped_output_dir(output_dir)
     path = out_dir / _safe_filename(filename, ".md")
     path.write_text(markdown, encoding="utf-8")
@@ -99,7 +112,11 @@ def write_json_artifact(
     data_json: str,
     output_dir: str = "./out",
 ) -> str:
-    """Write a JSON artifact after validating that data_json is valid JSON."""
+    """Write a JSON artifact after validating that data_json is valid JSON.
+
+    If output_dir already points inside a task timestamp directory, it is used
+    exactly instead of creating another timestamp child.
+    """
     parsed: Any = json.loads(data_json)
     out_dir = _timestamped_output_dir(output_dir)
     path = out_dir / _safe_filename(filename, ".json")

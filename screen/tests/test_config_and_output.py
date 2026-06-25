@@ -11,6 +11,17 @@ from stock_screen_agent.config import (
 from stock_screen_agent import tools
 
 
+def test_screen_prompt_defines_artifact_root():
+    prompt = (PROJECT_ROOT / "agents" / "screen.md").read_text(encoding="utf-8")
+    skill = (PROJECT_ROOT / "skills" / "idea-generation" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    assert "artifact root / output directory" in prompt
+    assert "If no directory is provided (standalone" in prompt
+    assert "upstream output directory" in skill
+    assert "do not create a new top-level" in skill
+
+
 def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
     for env_name in [
         "MODEL_NAME",
@@ -143,6 +154,31 @@ def test_write_artifacts_return_workspace_relative_paths(monkeypatch):
     assert json_path == "out/20260602-153000/screen.json"
     assert (WORKSPACE_ROOT / markdown_path).exists()
     assert (WORKSPACE_ROOT / json_path).exists()
+
+
+def test_orchestrator_output_dir_is_used_exactly(monkeypatch, tmp_path):
+    tools._TASK_OUTPUT_DIRS.clear()
+    storage_root = tmp_path / "clean-storage"
+    monkeypatch.setenv("AGENT_FILE_STORAGE_ROOT", str(storage_root))
+    monkeypatch.delenv("STOCK_SCREEN_OUTPUT_TIMESTAMP", raising=False)
+
+    output_dir = storage_root / "out" / "20260625-101500" / "screen"
+    out_path = tools.create_task_output_dir.invoke({"output_dir": str(output_dir)})
+    markdown_path = tools.write_markdown_report.invoke(
+        {"markdown": "# Screen\n", "filename": "screen.md", "output_dir": str(output_dir)}
+    )
+    json_path = tools.write_json_artifact.invoke(
+        {
+            "data_json": '{"ticker": "600519.SH"}',
+            "filename": "screen.json",
+            "output_dir": str(output_dir),
+        }
+    )
+
+    assert out_path == "out/20260625-101500/screen"
+    assert markdown_path == "out/20260625-101500/screen/screen.md"
+    assert json_path == "out/20260625-101500/screen/screen.json"
+    assert not any(path.is_dir() for path in output_dir.glob("20??????-??????*"))
 
 
 def test_graph_imports_in_test_mode(monkeypatch):

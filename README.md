@@ -129,7 +129,21 @@ IFIND_MCP_AUTHORIZATION=Bearer ...
 
 ## 6. 当前版本、迭代方向和联系
 
-当前版本：`v0.1 research-preview`，截至 2026-06-21。
+当前版本：`v0.1.1 research-preview`，截至 2026-06-25。
+
+### Change Log
+
+#### v0.1.1 - 2026-06-25
+
+- 统一 orchestrator 与子 agent 的产物目录协议：一次复合任务只固定一个母文件夹，所有子 agent 产物递归嵌套在该目录下。
+- 支持上游传入的 `output_dir` 精确落盘；`morning_note`、`stock_screen`、`sector_research`、`thesis_tracker` 和 `market_researcher` 不再在已分配任务目录下额外创建第二层时间戳目录。
+- 更新 `html_image_renderer` 的协作规则：由 orchestrator 调度时直接在指定子目录下写入 `html/` 和 `png/`。
+- 同步更新已挂载 skill 文档，避免 skill 指令继续要求创建新的顶层 `out/<timestamp>/`。
+- 增加针对 artifact root / output directory 行为的回归测试。
+
+#### v0.1.0 - 2026-06-21
+
+- 初始 research-preview：接入核心投研 agent、同花顺 iFind MCP、本地 artifacts 输出、三表模型、DCF、图表包和 HTML 图片渲染。
 
 已具备：
 

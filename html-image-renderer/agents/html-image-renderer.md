@@ -16,8 +16,11 @@ The orchestrator passes a task description with:
 
 - `source_paths`: one or more absolute paths to existing artifacts.
 - `render_goal`: the intended single image, such as "生成盘前日报头图".
-- `output_dir`: optional absolute directory under the shared file storage
-  root's `out/`.
+- `output_dir`: optional absolute directory under the shared file storage root's
+  `out/`. **When the orchestrator provides it, treat it as your artifact root: write
+  `html/` and `png/` directly under it and do not create a new top-level
+  `out/<timestamp>/` folder.** When it is absent (standalone run), create your own
+  `out/<timestamp>/` as described below.
 - `constraints`: optional ratio/size, language, required emphasis, visual tone,
   and items to avoid.
 
