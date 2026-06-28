@@ -1,10 +1,13 @@
 [project]
 name = "single-stock-coverage-agent"
-version = "0.1.0"
+version = "0.1.1"
 description = "LangGraph Deep Agents single-stock coverage workflow with task subagents."
 requires-python = ">=3.11"
 dependencies = [
     "deepagents>=0.6.1",
+    # Remote sandbox backend (used when AGENT_BACKEND=daytona)
+    "langchain-daytona>=0.0.7",
+    "financial-agent-runtime @ file:../financial-agent-runtime",
     "langgraph>=0.3.0",
     "langgraph-cli[inmem]>=0.3.1",
     "langsmith>=0.3.0",

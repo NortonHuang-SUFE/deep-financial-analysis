@@ -27,6 +27,8 @@ load_dotenv()
 
 from langchain_core.messages import SystemMessage, ToolMessage
 
+from financial_agent_runtime import ensure_general_purpose_subagent_disabled
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
@@ -35,6 +37,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from deep_orchestrator.config import (  # noqa: E402
     WORKSPACE_ROOT,
+    build_backend,
     file_storage_root,
     load_config,
 )
@@ -226,6 +229,7 @@ def _build_model(cfg):
 
 def _runtime_context_prompt() -> str:
     now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    artifact_base = file_storage_root() / "out"
     return (
         "\n\n## Runtime Context\n"
         f"Current Beijing time: {now:%Y-%m-%d %H:%M:%S %Z}.\n"
@@ -234,6 +238,14 @@ def _runtime_context_prompt() -> str:
         "this Beijing date/time. Include the concrete date/time in any "
         "subagent task description, especially for morning_note. Do not invent "
         "or reuse stale dates from examples or prior runs.\n"
+        f"Artifact base directory: {artifact_base}.\n"
+        "Fix ONE mother folder for this whole run — "
+        f"{artifact_base}/<YYYYMMDD-HHMMSS>/ — on your first delegation and reuse the "
+        "identical path on every later turn (use the time above to name it once, not a "
+        "value to recompute). In each subagent task description, name an explicit output "
+        "directory <mother>/<subdir>/ for that subagent and tell it to write there; "
+        "subagents must not create their own new top-level out/<timestamp>/ folder. "
+        "Write your own orchestration summary into the same mother folder.\n"
     )
 
 
@@ -303,7 +315,6 @@ def _create_agent():
 
     try:
         from deepagents import create_deep_agent
-        from deepagents.backends import LocalShellBackend
     except ImportError as exc:
         raise ImportError(
             "deepagents is not installed. Run: pip install deepagents"
@@ -320,11 +331,7 @@ def _create_agent():
 
     model = _build_model(cfg)
     subagents = _build_subagent_specs()
-    backend = LocalShellBackend(
-        root_dir=str(file_storage_root()),
-        virtual_mode=False,
-        inherit_env=True,
-    )
+    backend = build_backend(prefer_shell=True)
 
     print(
         f"INFO: Deep Orchestrator — {len(subagents)} native subagents "
@@ -332,6 +339,7 @@ def _create_agent():
         "(built-in `task` + shell-enabled tools)."
     )
 
+    ensure_general_purpose_subagent_disabled(model)
     return create_deep_agent(
         model=model,
         system_prompt=system_prompt,

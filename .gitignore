@@ -29,6 +29,8 @@
 !/html-image-renderer/**
 !/single-stock-coverage/
 !/single-stock-coverage/**
+!/financial-agent-runtime/
+!/financial-agent-runtime/**
 
 # Secrets and local overrides.
 **/.env
@@ -48,6 +50,8 @@
 
 # Tests are intentionally excluded from this first core-code upload.
 **/tests/
+!/industry-ananlysis/tests/
+!/industry-ananlysis/tests/**
 !/morning-note/tests/
 !/morning-note/tests/**
 !/screen/tests/
@@ -62,6 +66,8 @@
 !/html-image-renderer/tests/**
 !/single-stock-coverage/tests/
 !/single-stock-coverage/tests/**
+!/financial-agent-runtime/tests/
+!/financial-agent-runtime/tests/**
 
 # Python and tool caches.
 **/__pycache__/

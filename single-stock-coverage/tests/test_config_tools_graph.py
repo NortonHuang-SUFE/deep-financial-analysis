@@ -2280,6 +2280,12 @@ def test_statement_json_tool_groups_resolve_runtime_tools():
     ].args
 
 
+def test_root_coverage_prompt_nests_under_artifact_root():
+    prompt = _agent_prompt("single-stock-coverage.md")
+    assert "artifact root / output directory" in prompt
+    assert "the whole tree shares one source" in prompt
+
+
 def test_task2_prompts_are_json_first_with_parent_gates():
     parent = _agent_prompt("task2-financial-modeler.md")
     assert "Do not call MCP tools" in parent

@@ -9,6 +9,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from financial_agent_runtime import (
+    artifact_exists,
+    backend_is_daytona,
+    contains_task_timestamp_dir,
+    ensure_artifact_dir,
+    write_text_artifact,
+)
 from langchain_core.tools import tool
 
 from thesis_tracker_agent.config import file_storage_root
@@ -30,16 +37,24 @@ def _resolve_output_dir(output_dir: str) -> Path:
     return path if path.is_absolute() else _workspace_root() / path
 
 
+def _ensure_dir(path: Path) -> None:
+    ensure_artifact_dir(path)
+
+
+def _write_text(path: Path, text: str) -> None:
+    write_text_artifact(path, text, encoding="utf-8")
+
+
 def _timestamped_output_dir(output_dir: str = "./out") -> Path:
     base = _resolve_output_dir(output_dir)
-    if re.fullmatch(r"\d{8}-\d{6}(?:-\d+)?", base.name):
-        base.mkdir(parents=True, exist_ok=True)
+    if contains_task_timestamp_dir(base):
+        _ensure_dir(base)
         return base
 
     key = str(base.resolve())
     existing = _TASK_OUTPUT_DIRS.get(key)
     if existing:
-        existing.mkdir(parents=True, exist_ok=True)
+        _ensure_dir(existing)
         return existing
 
     timestamp = os.getenv("THESIS_TRACKER_OUTPUT_TIMESTAMP")
@@ -47,13 +62,13 @@ def _timestamped_output_dir(output_dir: str = "./out") -> Path:
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     candidate = base / timestamp
-    if candidate.exists() and os.getenv("THESIS_TRACKER_OUTPUT_TIMESTAMP") is None:
+    if artifact_exists(candidate) and os.getenv("THESIS_TRACKER_OUTPUT_TIMESTAMP") is None:
         suffix = 2
-        while (base / f"{timestamp}-{suffix}").exists():
+        while artifact_exists(base / f"{timestamp}-{suffix}"):
             suffix += 1
         candidate = base / f"{timestamp}-{suffix}"
 
-    candidate.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(candidate)
     _TASK_OUTPUT_DIRS[key] = candidate
     return candidate
 
@@ -76,7 +91,8 @@ def create_task_output_dir(output_dir: str = "./out") -> str:
 
     Args:
         output_dir: Base output directory. Relative paths resolve from the
-            workspace root. Defaults to ./out.
+            workspace root. If the path already contains a task timestamp
+            directory, it is used exactly. Defaults to ./out.
 
     Returns:
         Workspace-relative path to the timestamped output directory.
@@ -97,8 +113,9 @@ def write_markdown_report(
         title: Report title, used for the filename when filename is omitted.
         markdown: Complete markdown report content.
         filename: Optional .md filename.
-        output_dir: Base output directory. Relative paths resolve from the
-            workspace root. Defaults to ./out.
+        output_dir: Base/output directory. Relative paths resolve from the
+            workspace root. If the path already contains a task timestamp
+            directory, write directly into it. Defaults to ./out.
 
     Returns:
         Workspace-relative path to the written markdown file.
@@ -108,7 +125,7 @@ def write_markdown_report(
     if not safe_name.endswith(".md"):
         safe_name += ".md"
     path = out_dir / _slugify(safe_name, "thesis-report.md")
-    path.write_text(markdown, encoding="utf-8")
+    _write_text(path, markdown)
     return _relative_to_workspace(path)
 
 
@@ -123,8 +140,9 @@ def write_json_artifact(
     Args:
         data_json: Valid JSON string to persist.
         filename: Optional .json filename.
-        output_dir: Base output directory. Relative paths resolve from the
-            workspace root. Defaults to ./out.
+        output_dir: Base/output directory. Relative paths resolve from the
+            workspace root. If the path already contains a task timestamp
+            directory, write directly into it. Defaults to ./out.
 
     Returns:
         Workspace-relative path to the written JSON file.
@@ -133,8 +151,8 @@ def write_json_artifact(
     out_dir = _timestamped_output_dir(output_dir)
     safe_name = filename if filename.endswith(".json") else f"{filename}.json"
     path = out_dir / _slugify(safe_name, "thesis-artifact.json")
-    path.write_text(
+    _write_text(
+        path,
         json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
-        encoding="utf-8",
     )
     return _relative_to_workspace(path)

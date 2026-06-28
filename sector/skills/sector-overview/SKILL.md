@@ -86,10 +86,10 @@ tags:
 
 ### Step 8: Output Artifacts
 
-- 使用 `create_task_output_dir` 确认输出目录。
+- 若 task 描述提供了上游产物根目录/输出目录（由 orchestrator 派发），把它作为精确输出目录传给 `write_markdown_report` 和 `write_json_artifact` 的 `output_dir`，不要再调用 `create_task_output_dir` 创建新的顶层 `out/<YYYYMMDD-HHMMSS>/`。
+- 若未提供上游目录（独立运行），使用 `create_task_output_dir` 确认输出目录。
 - 使用 `write_markdown_report` 写最终报告。
 - 使用 `write_json_artifact` 保存结构化公司池、关键指标、来源清单或未来源化假设清单。
-- 输出目录在 workspace 根目录 `out/<YYYYMMDD-HHMMSS>/`；同一次任务复用同一个时间戳目录。
 
 ## Quality Bar
 
@@ -97,4 +97,3 @@ tags:
 - 表格中每个关键数字都要有来源或 `[UNSOURCED]`。
 - 结论必须能追溯到数据、政策或公司事实。
 - 研究报告会快速过期，必须注明截至日期。
-

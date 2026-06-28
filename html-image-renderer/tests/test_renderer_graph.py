@@ -110,7 +110,8 @@ def test_renderer_prompt_contains_skill_selection_rules():
     assert "poster-hero" in prompt
     assert "deck-swiss-international" in prompt
     assert "single static image" in prompt
-    assert "exactly one element matching `#image-root`" in prompt
+    assert "exactly one element matching" in prompt
+    assert "`#image-root`" in prompt
     assert "Never ask the orchestrator to paste full file contents" in prompt
     assert "read the selected skill's full `SKILL.md`" in prompt
     assert "example.html" in prompt
@@ -121,6 +122,12 @@ def test_renderer_prompt_contains_skill_selection_rules():
     assert "generic dark financial dashboard" in prompt
     assert "Keep the final response terse" in prompt
     assert "Do not invent calendar fields" in prompt
+    assert "output_dir/html/" in prompt
+    assert "output_dir/png/" in prompt
+    assert "three-digit sequence numbers" in prompt
+    assert "html/002.html` pairs with `png/002.png" in prompt
+    assert "treat it as your artifact root" in prompt
+    assert "do not create a new top-level" in prompt
 
 
 def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
@@ -141,8 +148,41 @@ def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
     assert "read its SKILL.md" in context
     assert "example.html in bounded structural slices" in context
     assert "data-html-anything-skill" in context
+    assert "html/<seq>.html and png/<seq>.png" in context
+    assert "html/001.html" in context
+    assert "png/001.png" in context
+    assert "Never overwrite an existing sequence" in context
+    assert "treat it as your artifact root" in context
+    assert "do not create a new top-level out/<timestamp>/ folder" in context
     assert "seed template" not in context
     assert "routing reference" not in context
+
+
+def test_runtime_context_uses_backend_render_helper_in_daytona(monkeypatch):
+    monkeypatch.setenv("HTML_IMAGE_RENDERER_TEST_MODE", "1")
+    monkeypatch.setenv("AGENT_BACKEND", "daytona")
+    monkeypatch.setenv("DAYTONA_FILE_STORAGE_ROOT", "/home/daytona/financial-analysis")
+    sys.modules.pop("html_image_renderer_agent.graph", None)
+    graph_module = importlib.import_module("html_image_renderer_agent.graph")
+    graph_module._RENDER_HELPER_BACKEND_PATH = None
+
+    uploads: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        graph_module,
+        "upload_file_artifact",
+        lambda local_path, remote_path: uploads.append((str(local_path), str(remote_path))),
+    )
+    cfg = graph_module.load_config()
+
+    context = graph_module._runtime_context_prompt(cfg)
+    second_context = graph_module._runtime_context_prompt(cfg)
+
+    expected = "/home/daytona/financial-analysis/.helpers/html-image-renderer/render_html.py"
+    assert f"HTML render helper script: {expected}" in context
+    assert f"HTML render helper script: {expected}" in second_context
+    assert len(uploads) == 1
+    assert uploads[0][0].endswith("html_image_renderer_agent/render_html.py")
+    assert uploads[0][1] == expected
 
 
 def test_graph_mounts_skills_directory_in_source():
@@ -150,7 +190,7 @@ def test_graph_mounts_skills_directory_in_source():
 
     source = Path(graph_module.__file__).read_text(encoding="utf-8")
 
-    assert "skills=[str(SKILLS_DIR)]" in source
+    assert "skills=[mirror_skills_into_backend(backend, SKILLS_DIR)]" in source
     assert "html-anything-" + "single-image" not in source
 
 
@@ -212,9 +252,10 @@ def test_render_html_requires_one_image_root(tmp_path):
     from html_image_renderer_agent.render_html import render_html_file
 
     out_dir = tmp_path / "out" / "20260623-090000"
-    html_path = out_dir / "index.html"
-    png_path = out_dir / "image.png"
-    out_dir.mkdir(parents=True)
+    html_path = out_dir / "html" / "001.html"
+    png_path = out_dir / "png" / "001.png"
+    html_path.parent.mkdir(parents=True)
+    png_path.parent.mkdir(parents=True)
     html_path.write_text(
         """<!doctype html>
 <html lang="zh-CN">
@@ -243,9 +284,10 @@ def test_render_html_to_single_png(tmp_path):
     csv_path.write_text("ticker,signal\n000001,buy watch\n", encoding="utf-8")
 
     out_dir = tmp_path / "out" / "20260623-090000"
-    html_path = out_dir / "index.html"
-    png_path = out_dir / "image.png"
-    out_dir.mkdir(parents=True)
+    html_path = out_dir / "html" / "001.html"
+    png_path = out_dir / "png" / "001.png"
+    html_path.parent.mkdir(parents=True)
+    png_path.parent.mkdir(parents=True)
     html_path.write_text(
         """<!doctype html>
 <html lang="zh-CN">
@@ -299,5 +341,5 @@ def test_render_html_to_single_png(tmp_path):
     assert png_path.exists()
     assert png_path.stat().st_size > 0
 
-    pngs = list(out_dir.glob("*.png"))
+    pngs = list((out_dir / "png").glob("*.png"))
     assert pngs == [png_path]

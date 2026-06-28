@@ -13,7 +13,7 @@ allowed-tools: read_file build_pptx
 
 Always call `build_pptx` for slide decks. Do not hand-build PPTX files and do not manually run render scripts unless debugging a failed tool run.
 
-The public tool name is still `build_pptx`, but its implementation is the Swiss pipeline: structured JSON in, `./out/<timestamp>/ppt/index.html`, rendered slide PNGs, and `./out/<timestamp>/ppt/<name>.pptx` out.
+The public tool name is still `build_pptx`, but its implementation is the Swiss pipeline: structured JSON in, `<task-output>/ppt/index.html`, rendered slide PNGs, and `<task-output>/ppt/<name>.pptx` out.
 
 ## Operating Rules
 
@@ -37,7 +37,7 @@ build_pptx(
 )
 ```
 
-If the current task already created a timestamped task directory, pass that directory as `output_dir`; the tool will still write artifacts under its `ppt/` child. The deprecated `template_path` argument may be omitted.
+If the current task already has an upstream artifact root / output directory, pass that exact directory as `output_dir`; the tool will still write artifacts under its `ppt/` child and will not create another top-level `out/<timestamp>` source. The deprecated `template_path` argument may be omitted.
 
 The tool returns a concise artifact summary with the PPTX path first. Final delivery must report the `.pptx` first.
 
@@ -127,12 +127,12 @@ Read these only when needed:
 The tool writes and renders the deck. For debugging or manual QA, check:
 
 ```bash
-node skills/pptx-author/scripts/validate-swiss-deck.mjs ./out/<timestamp>/ppt/index.html
+node skills/pptx-author/scripts/validate-swiss-deck.mjs <task-output>/ppt/index.html
 ```
 
 Expected artifacts:
 
-- `./out/<timestamp>/ppt/index.html`
-- `./out/<timestamp>/ppt/rendered-slides/01.png`, `02.png`, etc.
-- `./out/<timestamp>/ppt/<name>.pptx`
-- `./out/<timestamp>/ppt/manifest.json`
+- `<task-output>/ppt/index.html`
+- `<task-output>/ppt/rendered-slides/01.png`, `02.png`, etc.
+- `<task-output>/ppt/<name>.pptx`
+- `<task-output>/ppt/manifest.json`

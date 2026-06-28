@@ -1,0 +1,24 @@
+[project]
+name = "financial-agent-runtime"
+version = "0.1.0"
+description = "Shared runtime helpers for the financial services LangGraph agents."
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents>=0.6.1",
+    "langchain-daytona>=0.0.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=73.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

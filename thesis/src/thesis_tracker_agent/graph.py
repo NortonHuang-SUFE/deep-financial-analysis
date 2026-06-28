@@ -25,7 +25,8 @@ if str(SRC_ROOT) not in sys.path:
 from thesis_tracker_agent.config import (  # noqa: E402
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
-    file_storage_root,
+    build_backend,
+    mirror_skills_into_backend,
     load_config,
 )
 from thesis_tracker_agent.tools import (  # noqa: E402
@@ -170,7 +171,6 @@ async def _create_agent():
 
     try:
         from deepagents import create_deep_agent
-        from deepagents.backends import FilesystemBackend
     except ImportError as exc:
         raise ImportError("deepagents is not installed. Run: pip install deepagents") from exc
 
@@ -191,13 +191,14 @@ async def _create_agent():
 
     print(f"INFO: Agent tools - MCP: {len(mcp_tools)}, Local: {len(local_tools)}")
 
+    backend = build_backend(prefer_shell=False)
     return create_deep_agent(
         model=model,
         system_prompt=system_prompt,
         tools=all_tools,
-        skills=[str(PROJECT_ROOT / "skills")],
+        skills=[mirror_skills_into_backend(backend, PROJECT_ROOT / "skills")],
         middleware=[_make_tool_error_middleware()],
-        backend=FilesystemBackend(root_dir=str(file_storage_root()), virtual_mode=False),
+        backend=backend,
         name="thesis_tracker",
     )
 

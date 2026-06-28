@@ -166,7 +166,7 @@ Required:
 1. Gather all raw data using available MCP tools (capiq, factset) or web search as fallback
 2. Structure the data as JSON: list of companies with revenue, ebitda, market_cap, enterprise_value, growth, etc.
 3. Call the `build_comps_excel` tool with the structured data — it generates the .xlsx file
-4. Ensure the Excel file is written into the task timestamp directory under `./out`
+4. Ensure the Excel file is written into the task output directory for this run. If an upstream orchestrator supplied an `output_dir`, pass that exact directory to `build_comps_excel`; do not create another top-level `./out/<timestamp>` source.
 5. Report the output path and key findings to the user
 
 ### Sanity Checks

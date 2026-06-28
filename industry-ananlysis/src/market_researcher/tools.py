@@ -15,10 +15,20 @@ import os
 import html
 import re
 import shutil
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from financial_agent_runtime import (
+    artifact_exists,
+    backend_is_daytona,
+    contains_task_timestamp_dir,
+    ensure_artifact_dir,
+    materialize_file_artifact,
+    upload_file_artifact,
+    write_text_artifact,
+)
 from langchain_core.tools import tool
 
 from market_researcher.config import file_storage_root
@@ -45,23 +55,37 @@ def _resolve_output_dir(output_dir: str) -> Path:
 
 def _ensure_out_dir(output_dir: str) -> Path:
     out = _resolve_output_dir(output_dir)
-    out.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(out)
     return out
 
 
-def _timestamped_output_dir(output_dir: str) -> Path:
-    """Return this process task's timestamped artifact directory under output_dir."""
-    import re
+def _ensure_dir(path: Path) -> None:
+    ensure_artifact_dir(path)
 
+
+def _write_text(path: Path, text: str) -> None:
+    write_text_artifact(path, text, encoding="utf-8")
+
+
+def _save_workbook(wb: Any, path: Path) -> None:
+    materialize_file_artifact(path, lambda target: wb.save(target))
+
+
+def _timestamped_output_dir(output_dir: str) -> Path:
+    """Return the task artifact directory for output_dir.
+
+    If output_dir already points inside an orchestrator task timestamp directory,
+    use it exactly; otherwise create or reuse a timestamped child directory.
+    """
     base = _resolve_output_dir(output_dir)
-    if re.fullmatch(r"\d{8}-\d{6}(?:-\d+)?", base.name):
-        base.mkdir(parents=True, exist_ok=True)
+    if contains_task_timestamp_dir(base):
+        _ensure_dir(base)
         return base
 
     key = str(base.resolve())
     existing = _TASK_OUTPUT_DIRS.get(key)
     if existing:
-        existing.mkdir(parents=True, exist_ok=True)
+        _ensure_dir(existing)
         return existing
 
     timestamp = os.getenv("MARKET_RESEARCHER_OUTPUT_TIMESTAMP")
@@ -69,13 +93,13 @@ def _timestamped_output_dir(output_dir: str) -> Path:
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     candidate = base / timestamp
-    if candidate.exists() and os.getenv("MARKET_RESEARCHER_OUTPUT_TIMESTAMP") is None:
+    if artifact_exists(candidate) and os.getenv("MARKET_RESEARCHER_OUTPUT_TIMESTAMP") is None:
         suffix = 2
-        while (base / f"{timestamp}-{suffix}").exists():
+        while artifact_exists(base / f"{timestamp}-{suffix}"):
             suffix += 1
         candidate = base / f"{timestamp}-{suffix}"
 
-    candidate.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(candidate)
     _TASK_OUTPUT_DIRS[key] = candidate
     return candidate
 
@@ -115,8 +139,9 @@ def build_comps_excel(data_json: str, sector: str, output_dir: str = "./out") ->
                 "extra_metrics": {}              # dict of {label: value}
             }
         sector: Sector name used in the file name (e.g. "fintech-payments").
-        output_dir: Base directory to write the file into. A timestamped
-            subdirectory is created automatically under this directory.
+        output_dir: Base/output directory to write the file into. If the path
+            already contains a task timestamp directory, it is used exactly;
+            otherwise a timestamped subdirectory is created automatically.
 
     Returns:
         Relative path of the written .xlsx file.
@@ -398,7 +423,7 @@ def build_comps_excel(data_json: str, sector: str, output_dir: str = "./out") ->
     for col_letter in ["B", "C", "D", "E", "F", "G", "H", "I", "J"]:
         ws.column_dimensions[col_letter].width = 15
 
-    wb.save(filepath)
+    _save_workbook(wb, filepath)
     return _rel(filepath)
 
 
@@ -465,6 +490,11 @@ def _skill_dir() -> Path:
 
 
 def _rel(path: Path) -> str:
+    if backend_is_daytona():
+        try:
+            return str(path.relative_to(_workspace_root()))
+        except ValueError:
+            return str(path)
     try:
         return str(path.resolve().relative_to(_workspace_root()))
     except ValueError:
@@ -877,6 +907,35 @@ def _images_to_pptx(image_dir: Path, pptx_path: Path) -> None:
     prs.save(pptx_path)
 
 
+def _build_swiss_deck_files(
+    plan: dict[str, Any],
+    output_name: str,
+    ppt_dir: Path,
+) -> tuple[Path, Path, Path, int]:
+    assets_dir = ppt_dir / "assets"
+    rendered_dir = ppt_dir / "rendered-slides"
+    ppt_dir.mkdir(parents=True, exist_ok=True)
+    assets_dir.mkdir(parents=True, exist_ok=True)
+
+    motion_src = _skill_dir() / "assets" / "motion.min.js"
+    if motion_src.exists():
+        shutil.copy2(motion_src, assets_dir / "motion.min.js")
+
+    html_path = ppt_dir / "index.html"
+    html_path.write_text(_build_swiss_html(plan), encoding="utf-8")
+
+    rendered_count = _render_html_to_images(html_path, rendered_dir)
+    pptx_path = ppt_dir / f"{output_name}.pptx"
+    _images_to_pptx(rendered_dir, pptx_path)
+    return html_path, rendered_dir, pptx_path, rendered_count
+
+
+def _upload_directory(local_dir: Path, remote_dir: Path) -> None:
+    for local_file in sorted(local_dir.rglob("*")):
+        if local_file.is_file():
+            upload_file_artifact(local_file, remote_dir / local_file.relative_to(local_dir))
+
+
 @tool
 def build_pptx(slides_json: str, output_name: str, output_dir: str = "./out",
                template_path: str = "./templates/firm-template.pptx") -> str:
@@ -904,8 +963,9 @@ def build_pptx(slides_json: str, output_name: str, output_dir: str = "./out",
                 ]
             }
         output_name: Filename without extension.
-        output_dir: Base directory or existing timestamp directory. The tool
-            writes artifacts under `<timestamp>/ppt/`.
+        output_dir: Base directory, existing timestamp directory, or an
+            orchestrator-assigned child under a timestamp directory. The tool
+            writes artifacts under the resolved task directory's `ppt/` child.
         template_path: Deprecated; ignored.
 
     Returns:
@@ -916,22 +976,25 @@ def build_pptx(slides_json: str, output_name: str, output_dir: str = "./out",
         plan: dict[str, Any] = json.loads(slides_json)
         out_dir = _timestamped_output_dir(output_dir)
         ppt_dir = out_dir / "ppt"
-        assets_dir = ppt_dir / "assets"
         rendered_dir = ppt_dir / "rendered-slides"
-        ppt_dir.mkdir(parents=True, exist_ok=True)
-        assets_dir.mkdir(parents=True, exist_ok=True)
-
-        motion_src = _skill_dir() / "assets" / "motion.min.js"
-        if motion_src.exists():
-            shutil.copy2(motion_src, assets_dir / "motion.min.js")
-
-        html_path = ppt_dir / "index.html"
-        html_path.write_text(_build_swiss_html(plan), encoding="utf-8")
-
-        rendered_count = _render_html_to_images(html_path, rendered_dir)
         safe_output_name = output_name[:-5] if output_name.lower().endswith(".pptx") else output_name
         pptx_path = ppt_dir / f"{safe_output_name}.pptx"
-        _images_to_pptx(rendered_dir, pptx_path)
+        html_path = ppt_dir / "index.html"
+
+        if backend_is_daytona():
+            _ensure_dir(ppt_dir)
+            _ensure_dir(ppt_dir / "assets")
+            _ensure_dir(rendered_dir)
+            with tempfile.TemporaryDirectory(prefix="market-researcher-pptx-") as tmp:
+                local_ppt_dir = Path(tmp) / "ppt"
+                _local_html_path, _local_rendered_dir, _local_pptx_path, rendered_count = (
+                    _build_swiss_deck_files(plan, safe_output_name, local_ppt_dir)
+                )
+                _upload_directory(local_ppt_dir, ppt_dir)
+        else:
+            _local_html_path, _local_rendered_dir, _local_pptx_path, rendered_count = (
+                _build_swiss_deck_files(plan, safe_output_name, ppt_dir)
+            )
 
         manifest = {
             "pptx": _rel(pptx_path),
@@ -942,7 +1005,7 @@ def build_pptx(slides_json: str, output_name: str, output_dir: str = "./out",
             "mode": "swiss-html-rendered-to-pptx",
         }
         manifest_path = ppt_dir / "manifest.json"
-        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        _write_text(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2))
 
         return (
             f"PPTX: {_rel(pptx_path)}\n"

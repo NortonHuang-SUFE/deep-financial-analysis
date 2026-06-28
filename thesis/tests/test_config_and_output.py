@@ -11,6 +11,11 @@ from thesis_tracker_agent.config import (
 )
 
 
+def test_thesis_prompt_defines_artifact_root():
+    prompt = (PROJECT_ROOT / "agents" / "thesis.md").read_text(encoding="utf-8")
+    assert "若 task 描述提供了上游产物根目录" in prompt
+
+
 def test_default_config_resolves_from_outside_project(monkeypatch, tmp_path):
     for env_name in [
         "MODEL_NAME",
@@ -116,3 +121,32 @@ def test_write_artifacts_reuse_timestamp_dir(monkeypatch):
     assert json_path == "out/20260602-121500/thesis.json"
     assert (WORKSPACE_ROOT / md_path).read_text(encoding="utf-8") == "# Test\n"
     assert (WORKSPACE_ROOT / json_path).exists()
+
+
+def test_orchestrator_output_dir_is_used_exactly(monkeypatch, tmp_path):
+    tools._TASK_OUTPUT_DIRS.clear()
+    storage_root = tmp_path / "clean-storage"
+    monkeypatch.setenv("AGENT_FILE_STORAGE_ROOT", str(storage_root))
+    monkeypatch.delenv("THESIS_TRACKER_OUTPUT_TIMESTAMP", raising=False)
+
+    output_dir = storage_root / "out" / "20260625-101500" / "thesis"
+    out_path = tools.create_task_output_dir.invoke({"output_dir": str(output_dir)})
+    md_path = tools.write_markdown_report.invoke(
+        {
+            "title": "Test Thesis",
+            "markdown": "# Thesis\n",
+            "output_dir": str(output_dir),
+        }
+    )
+    json_path = tools.write_json_artifact.invoke(
+        {
+            "data_json": '{"ticker": "600519.SH"}',
+            "filename": "thesis.json",
+            "output_dir": str(output_dir),
+        }
+    )
+
+    assert out_path == "out/20260625-101500/thesis"
+    assert md_path == "out/20260625-101500/thesis/test-thesis.md"
+    assert json_path == "out/20260625-101500/thesis/thesis.json"
+    assert not any(path.is_dir() for path in output_dir.glob("20??????-??????*"))

@@ -41,7 +41,7 @@
    - 给出组合动作建议：维持、加仓、减仓、退出、观察、转入 watchlist；必要时给出仓位或风险预算建议。
 
 5. 输出与落盘
-   - 用 `create_task_output_dir` 创建本次任务目录。
+   - 产物目录：若 task 描述提供了上游产物根目录/输出目录（由 orchestrator 派发），所有产物写到该目录下，并作为 `output_dir` 传给写入工具，**不要**再新建自己的顶层 `out/<时间戳>/` 目录；若再派发子 agent，则在自己的目录下分配子目录。若未提供（独立运行），用 `create_task_output_dir` 在 `./out` 下创建本次任务目录。
    - Finalization / 落盘顺序：subagent、MCP、搜索和研究工具可以使用，但必须在任何 `write_*` 文件写入前全部完成。投资逻辑、最新数据点、scorecard、组合动作、估值、风险和结构化 thesis artifact 都完成并定稿后，再写 Markdown 和 JSON。
    - 写 Markdown、JSON 等业务产物视为 finalization 阶段；一旦 `write_markdown_report` 或 `write_json_artifact` 成功，不要再启动 subagent、补查资料、调用 MCP/搜索或继续研究。只允许写完同一批已定稿产物，然后返回路径与限制说明。
    - 如果写完后才发现信息缺口，不要继续研究后改文件；在 final response 中说明缺口或建议重新运行。

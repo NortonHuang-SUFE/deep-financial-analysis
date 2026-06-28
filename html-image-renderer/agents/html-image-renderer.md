@@ -16,8 +16,11 @@ The orchestrator passes a task description with:
 
 - `source_paths`: one or more absolute paths to existing artifacts.
 - `render_goal`: the intended single image, such as "生成盘前日报头图".
-- `output_dir`: optional absolute directory under the shared file storage
-  root's `out/`.
+- `output_dir`: optional absolute directory under the shared file storage root's
+  `out/`. **When the orchestrator provides it, treat it as your artifact root: write
+  `html/` and `png/` directly under it and do not create a new top-level
+  `out/<timestamp>/` folder.** When it is absent (standalone run), create your own
+  `out/<timestamp>/` as described below.
 - `constraints`: optional ratio/size, language, required emphasis, visual tone,
   and items to avoid.
 
@@ -46,7 +49,7 @@ recreate that flow yourself:
    small slices only when needed. Do not load a large `example.html` wholesale
    into the conversation. If `example.md` exists, read it when it helps
    understand how source content maps into the template.
-5. Only then write `index.html`.
+5. Only then write the sequenced HTML file under `output_dir/html/`.
 
 Do not proceed directly from skill names or descriptions. If you have not read a
 selected `SKILL.md`, the output is invalid. If `example.html` exists and you did
@@ -107,23 +110,29 @@ Adapt the original shared directives for this local single-image renderer:
    skill's visual grammar, spacing, hierarchy, and component ideas, but adapt it
    to a single static image. Skills that normally produce decks, carousels,
    pages, videos, or multi-frame outputs are only design guidance here.
-6. Write `output_dir/index.html`. It must be a complete standalone HTML
+6. Create `output_dir/html/` and `output_dir/png/` if they do not exist. Scan
+   both directories for existing three-digit sequence numbers such as `001`,
+   `002`, and `003`; choose the next unused sequence and never overwrite an
+   existing pair.
+7. Write `output_dir/html/<seq>.html`. It must be a complete standalone HTML
    document with inline CSS and exactly one deliverable element:
 
 ```html
 <main id="image-root" data-html-anything-skill="selected-skill-id">...</main>
 ```
 
-7. Render `#image-root` to `output_dir/image.png` with the runtime render
-   helper script.
-8. Verify the PNG exists, is non-empty, and the rendered dimensions match the
+8. Render `#image-root` to the paired `output_dir/png/<seq>.png` with the
+   runtime render helper script. The HTML and PNG must use the same sequence:
+   `html/002.html` pairs with `png/002.png`.
+9. Verify the PNG exists, is non-empty, and the rendered dimensions match the
    selected ratio.
 
 ## Single-Image Rules
 
 - Output exactly one PNG image. Do not create a deck, carousel, PDF, PPTX,
   public URL, or clipboard output.
-- `index.html` must contain exactly one element matching `#image-root`.
+- Each generated HTML file must contain exactly one element matching
+  `#image-root`.
 - `#image-root` must include `data-html-anything-skill="<selected skill id>"`.
   The value must match a mounted skill directory that you read.
 - Default canvas is `1080 x 1440` for Chinese financial head images unless the
@@ -166,8 +175,8 @@ Render command shape:
 
 ```bash
 .venv/bin/python html-image-renderer/src/html_image_renderer_agent/render_html.py \
-  --html /absolute/out/dir/index.html \
-  --png /absolute/out/dir/image.png \
+  --html /absolute/out/dir/html/001.html \
+  --png /absolute/out/dir/png/001.png \
   --selector '#image-root' \
   --width 1080 \
   --height 1440
@@ -182,8 +191,8 @@ If Playwright Chromium is missing, report:
 Return a concise final message with:
 
 - `source_paths`: files read.
-- `html_path`: absolute path to `index.html`.
-- `png_path`: absolute path to `image.png`.
+- `html_path`: absolute path to `html/<seq>.html`.
+- `png_path`: absolute path to the paired `png/<seq>.png`.
 - `dimensions`: rendered pixel dimensions.
 - `status`: one short sentence naming the chosen HTML Anything skill and the
   rendering result.

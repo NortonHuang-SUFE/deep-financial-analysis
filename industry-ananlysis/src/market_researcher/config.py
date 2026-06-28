@@ -18,6 +18,12 @@ from urllib.parse import urlparse
 import yaml
 from pydantic import BaseModel, Field
 
+from financial_agent_runtime import (
+    build_backend as _shared_build_backend,
+    file_storage_root as _shared_file_storage_root,
+    mirror_skills_into_backend as _shared_mirror_skills_into_backend,
+)
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
@@ -25,15 +31,15 @@ WORKSPACE_ENV_PATH = WORKSPACE_ROOT / ".env"
 
 
 def file_storage_root() -> Path:
-    """Return the shared artifact storage root for all workspace agents."""
-    raw_root = os.getenv("AGENT_FILE_STORAGE_ROOT")
-    if not raw_root:
-        return WORKSPACE_ROOT
+    return _shared_file_storage_root(WORKSPACE_ROOT)
 
-    path = Path(raw_root).expanduser()
-    if path.is_absolute():
-        return path.resolve()
-    return (WORKSPACE_ROOT / path).resolve()
+
+def build_backend(*, prefer_shell: bool = True):
+    return _shared_build_backend(WORKSPACE_ROOT, prefer_shell=prefer_shell)
+
+
+def mirror_skills_into_backend(backend, local_dir) -> str:
+    return _shared_mirror_skills_into_backend(backend, local_dir, file_storage_root())
 
 
 # ── Sub-models ────────────────────────────────────────────────────────────────

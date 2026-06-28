@@ -35,7 +35,7 @@ from single_stock_coverage_agent.agent_registry import (  # noqa: E402
 )
 from single_stock_coverage_agent.config import (  # noqa: E402
     enabled_mcp_server_configs,
-    file_storage_root,
+    build_backend,
     load_config,
 )
 
@@ -180,11 +180,6 @@ async def _create_agent(agent_name: str):
             "backend_map": _agent_backend_type_map(registry, agent_name),
         }
 
-    try:
-        from deepagents.backends import FilesystemBackend, LocalShellBackend
-    except ImportError as exc:
-        raise ImportError("deepagents is not installed. Run: pip install deepagents") from exc
-
     cfg = load_config()
     model = _build_model(cfg)
     needs_mcp = agent_uses_tool_group(registry, agent_name, "mcp_tools")
@@ -196,18 +191,9 @@ async def _create_agent(agent_name: str):
 
     def backend_resolver(name: str):
         if name not in backend_cache:
-            root_dir = str(file_storage_root())
-            if _uses_local_shell_backend(name):
-                backend_cache[name] = LocalShellBackend(
-                    root_dir=root_dir,
-                    virtual_mode=False,
-                    inherit_env=True,
-                )
-            else:
-                backend_cache[name] = FilesystemBackend(
-                    root_dir=root_dir,
-                    virtual_mode=False,
-                )
+            backend_cache[name] = build_backend(
+                prefer_shell=_uses_local_shell_backend(name)
+            )
         return backend_cache[name]
 
     tool_resolver = ToolGroupResolver(mcp_tools=mcp_tools)

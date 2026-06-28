@@ -384,6 +384,8 @@ def _skills_middleware(
     if not spec.skills:
         return []
 
+    from single_stock_coverage_agent.config import mirror_skills_into_backend
+
     sources: list[tuple[str, str]] = []
     selected_skill_names: list[str] = []
     for source_name, skill_names in spec.skills.items():
@@ -391,7 +393,10 @@ def _skills_middleware(
             continue
         source = registry.skill_sources[source_name]
         label = str(source.get("label") or source_name.replace("_", " ").title())
-        sources.append((str(registry.skill_source_path(source_name)), label))
+        source_path = mirror_skills_into_backend(
+            backend, registry.skill_source_path(source_name)
+        )
+        sources.append((source_path, label))
         selected_skill_names.extend(skill_names)
 
     if not selected_skill_names:

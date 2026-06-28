@@ -17,19 +17,38 @@ load_dotenv()
 
 from langchain_core.messages import SystemMessage, ToolMessage
 
+from financial_agent_runtime import backend_is_daytona, upload_file_artifact
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
 SKILLS_DIR = PROJECT_ROOT / "skills"
+_RENDER_HELPER_BACKEND_PATH: Path | None = None
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from html_image_renderer_agent.config import (  # noqa: E402
     WORKSPACE_ROOT,
+    build_backend,
+    mirror_skills_into_backend,
     file_storage_root,
     load_config,
     resolve_output_base,
 )
+
+
+def _render_helper_path() -> Path:
+    """Return a shell-backend-visible render helper path."""
+    script_path = PROJECT_ROOT / "src" / "html_image_renderer_agent" / "render_html.py"
+    if not backend_is_daytona():
+        return script_path
+
+    global _RENDER_HELPER_BACKEND_PATH
+    helper_path = file_storage_root() / ".helpers" / "html-image-renderer" / "render_html.py"
+    if _RENDER_HELPER_BACKEND_PATH != helper_path:
+        upload_file_artifact(script_path, helper_path)
+        _RENDER_HELPER_BACKEND_PATH = helper_path
+    return helper_path
 
 
 def _make_runtime_context_middleware(context_factory):
@@ -153,7 +172,7 @@ def _build_model(cfg):
 def _runtime_context_prompt(cfg) -> str:
     now = datetime.now(ZoneInfo("Asia/Shanghai"))
     output_base = resolve_output_base(cfg.output.dir)
-    render_script = PROJECT_ROOT / "src" / "html_image_renderer_agent" / "render_html.py"
+    render_script = _render_helper_path()
     return (
         "\n\n## Runtime Context\n"
         f"Current Beijing time: {now:%Y-%m-%d %H:%M:%S %Z}.\n"
@@ -163,18 +182,25 @@ def _runtime_context_prompt(cfg) -> str:
         f"Default output base directory: {output_base}.\n"
         f"HTML Anything skills directory: {SKILLS_DIR}.\n"
         f"HTML render helper script: {render_script}.\n"
-        "If the task does not provide output_dir, create "
-        f"{output_base}/{now:%Y%m%d-%H%M%S}/ and write exactly index.html and image.png "
-        "there. Always read source_paths yourself from the filesystem; do not "
+        "If the task provides output_dir (an upstream orchestrator dispatched you), "
+        "treat it as your artifact root: write html/ and png/ directly under it and "
+        "do not create a new top-level out/<timestamp>/ folder. If the task does not "
+        "provide output_dir, create "
+        f"{output_base}/{now:%Y%m%d-%H%M%S}/ as the task output directory. "
+        "Inside output_dir, create html/ and png/ subdirectories, scan existing "
+        "three-digit sequence numbers, and write the next paired files as "
+        "html/<seq>.html and png/<seq>.png, for example html/001.html and "
+        "png/001.png. Never overwrite an existing sequence. Always read "
+        "source_paths yourself from the filesystem; do not "
         "ask the orchestrator to paste file contents. Use the mounted HTML "
         "Anything skills as design and layout guidance. Before writing HTML, "
         "select one primary skill, read its SKILL.md, and read the adjacent "
         "example.html in bounded structural slices when present so the output "
         "inherits the actual template structure rather than only the skill "
         "description. Adapt every selected "
-        "skill to exactly one deliverable #image-root hero image in index.html, "
+        "skill to exactly one deliverable #image-root hero image in the selected HTML file, "
         "set data-html-anything-skill on #image-root to the selected skill id, "
-        "render only that element to image.png, and keep the final response "
+        "render only that element to the paired png/<seq>.png, and keep the final response "
         "terse with paths, dimensions, selected skill, and status only.\n"
     )
 
@@ -191,13 +217,7 @@ def _is_allowed_model_gateway(parsed_base_url) -> bool:
 
 
 def _create_backend():
-    from deepagents.backends import LocalShellBackend
-
-    return LocalShellBackend(
-        root_dir=str(file_storage_root()),
-        virtual_mode=False,
-        inherit_env=True,
-    )
+    return build_backend(prefer_shell=True)
 
 
 def _create_agent():
@@ -231,7 +251,7 @@ def _create_agent():
         model=model,
         system_prompt=system_prompt,
         tools=[],
-        skills=[str(SKILLS_DIR)],
+        skills=[mirror_skills_into_backend(backend, SKILLS_DIR)],
         middleware=[
             _make_runtime_context_middleware(lambda: _runtime_context_prompt(cfg)),
             _make_tool_error_middleware(),

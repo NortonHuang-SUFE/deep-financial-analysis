@@ -18,6 +18,8 @@ load_dotenv()
 
 from langchain_core.messages import SystemMessage, ToolMessage
 
+from financial_agent_runtime import ensure_general_purpose_subagent_disabled
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
@@ -25,8 +27,9 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from morning_note_agent.config import (  # noqa: E402
-    WORKSPACE_ROOT,
     enabled_mcp_server_configs,
+    build_backend,
+    mirror_skills_into_backend,
     file_storage_root,
     load_config,
 )
@@ -193,6 +196,11 @@ def _runtime_context_prompt(cfg) -> str:
         "artifacts through the provided artifact tools and report the absolute "
         "paths returned by those tools. Do not reuse artifact paths from previous "
         "runs unless the user explicitly asks to inspect an old run.\n"
+        "Artifact root: if the task description provides an output directory / "
+        "artifact root (an upstream orchestrator dispatched you), pass it as "
+        "output_dir to the artifact tools and write everything under it; do not "
+        "create your own new top-level out/<timestamp>/ folder. If none is provided "
+        "(standalone run), create your own out/<timestamp>/ as the source.\n"
     )
 
 
@@ -213,7 +221,6 @@ async def _create_agent():
 
     try:
         from deepagents import create_deep_agent
-        from deepagents.backends import FilesystemBackend
     except ImportError as exc:
         raise ImportError("deepagents is not installed. Run: pip install deepagents") from exc
 
@@ -233,18 +240,19 @@ async def _create_agent():
         write_markdown_report,
         write_json_artifact,
     ]
-    backend = FilesystemBackend(root_dir=str(file_storage_root()), virtual_mode=False)
+    backend = build_backend(prefer_shell=False)
     all_tools = mcp_tools + local_tools
 
     print(
         f"INFO: Agent tools - MCP: {len(mcp_tools)}, Local: {len(local_tools)}"
     )
 
+    ensure_general_purpose_subagent_disabled(model)
     return create_deep_agent(
         model=model,
         system_prompt=system_prompt,
         tools=all_tools,
-        skills=[str(PROJECT_ROOT / "skills")],
+        skills=[mirror_skills_into_backend(backend, PROJECT_ROOT / "skills")],
         middleware=[
             _make_runtime_context_middleware(lambda: _runtime_context_prompt(cfg)),
             _make_tool_error_middleware(),

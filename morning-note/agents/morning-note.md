@@ -67,10 +67,11 @@
 
 ## 工具使用
 
-- 使用 `create_task_output_dir` 创建本次任务输出目录。
-- Finalization / 落盘顺序：subagent、MCP、搜索和研究工具可以使用，但必须在任何 `write_*` 文件写入前全部完成。隔夜市场、政策监管、公司事件、资金面、今日日程和来源核验都完成并定稿后，再一次性写 JSON artifact 和最终 `morning-note.md`。
-- 写 Markdown、JSON 等业务产物视为 finalization 阶段；一旦 `write_markdown_report` 或 `write_json_artifact` 成功，不要再启动 subagent、补查资料、调用 MCP/搜索或继续研究。只允许写完同一批已定稿产物，然后直接返回路径与限制说明。
+- 禁止调用或请求 `general-purpose` subagent；本 agent 不应使用任何通用委派 subagent。需要补充信息时，使用已配置的 MCP/本地工具完成，或在最终回复中说明缺口。
+- 产物目录：若 task 描述提供了上游产物根目录/输出目录（由 orchestrator 派发），就把它作为输出根，所有产物写到该目录下，并把它作为 `output_dir` 传给写入工具，**不要**再新建自己的顶层 `out/<时间戳>/` 目录；若需再派发子 agent，则在自己的目录下分配子目录。若未提供（独立运行），用 `create_task_output_dir` 在 `./out` 下创建本次任务输出目录。
+- Finalization / 落盘顺序：MCP、搜索和研究工具可以使用，但必须在任何 `write_*` 文件写入前全部完成。隔夜市场、政策监管、公司事件、资金面、今日日程和来源核验都完成并定稿后，再一次性写 JSON artifact 和最终 `morning-note.md`。
+- 写 Markdown、JSON 等业务产物视为 finalization 阶段；一旦 `write_markdown_report` 或 `write_json_artifact` 成功，不要再启动补查资料、调用 MCP/搜索或继续研究。只允许写完同一批已定稿产物，然后直接返回路径与限制说明。
 - 如果写完后才发现信息缺口，不要继续研究后改文件；在 final response 中说明缺口或建议重新运行。
 - 使用 `write_markdown_report` 保存最终 Morning Note。
 - 如整理了公告清单、资金流、日程或来源日志，使用 `write_json_artifact` 保存 JSON artifact。
-- 同一次任务写入同一个 `out/<YYYYMMDD-HHMMSS>/` 目录；如环境变量 `MORNING_NOTE_OUTPUT_TIMESTAMP` 存在，则使用该固定时间戳。
+- 同一次任务的所有产物写入同一个目录（上游提供的产物目录，或独立运行时的 `out/<YYYYMMDD-HHMMSS>/`）；如环境变量 `MORNING_NOTE_OUTPUT_TIMESTAMP` 存在，则使用该固定时间戳。

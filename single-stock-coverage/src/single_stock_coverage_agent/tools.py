@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import math
 import os
@@ -13,6 +14,17 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
+from financial_agent_runtime import (
+    artifact_exists,
+    backend_is_daytona,
+    copy_artifact,
+    ensure_artifact_dir,
+    list_artifact_dir,
+    materialize_file_artifact,
+    read_bytes_artifact,
+    read_text_artifact,
+    write_text_artifact,
+)
 from langchain_core.tools import tool
 
 from single_stock_coverage_agent.config import file_storage_root
@@ -268,6 +280,42 @@ def _resolve_workspace_path(path: str | Path) -> Path:
     return _canonicalize_workspace_path(_workspace_root() / candidate)
 
 
+def _ensure_dir(path: Path) -> None:
+    ensure_artifact_dir(path)
+
+
+def _write_text(path: Path, text: str) -> None:
+    write_text_artifact(path, text, encoding="utf-8")
+
+
+def _save_workbook(wb: Any, path: Path) -> None:
+    materialize_file_artifact(path, lambda target: wb.save(target))
+
+
+def _save_workbook_with_formula_cache(
+    wb: Any,
+    path: Path,
+    formula_cache: dict[str, dict[str, Any]],
+) -> int:
+    def _produce(target: Path) -> int:
+        wb.save(target)
+        return _patch_xlsx_formula_caches(target, formula_cache)
+
+    return materialize_file_artifact(path, _produce)
+
+
+def _copy_file_artifact(source_path: Path, artifact_path: Path) -> None:
+    copy_artifact(source_path, artifact_path)
+
+
+def _load_workbook(path: Path, **kwargs: Any):
+    import openpyxl
+
+    if backend_is_daytona():
+        return openpyxl.load_workbook(io.BytesIO(read_bytes_artifact(path)), **kwargs)
+    return openpyxl.load_workbook(path, **kwargs)
+
+
 def _canonicalize_workspace_path(path: Path) -> Path:
     """Map project-local out/ paths to the workspace-level artifact root."""
     project_out = _project_root() / "out"
@@ -309,6 +357,11 @@ def _coverage_dir(market: str, ticker: str, output_dir: str = DEFAULT_OUTPUT_DIR
 
 
 def _relative_to_workspace(path: Path) -> str:
+    if backend_is_daytona():
+        try:
+            return str(path.relative_to(_workspace_root()))
+        except ValueError:
+            return str(path)
     try:
         return str(path.resolve().relative_to(_workspace_root()))
     except ValueError:
@@ -1702,9 +1755,10 @@ def _validation_result(
 
 
 def _read_json_file(path: Path) -> Any | None:
-    if not path.exists():
+    text = read_text_artifact(path, missing_ok=True)
+    if text is None:
         return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(text)
 
 
 def _statement_model_dir(run_dir: Path) -> Path:
@@ -1742,7 +1796,7 @@ def _task1_missing_paths(run_dir: Path) -> list[str]:
     return [
         _relative_to_workspace(path)
         for path in _required_task1_paths(run_dir).values()
-        if not path.exists()
+        if not artifact_exists(path)
     ]
 
 
@@ -1759,12 +1813,10 @@ def _latest_task1_run(
     output_dir: str = DEFAULT_OUTPUT_DIR,
 ) -> Path | None:
     runs_dir = _coverage_dir(market, ticker, output_dir) / "runs"
-    if not runs_dir.exists():
-        return None
     candidates = [
         path
-        for path in runs_dir.iterdir()
-        if path.is_dir() and not _task1_missing_paths(path)
+        for path in list_artifact_dir(runs_dir)
+        if not _task1_missing_paths(path)
     ]
     if not candidates:
         return None
@@ -1804,11 +1856,12 @@ def _wrong_root_artifacts_for(run_dir: Path) -> list[dict[str, str]]:
 
 
 def _artifact_record(path: Path) -> dict[str, Any]:
+    exists = artifact_exists(path)
     record: dict[str, Any] = {
         "path": _relative_to_workspace(path),
-        "exists": path.exists(),
+        "exists": exists,
     }
-    if path.suffix == ".json" and path.exists():
+    if path.suffix == ".json" and exists:
         try:
             parsed = _read_json_file(path)
         except Exception as exc:
@@ -2099,7 +2152,7 @@ def _statement_context_payload(statement_type: str, run_dir: Path) -> dict[str, 
     missing = [
         _relative_to_workspace(path)
         for name, path in paths.items()
-        if not path.exists()
+        if not artifact_exists(path)
     ]
     return {
         "statement_type": statement_type,
@@ -2555,11 +2608,11 @@ def _write_statement_json(
         )
 
     model_dir = _statement_model_dir(out_dir)
-    model_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(model_dir)
     written: list[str] = []
 
     path = model_dir / STATEMENT_JSON_OUTPUTS[statement_type]
-    path.write_text(_json_result(payload) + "\n", encoding="utf-8")
+    _write_text(path, _json_result(payload) + "\n")
     written.append(_relative_to_workspace(path))
 
     if statement_type == "income_statement" and isinstance(
@@ -2567,10 +2620,7 @@ def _write_statement_json(
         dict,
     ):
         revenue_path = model_dir / "revenue_build_spec.json"
-        revenue_path.write_text(
-            _json_result(payload["revenue_build_spec"]) + "\n",
-            encoding="utf-8",
-        )
+        _write_text(revenue_path, _json_result(payload["revenue_build_spec"]) + "\n")
         written.append(_relative_to_workspace(revenue_path))
 
     return _json_result(
@@ -2603,7 +2653,7 @@ def _find_run_dir(
     key = f"{_safe_market(market)}:{_safe_ticker(ticker)}:{output_dir}"
     existing = _ACTIVE_RUNS.get(key)
     if existing:
-        existing.mkdir(parents=True, exist_ok=True)
+        _ensure_dir(existing)
         return existing
 
     return _create_run_dir(
@@ -2627,22 +2677,22 @@ def _create_run_dir(
 ) -> Path:
     coverage_dir = _coverage_dir(market, ticker, output_dir)
     runs_dir = coverage_dir / "runs"
-    runs_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(runs_dir)
 
     base_timestamp = _timestamp()
     candidate = runs_dir / base_timestamp
-    if candidate.exists() and os.getenv("SINGLE_STOCK_COVERAGE_OUTPUT_TIMESTAMP") is None:
+    if artifact_exists(candidate) and os.getenv("SINGLE_STOCK_COVERAGE_OUTPUT_TIMESTAMP") is None:
         suffix = 2
-        while (runs_dir / f"{base_timestamp}-{suffix}").exists():
+        while artifact_exists(runs_dir / f"{base_timestamp}-{suffix}"):
             suffix += 1
         candidate = runs_dir / f"{base_timestamp}-{suffix}"
-    candidate.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(candidate)
 
     key = f"{_safe_market(market)}:{_safe_ticker(ticker)}:{output_dir}"
     _ACTIVE_RUNS[key] = candidate
 
     manifest_path = candidate / "run_manifest.json"
-    if not manifest_path.exists():
+    if not artifact_exists(manifest_path):
         manifest = {
             "run_id": candidate.name,
             "company": company,
@@ -2658,13 +2708,13 @@ def _create_run_dir(
             "follow_up_checklist": [],
             "created_at": datetime.now().isoformat(timespec="seconds"),
         }
-        manifest_path.write_text(
+        _write_text(
+            manifest_path,
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
         )
 
     coverage_state = coverage_dir / "coverage_state.json"
-    if not coverage_state.exists():
+    if not artifact_exists(coverage_state):
         state = {
             "company": company,
             "ticker": ticker,
@@ -2682,9 +2732,9 @@ def _create_run_dir(
             "stale_data_flags": [],
             "updated_at": datetime.now().isoformat(timespec="seconds"),
         }
-        coverage_state.write_text(
+        _write_text(
+            coverage_state,
             json.dumps(state, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
         )
 
     return candidate
@@ -2749,10 +2799,10 @@ def write_markdown_artifact(
         run_dir=run_dir,
     )
     artifact_dir = out_dir / _slugify(subdir, "artifacts")
-    artifact_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(artifact_dir)
     safe_name = _slugify(Path(filename).stem, "artifact") + ".md"
     path = artifact_dir / safe_name
-    path.write_text(markdown, encoding="utf-8")
+    _write_text(path, markdown)
     return _relative_to_workspace(path)
 
 
@@ -2778,12 +2828,12 @@ def write_json_artifact(
         run_dir=run_dir,
     )
     artifact_dir = out_dir / _slugify(subdir, "artifacts")
-    artifact_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(artifact_dir)
     safe_name = _slugify(Path(filename).stem, "artifact") + ".json"
     path = artifact_dir / safe_name
-    path.write_text(
+    _write_text(
+        path,
         json.dumps(parsed, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
     )
     return _relative_to_workspace(path)
 
@@ -2945,7 +2995,7 @@ def verify_task2_artifacts(run_dir: str, stage: str = "all") -> str:
         artifacts["task1"] = {}
         for name, path in _required_task1_paths(out_dir).items():
             artifacts["task1"][name] = _artifact_record(path)
-            if not path.exists():
+            if not artifact_exists(path):
                 _append_finding(
                     critical,
                     category="Missing Task 1 Artifact",
@@ -3017,7 +3067,7 @@ def verify_task2_artifacts(run_dir: str, stage: str = "all") -> str:
         for name in ("integrated_model.xlsx", "model_audit.md"):
             path = model_dir / name
             artifacts["workbook"][name] = _artifact_record(path)
-            if not path.exists():
+            if not artifact_exists(path):
                 _append_finding(
                     critical,
                     category="Missing Workbook Artifact",
@@ -3053,7 +3103,7 @@ def write_task2_model_audit(run_dir: str, audit_json: str) -> str:
 
     out_dir = _resolve_workspace_path(run_dir)
     model_dir = _statement_model_dir(out_dir)
-    model_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(model_dir)
     path = model_dir / "model_audit.md"
 
     status = _safe_audit_text(audit.get("status") or "UNKNOWN", 80)
@@ -3119,7 +3169,7 @@ def write_task2_model_audit(run_dir: str, audit_json: str) -> str:
         lines.append("No follow-up steps supplied.")
 
     markdown = "\n".join(lines).strip() + "\n"
-    path.write_text(markdown, encoding="utf-8")
+    _write_text(path, markdown)
     return _json_result(
         {
             "status": "OK",
@@ -3369,9 +3419,9 @@ def reconcile_statement_specs(
         "warnings": warnings,
         "builder_blocked": bool(critical),
     }
-    model_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(model_dir)
     pack_path = model_dir / "statement_spec_pack.json"
-    pack_path.write_text(_json_result(pack) + "\n", encoding="utf-8")
+    _write_text(pack_path, _json_result(pack) + "\n")
 
     facts_path = model_dir / "financial_facts.json"
     context_path = model_dir / "task2_context_packet.json"
@@ -3396,8 +3446,8 @@ def reconcile_statement_specs(
             "critical_count": pack.get("critical_count", 0),
             "warning_count": pack.get("warning_count", 0),
         }
-    facts_path.write_text(_json_result(financial_facts) + "\n", encoding="utf-8")
-    context_path.write_text(_json_result(context_packet) + "\n", encoding="utf-8")
+    _write_text(facts_path, _json_result(financial_facts) + "\n")
+    _write_text(context_path, _json_result(context_packet) + "\n")
 
     return _json_result(
         {
@@ -3450,7 +3500,7 @@ def _scoped_build_integrated_three_statement_model_reference(
     forecast_labels = _forecast_labels(merged, latest["year"])
     assumptions = _assumption_set(merged, latest)
 
-    model_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(model_dir)
     workbook_path = model_dir / "integrated_model.xlsx"
 
     periods: list[dict[str, Any]] = [
@@ -4151,7 +4201,7 @@ def _scoped_build_integrated_three_statement_model_reference(
     if hasattr(wb, "calculation"):
         wb.calculation.fullCalcOnLoad = True
         wb.calculation.forceFullCalc = True
-    wb.save(workbook_path)
+    _save_workbook(wb, workbook_path)
 
     return _json_result(
         {
@@ -4178,7 +4228,7 @@ def _scoped_validate_integrated_three_statement_model_reference(
         )
 
     path = _resolve_workspace_path(excel_path)
-    if not path.exists():
+    if not artifact_exists(path):
         return _validation_result(
             "FAIL",
             [
@@ -4217,7 +4267,7 @@ def _scoped_validate_integrated_three_statement_model_reference(
         elif isinstance(parsed, dict):
             row_map = parsed
 
-    wb = openpyxl.load_workbook(path, data_only=False)
+    wb = _load_workbook(path, data_only=False)
     critical: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
 
@@ -4375,16 +4425,16 @@ def update_run_manifest(
         run_dir=run_dir,
     )
     manifest_path = out_dir / "run_manifest.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest = json.loads(read_text_artifact(manifest_path))
     for key, value in patch.items():
         if isinstance(value, list) and isinstance(manifest.get(key), list):
             manifest[key].extend(value)
         else:
             manifest[key] = value
     manifest["updated_at"] = datetime.now().isoformat(timespec="seconds")
-    manifest_path.write_text(
+    _write_text(
+        manifest_path,
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
     )
     return _relative_to_workspace(manifest_path)
 
@@ -4407,7 +4457,7 @@ def build_integrated_three_statement_model(
     sources = _load_task2_model_sources(out_dir)
     merged = _merge_payload_model_input(sources["payload"])
     model_dir = sources["model_dir"]
-    model_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(model_dir)
     workbook_path = model_dir / "integrated_model.xlsx"
 
     file_facts = _read_json_file(model_dir / "financial_facts.json")
@@ -5325,8 +5375,11 @@ def build_integrated_three_statement_model(
     formula_cache = _evaluate_workbook_formula_caches(wb)
     wb.calculation.fullCalcOnLoad = True
     wb.calculation.forceFullCalc = True
-    wb.save(workbook_path)
-    cached_formula_count = _patch_xlsx_formula_caches(workbook_path, formula_cache)
+    cached_formula_count = _save_workbook_with_formula_cache(
+        wb,
+        workbook_path,
+        formula_cache,
+    )
     return _json_result(
         {
             "status": "OK",
@@ -5356,7 +5409,7 @@ def update_integrated_three_statement_model(
     """
     del output_dir
     source_path = _resolve_workspace_path(prior_workbook_path)
-    if not source_path.exists():
+    if not artifact_exists(source_path):
         return _json_result(
             {
                 "status": "FAIL",
@@ -5379,10 +5432,10 @@ def update_integrated_three_statement_model(
 
     out_dir = _resolve_workspace_path(run_dir)
     model_dir = _statement_model_dir(out_dir)
-    model_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(model_dir)
     workbook_path = model_dir / "integrated_model.xlsx"
     if source_path.resolve() != workbook_path.resolve():
-        shutil.copy2(source_path, workbook_path)
+        _copy_file_artifact(source_path, workbook_path)
 
     failure = _inline_json_failure(update_scope_json or "{}", "update_scope_json")
     if failure:
@@ -5408,7 +5461,7 @@ def update_integrated_three_statement_model(
             }
         )
 
-    wb = openpyxl.load_workbook(workbook_path)
+    wb = _load_workbook(workbook_path)
     updated_cells: list[str] = []
     if model_input:
         try:
@@ -5522,8 +5575,11 @@ def update_integrated_three_statement_model(
             cover["A15"] = "Updated Model Input"
             cover["B15"] = "financial_facts/task2_context_packet"
     formula_cache = _evaluate_workbook_formula_caches(wb)
-    wb.save(workbook_path)
-    cached_formula_count = _patch_xlsx_formula_caches(workbook_path, formula_cache)
+    cached_formula_count = _save_workbook_with_formula_cache(
+        wb,
+        workbook_path,
+        formula_cache,
+    )
 
     return _json_result(
         {
@@ -5553,7 +5609,7 @@ def validate_integrated_three_statement_model(
         return _json_result({"status": "ERROR", "message": f"openpyxl is not installed: {exc}"})
 
     path = _resolve_workspace_path(excel_path)
-    if not path.exists():
+    if not artifact_exists(path):
         return _validation_result(
             "FAIL",
             [{"sheet": "", "cell": "", "category": "Missing File", "issue": f"Workbook not found: {path}"}],
@@ -5582,8 +5638,13 @@ def validate_integrated_three_statement_model(
         elif isinstance(parsed, dict):
             row_map = parsed
 
-    wb = openpyxl.load_workbook(path, data_only=False)
-    wb_values = openpyxl.load_workbook(path, data_only=True)
+    workbook_bytes = read_bytes_artifact(path) if backend_is_daytona() else None
+    if workbook_bytes is not None:
+        wb = openpyxl.load_workbook(io.BytesIO(workbook_bytes), data_only=False)
+        wb_values = openpyxl.load_workbook(io.BytesIO(workbook_bytes), data_only=True)
+    else:
+        wb = openpyxl.load_workbook(path, data_only=False)
+        wb_values = openpyxl.load_workbook(path, data_only=True)
     critical: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     source_payload: dict[str, Any] = {}
@@ -6192,13 +6253,13 @@ def write_coverage_state(
         raise ValueError("state_json must be a JSON object")
 
     coverage_dir = _coverage_dir(market, ticker, output_dir)
-    coverage_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(coverage_dir)
     state.setdefault("ticker", ticker)
     state.setdefault("market", market)
     state["updated_at"] = datetime.now().isoformat(timespec="seconds")
     path = coverage_dir / "coverage_state.json"
-    path.write_text(
+    _write_text(
+        path,
         json.dumps(state, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
     )
     return _relative_to_workspace(path)
