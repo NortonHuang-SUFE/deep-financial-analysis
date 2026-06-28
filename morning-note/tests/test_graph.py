@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import inspect
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -83,6 +84,18 @@ def test_morning_note_prompt_forbids_general_purpose_subagent():
 
     assert "禁止调用或请求 `general-purpose` subagent" in prompt
     assert "禁止调用或请求 `general-purpose` subagent" in skill
+
+
+def test_morning_note_graph_uses_shared_general_purpose_disable_helper(monkeypatch):
+    monkeypatch.setenv("MORNING_NOTE_TEST_MODE", "1")
+    from morning_note_agent import graph as morning_graph
+
+    source = inspect.getsource(morning_graph)
+
+    assert "ensure_general_purpose_subagent_disabled(model)" in source
+    assert "_HARNESS_PROFILES" not in source
+    assert "harness_profiles" not in source
+    assert "def _general_purpose_subagent_disabled" not in source
 
 
 def test_morning_note_prompt_and_runtime_define_artifact_root():

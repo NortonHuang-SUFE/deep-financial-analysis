@@ -26,6 +26,7 @@
   "python_version": "3.11",
   "env": "./.env",
   "dependencies": [
+    "./financial-agent-runtime",
     "./DCF-builder",
     "./industry-ananlysis",
     "./morning-note",

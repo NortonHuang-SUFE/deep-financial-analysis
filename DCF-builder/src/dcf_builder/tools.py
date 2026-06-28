@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import re
@@ -9,6 +10,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from financial_agent_runtime import (
+    artifact_exists,
+    backend_is_daytona,
+    contains_task_timestamp_dir,
+    ensure_artifact_dir,
+    materialize_file_artifact,
+    read_bytes_artifact,
+    read_text_artifact,
+    write_text_artifact,
+)
 from langchain_core.tools import tool
 
 from dcf_builder.config import file_storage_root
@@ -32,24 +43,44 @@ def _resolve_output_dir(output_dir: str) -> Path:
 
 def _ensure_out_dir(output_dir: str) -> Path:
     out = _resolve_output_dir(output_dir)
-    out.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(out)
     return out
+
+
+def _ensure_dir(path: Path) -> None:
+    ensure_artifact_dir(path)
+
+
+def _write_text(path: Path, text: str) -> None:
+    write_text_artifact(path, text, encoding="utf-8")
+
+
+def _save_workbook(wb: Any, path: Path) -> None:
+    materialize_file_artifact(path, lambda target: wb.save(target))
+
+
+def _load_workbook(path: Path, **kwargs: Any):
+    import openpyxl
+
+    if backend_is_daytona():
+        return openpyxl.load_workbook(io.BytesIO(read_bytes_artifact(path)), **kwargs)
+    return openpyxl.load_workbook(path, **kwargs)
 
 
 def _timestamped_output_dir(output_dir: str, exact_output_dir: bool = False) -> Path:
     base = _resolve_output_dir(output_dir)
     if exact_output_dir:
-        base.mkdir(parents=True, exist_ok=True)
+        _ensure_dir(base)
         return base
 
-    if re.fullmatch(r"\d{8}-\d{6}(?:-\d+)?", base.name):
-        base.mkdir(parents=True, exist_ok=True)
+    if contains_task_timestamp_dir(base):
+        _ensure_dir(base)
         return base
 
     key = str(base.resolve())
     existing = _TASK_OUTPUT_DIRS.get(key)
     if existing:
-        existing.mkdir(parents=True, exist_ok=True)
+        _ensure_dir(existing)
         return existing
 
     timestamp = os.getenv("DCF_BUILDER_OUTPUT_TIMESTAMP")
@@ -57,13 +88,13 @@ def _timestamped_output_dir(output_dir: str, exact_output_dir: bool = False) -> 
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     candidate = base / timestamp
-    if candidate.exists() and os.getenv("DCF_BUILDER_OUTPUT_TIMESTAMP") is None:
+    if artifact_exists(candidate) and os.getenv("DCF_BUILDER_OUTPUT_TIMESTAMP") is None:
         suffix = 2
-        while (base / f"{timestamp}-{suffix}").exists():
+        while artifact_exists(base / f"{timestamp}-{suffix}"):
             suffix += 1
         candidate = base / f"{timestamp}-{suffix}"
 
-    candidate.mkdir(parents=True, exist_ok=True)
+    _ensure_dir(candidate)
     _TASK_OUTPUT_DIRS[key] = candidate
     return candidate
 
@@ -742,7 +773,7 @@ def build_comps_excel(
             sheet.column_dimensions[_col_letter(col)].width = 16
     ws.column_dimensions["A"].width = 28
 
-    wb.save(filepath)
+    _save_workbook(wb, filepath)
     return str(filepath)
 
 
@@ -835,7 +866,7 @@ def build_dcf_model(
         sheet.column_dimensions["A"].width = 28
         sheet.freeze_panes = "B2"
 
-    wb.save(filepath)
+    _save_workbook(wb, filepath)
     return str(filepath)
 
 
@@ -1250,15 +1281,15 @@ def _write_checks_sheet(ws, row_map, styles) -> None:
 def validate_dcf_model(excel_path: str) -> str:
     """Validate a generated DCF workbook and write validation.json beside it."""
     try:
-        import openpyxl
+        import openpyxl  # noqa: F401
     except ImportError as exc:
         return json.dumps({"status": "ERROR", "message": f"openpyxl is not installed - {exc}"})
 
     path = Path(excel_path)
-    if not path.exists():
+    if not artifact_exists(path):
         raise FileNotFoundError(f"File not found: {excel_path}")
 
-    wb = openpyxl.load_workbook(path, data_only=False)
+    wb = _load_workbook(path, data_only=False)
     errors: list[str] = []
     warnings: list[str] = []
     info: list[str] = []
@@ -1308,7 +1339,7 @@ def validate_dcf_model(excel_path: str) -> str:
         "info": info,
     }
     validation_path = path.parent / "validation.json"
-    validation_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    _write_text(validation_path, json.dumps(results, indent=2))
     results["validation_path"] = str(validation_path)
     return json.dumps(results, indent=2)
 
@@ -1397,9 +1428,10 @@ def write_valuation_summary(
     validation = payload.get("validation")
     if not validation:
         validation_path = out_dir / "validation.json"
-        if validation_path.exists():
+        validation_text = read_text_artifact(validation_path, missing_ok=True)
+        if validation_text is not None:
             try:
-                validation = json.loads(validation_path.read_text(encoding="utf-8"))
+                validation = json.loads(validation_text)
             except json.JSONDecodeError:
                 validation = None
 
@@ -1439,7 +1471,7 @@ def write_valuation_summary(
         lines.append(f"- {validation or '[UNSOURCED]'}")
     lines.append("")
 
-    filepath.write_text("\n".join(lines), encoding="utf-8")
+    _write_text(filepath, "\n".join(lines))
     return str(filepath)
 
 
@@ -1460,5 +1492,5 @@ def write_assumption_analysis(
 
     out_dir = _timestamped_output_dir(output_dir, exact_output_dir)
     filepath = out_dir / safe_name
-    filepath.write_text(assumption_markdown.rstrip() + "\n", encoding="utf-8")
+    _write_text(filepath, assumption_markdown.rstrip() + "\n")
     return str(filepath)

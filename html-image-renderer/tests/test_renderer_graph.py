@@ -158,12 +158,39 @@ def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
     assert "routing reference" not in context
 
 
+def test_runtime_context_uses_backend_render_helper_in_daytona(monkeypatch):
+    monkeypatch.setenv("HTML_IMAGE_RENDERER_TEST_MODE", "1")
+    monkeypatch.setenv("AGENT_BACKEND", "daytona")
+    monkeypatch.setenv("DAYTONA_FILE_STORAGE_ROOT", "/home/daytona/financial-analysis")
+    sys.modules.pop("html_image_renderer_agent.graph", None)
+    graph_module = importlib.import_module("html_image_renderer_agent.graph")
+    graph_module._RENDER_HELPER_BACKEND_PATH = None
+
+    uploads: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        graph_module,
+        "upload_file_artifact",
+        lambda local_path, remote_path: uploads.append((str(local_path), str(remote_path))),
+    )
+    cfg = graph_module.load_config()
+
+    context = graph_module._runtime_context_prompt(cfg)
+    second_context = graph_module._runtime_context_prompt(cfg)
+
+    expected = "/home/daytona/financial-analysis/.helpers/html-image-renderer/render_html.py"
+    assert f"HTML render helper script: {expected}" in context
+    assert f"HTML render helper script: {expected}" in second_context
+    assert len(uploads) == 1
+    assert uploads[0][0].endswith("html_image_renderer_agent/render_html.py")
+    assert uploads[0][1] == expected
+
+
 def test_graph_mounts_skills_directory_in_source():
     import html_image_renderer_agent.graph as graph_module
 
     source = Path(graph_module.__file__).read_text(encoding="utf-8")
 
-    assert "skills=[str(SKILLS_DIR)]" in source
+    assert "skills=[mirror_skills_into_backend(backend, SKILLS_DIR)]" in source
     assert "html-anything-" + "single-image" not in source
 
 

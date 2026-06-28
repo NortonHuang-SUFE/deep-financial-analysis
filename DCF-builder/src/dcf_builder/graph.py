@@ -31,7 +31,8 @@ from dcf_builder.assumption_research import (
 from dcf_builder.config import (
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
-    file_storage_root,
+    build_backend,
+    mirror_skills_into_backend,
     load_config,
 )
 from dcf_builder.tools import (
@@ -239,7 +240,6 @@ async def _create_agent():
 
     try:
         from deepagents import create_deep_agent
-        from deepagents.backends import LocalShellBackend
     except ImportError as exc:
         raise ImportError("deepagents is not installed. Run: pip install deepagents") from exc
 
@@ -262,11 +262,7 @@ async def _create_agent():
         validate_dcf_model,
         write_valuation_summary,
     ]
-    backend = LocalShellBackend(
-        root_dir=str(file_storage_root()),
-        virtual_mode=False,
-        inherit_env=True,
-    )
+    backend = build_backend(prefer_shell=True)
     assumption_tools = assumption_mcp_tools + search_tools + [write_assumption_analysis]
     assumption_subagent = create_assumption_research_subagent_spec(
         model=model,
@@ -287,7 +283,7 @@ async def _create_agent():
         system_prompt=system_prompt,
         tools=all_tools,
         subagents=[assumption_subagent],
-        skills=[str(PROJECT_ROOT / "skills")],
+        skills=[mirror_skills_into_backend(backend, PROJECT_ROOT / "skills")],
         middleware=[_make_tool_error_middleware()],
         backend=backend,
         name="dcf_builder",

@@ -180,9 +180,9 @@ def _build_agent(model, subagents):
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
 
-def test_subagent_registry_matches_disk():
+def test_subagent_registry_matches_disk(monkeypatch):
     """The native registry lists the agents and their packages exist on disk."""
-    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"  # avoid building the heavy graph
+    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")  # avoid building the heavy graph
     from deep_orchestrator import graph as orch
 
     expected = {
@@ -205,7 +205,7 @@ def test_subagent_registry_matches_disk():
 
 def test_loader_resolves_async_graph_factory(monkeypatch):
     """Sibling agents may expose `graph` as an async LangGraph factory."""
-    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"  # avoid building the heavy graph
+    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")  # avoid building the heavy graph
     from deep_orchestrator import graph as orch
 
     class FakeRunnable:
@@ -226,8 +226,8 @@ def test_loader_resolves_async_graph_factory(monkeypatch):
     assert orch._load_subagent_runnable("dummy-folder", "dummy_package") is expected
 
 
-def test_runtime_context_prompt_includes_beijing_time():
-    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"
+def test_runtime_context_prompt_includes_beijing_time(monkeypatch):
+    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")
     from deep_orchestrator import graph as orch
 
     context = orch._runtime_context_prompt()
@@ -288,7 +288,7 @@ def test_builtin_tools_present_and_no_custom_tools():
 
 def test_orchestrator_task_tool_excludes_general_purpose(monkeypatch, tmp_path):
     """The top-level task tool must reject the auto-added GP subagent."""
-    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"
+    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")
     from deep_orchestrator import graph as orch
 
     monkeypatch.delenv("ORCHESTRATOR_TEST_MODE", raising=False)
@@ -326,9 +326,9 @@ def test_orchestrator_task_tool_excludes_general_purpose(monkeypatch, tmp_path):
     assert "only allowed types are `market_researcher`" in texts
 
 
-def test_orchestrator_does_not_mount_skills():
+def test_orchestrator_does_not_mount_skills(monkeypatch):
     """Production orchestrator delegates visual work instead of loading skills."""
-    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"
+    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")
     from deep_orchestrator import graph as orch
 
     source = inspect.getsource(orch._create_agent)
@@ -366,6 +366,18 @@ def test_orchestrator_prompt_forbids_general_purpose_subagent():
     assert "only valid synchronous `task.subagent_type` values" in prompt
 
 
+def test_orchestrator_graph_uses_shared_general_purpose_disable_helper(monkeypatch):
+    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")
+    from deep_orchestrator import graph as orch
+
+    source = inspect.getsource(orch)
+
+    assert "ensure_general_purpose_subagent_disabled(model)" in source
+    assert "_HARNESS_PROFILES" not in source
+    assert "harness_profiles" not in source
+    assert "def _general_purpose_subagent_disabled" not in source
+
+
 def test_orchestrator_prompt_defines_single_artifact_root():
     prompt = (PROJECT_ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
 
@@ -376,8 +388,8 @@ def test_orchestrator_prompt_defines_single_artifact_root():
     assert "to create its own new top-level `out/<timestamp>/` folder" in prompt
 
 
-def test_runtime_context_prompt_defines_artifact_root():
-    os.environ["ORCHESTRATOR_TEST_MODE"] = "1"
+def test_runtime_context_prompt_defines_artifact_root(monkeypatch):
+    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")
     from deep_orchestrator import graph as orch
 
     context = orch._runtime_context_prompt()
@@ -392,9 +404,9 @@ def test_runtime_context_prompt_defines_artifact_root():
     os.getenv("ORCHESTRATOR_RUN_INTEGRATION") != "1",
     reason="set ORCHESTRATOR_RUN_INTEGRATION=1 to build the real graph (needs model key + sibling deps)",
 )
-def test_real_orchestrator_graph_builds():
+def test_real_orchestrator_graph_builds(monkeypatch):
     """Integration: the real orchestrator graph builds with native subagents."""
-    os.environ.pop("ORCHESTRATOR_TEST_MODE", None)
+    monkeypatch.delenv("ORCHESTRATOR_TEST_MODE", raising=False)
     import importlib
 
     import deep_orchestrator.graph as orch

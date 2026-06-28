@@ -16,7 +16,6 @@ import importlib
 import inspect
 import os
 import sys
-from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -28,6 +27,8 @@ load_dotenv()
 
 from langchain_core.messages import SystemMessage, ToolMessage
 
+from financial_agent_runtime import ensure_general_purpose_subagent_disabled
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
@@ -36,6 +37,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from deep_orchestrator.config import (  # noqa: E402
     WORKSPACE_ROOT,
+    build_backend,
     file_storage_root,
     load_config,
 )
@@ -163,39 +165,6 @@ def _tool_error_message(request, exc: Exception) -> ToolMessage:
         tool_call_id=request.tool_call.get("id", ""),
         status="error",
     )
-
-
-# ── Deep Agents harness profile ───────────────────────────────────────────────
-
-
-@contextmanager
-def _general_purpose_subagent_disabled(model):
-    """Temporarily disable Deep Agents' auto-added general-purpose subagent."""
-    from deepagents import (
-        GeneralPurposeSubagentProfile,
-        HarnessProfile,
-        register_harness_profile,
-    )
-    from deepagents._models import get_model_provider
-    from deepagents.profiles.harness import harness_profiles
-
-    harness_profiles._ensure_harness_profiles_loaded()
-    original_profiles = dict(harness_profiles._HARNESS_PROFILES)
-    provider = get_model_provider(model) or "openai"
-
-    try:
-        register_harness_profile(
-            provider,
-            HarnessProfile(
-                general_purpose_subagent=GeneralPurposeSubagentProfile(
-                    enabled=False
-                ),
-            ),
-        )
-        yield
-    finally:
-        harness_profiles._HARNESS_PROFILES.clear()
-        harness_profiles._HARNESS_PROFILES.update(original_profiles)
 
 
 # ── Model builder (identical pattern to all sibling agents) ───────────────────
@@ -346,7 +315,6 @@ def _create_agent():
 
     try:
         from deepagents import create_deep_agent
-        from deepagents.backends import LocalShellBackend
     except ImportError as exc:
         raise ImportError(
             "deepagents is not installed. Run: pip install deepagents"
@@ -363,11 +331,7 @@ def _create_agent():
 
     model = _build_model(cfg)
     subagents = _build_subagent_specs()
-    backend = LocalShellBackend(
-        root_dir=str(file_storage_root()),
-        virtual_mode=False,
-        inherit_env=True,
-    )
+    backend = build_backend(prefer_shell=True)
 
     print(
         f"INFO: Deep Orchestrator — {len(subagents)} native subagents "
@@ -375,20 +339,20 @@ def _create_agent():
         "(built-in `task` + shell-enabled tools)."
     )
 
-    with _general_purpose_subagent_disabled(model):
-        return create_deep_agent(
-            model=model,
-            system_prompt=system_prompt,
-            tools=[],
-            subagents=subagents,
-            skills=None,
-            middleware=[
-                _make_runtime_context_middleware(_runtime_context_prompt),
-                _make_tool_error_middleware(),
-            ],
-            backend=backend,
-            name="deep_orchestrator",
-        )
+    ensure_general_purpose_subagent_disabled(model)
+    return create_deep_agent(
+        model=model,
+        system_prompt=system_prompt,
+        tools=[],
+        subagents=subagents,
+        skills=None,
+        middleware=[
+            _make_runtime_context_middleware(_runtime_context_prompt),
+            _make_tool_error_middleware(),
+        ],
+        backend=backend,
+        name="deep_orchestrator",
+    )
 
 
 # NOTE: `_create_agent` is synchronous on purpose. The orchestrator needs no

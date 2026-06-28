@@ -181,6 +181,18 @@ def test_orchestrator_output_dir_is_used_exactly(monkeypatch, tmp_path):
     assert not any(path.is_dir() for path in output_dir.glob("20??????-??????*"))
 
 
+def test_timestamp_detection_ignores_grandparent_timestamp(monkeypatch, tmp_path):
+    tools._TASK_OUTPUT_DIRS.clear()
+    storage_root = tmp_path / "clean-storage"
+    monkeypatch.setenv("AGENT_FILE_STORAGE_ROOT", str(storage_root))
+    monkeypatch.setenv("STOCK_SCREEN_OUTPUT_TIMESTAMP", "20260625-111111")
+
+    output_dir = storage_root / "out" / "20260625-101500" / "screen" / "nested"
+    out_path = tools.create_task_output_dir.invoke({"output_dir": str(output_dir)})
+
+    assert out_path == "out/20260625-101500/screen/nested/20260625-111111"
+
+
 def test_graph_imports_in_test_mode(monkeypatch):
     monkeypatch.setenv("STOCK_SCREEN_TEST_MODE", "1")
     module = importlib.import_module("stock_screen_agent.graph")
