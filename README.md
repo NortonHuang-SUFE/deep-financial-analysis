@@ -34,6 +34,20 @@
 | 图表包 | 估值足球场、敏感性分析、情景对比、风险矩阵、催化时间线等 |
 | HTML 图片 | 基于 HTML Anything 风格模板渲染出的单页 PNG、卡片、海报、报告图和演示页 |
 
+### 样例展示（HTML 图片渲染）
+
+下面两张图是 `html_image_renderer` 基于 HTML Anything 风格模板渲染出的真实运行产物（PC 端单页 PNG）：
+
+<p align="center">
+  <img src="docs/assets/sample-leverage-flows-dashboard.png" alt="盘前两融资金主题 PC 头图" width="640"><br>
+  <em>盘前两融资金主题 PC 头图：长电 · 恒逸 杠杆信号分化（2026-06-26）</em>
+</p>
+
+<p align="center">
+  <img src="docs/assets/sample-storage-chain-poster.png" alt="市场主题电子杂志风海报" width="300"><br>
+  <em>市场主题电子杂志风海报：存储链爆发 / 两融破 3 万亿（2026-06-24）</em>
+</p>
+
 ## 3. 主要 Agent
 
 当前项目按投研流程拆成多个可独立运行的 LangGraph agent，也可以通过顶层 orchestrator 串联执行：
@@ -83,10 +97,14 @@ Anthropic 的 Financial Agents 定位更接近“企业金融工作流模板市�
 python3.11 -m venv .venv
 . .venv/bin/activate
 pip install -U pip
-pip install -e ./DCF-builder -e ./industry-ananlysis -e ./morning-note \
+pip install -e ./financial-agent-runtime \
+  -e ./DCF-builder -e ./industry-ananlysis -e ./morning-note \
   -e ./screen -e ./sector -e ./thesis -e ./orchestrator \
   -e ./html-image-renderer -e ./single-stock-coverage
 ```
+
+> `financial-agent-runtime` 是所有 agent 共用的运行时包，必须先安装，否则启动时会报
+> `ModuleNotFoundError: No module named 'financial_agent_runtime'`。
 
 配置：
 
@@ -127,11 +145,39 @@ IFIND_MCP_AUTHORIZATION=Bearer ...
 
 启动后可在 LangGraph 中选择顶层调度或单个投研 agent 运行；复合任务建议从 `deep_orchestrator` 开始。
 
+### 运行模式：本地 / 云端沙箱
+
+从 v0.2 起，系统支持两种文件后端，通过环境变量 `AGENT_BACKEND` 切换（默认 `local`）：
+
+| 模式 | `AGENT_BACKEND` | 说明 |
+|---|---|---|
+| 本地模式 | `local`（默认） | 代码执行与产物读写都在本机文件系统完成（`LocalShellBackend` / `FilesystemBackend`），产物落到 `AGENT_FILE_STORAGE_ROOT`（留空则为本仓库工作区）。适合快速开发、调试和单机复盘。 |
+| 云端模式（实验性） | `daytona` | 每个进程启动一个临时 [Daytona](https://www.daytona.io/) 云端沙箱，agent 的代码执行与产物写入都在沙箱内完成；产物根目录由 `DAYTONA_FILE_STORAGE_ROOT`（沙箱内的 Linux 路径）指定。适合隔离执行环境、统一 Linux 运行时、避免污染本机。 |
+
+云端模式需要在 `.env` 中额外配置 Daytona 凭证：
+
+```bash
+AGENT_BACKEND=daytona
+DAYTONA_API_KEY=...
+DAYTONA_API_URL=https://app.daytona.io/api
+DAYTONA_FILE_STORAGE_ROOT=/home/daytona/financial-analysis
+```
+
+两种模式共用同一套 agent 代码和 skills；切换后端不需要改动业务逻辑。
+
 ## 6. 当前版本、迭代方向和联系
 
-当前版本：`v0.1.1 research-preview`，截至 2026-06-25。
+当前版本：`v0.2 research-preview`，截至 2026-06-28。
 
 ### Change Log
+
+#### v0.2.0 - 2026-06-28
+
+- 新增云端运行模式：通过 `AGENT_BACKEND=daytona` 让全部 agent 在临时 Daytona 云端沙箱内执行与落盘；默认仍为 `local` 本地模式，两种模式共用同一套 agent 代码。
+- 抽出共享运行时包 `financial-agent-runtime`，统一后端选择、产物存储根、skills 同步、产物写入和 general-purpose subagent 禁用逻辑，消除各子 agent 的重复实现。
+- `.env.example` 增加 `AGENT_BACKEND`、`DAYTONA_*` 凭证和 `DAYTONA_FILE_STORAGE_ROOT` 说明（中英文注释）。
+- 安装说明补充 `financial-agent-runtime` 共享包；`langgraph.json` 将其登记为首个依赖。
+- 新增针对云端/本地后端与产物路径的回归测试。
 
 #### v0.1.1 - 2026-06-25
 
@@ -148,6 +194,7 @@ IFIND_MCP_AUTHORIZATION=Bearer ...
 已具备：
 
 - 顶层 orchestrator 和核心投研 agent
+- 本地 / 云端（Daytona 沙箱）两种运行后端，通过 `AGENT_BACKEND` 切换
 - 同花顺 iFind MCP 统一数据接入
 - 晨报、行业研究、资金扫描、公告扫描、个股研究、三表模型、DCF 和图表包
 - 本地 Markdown / JSON / Excel / PPT / HTML / PNG artifacts 输出

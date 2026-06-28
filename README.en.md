@@ -45,6 +45,20 @@ The following three examples represent the system's current core capabilities an
 | Sector research | [MLCC sector research](docs/examples/mlcc-sector-research.md) | Supply-demand, value chain, competitive landscape, key stocks, and risks |
 | Single-stock research | [Shaanxi Coal company research](docs/examples/shaanxi-coal-company-research.md) | Business model, cost structure, governance, moat, and risks |
 
+### Sample head images (HTML image rendering)
+
+Both images below are real run artifacts produced by `html_image_renderer` from HTML Anything style templates (single-page PNGs for desktop):
+
+<p align="center">
+  <img src="docs/assets/sample-leverage-flows-dashboard.png" alt="Pre-market margin-flow head image" width="640"><br>
+  <em>Pre-market margin-flow head image: divergent leverage signals across two names (2026-06-26)</em>
+</p>
+
+<p align="center">
+  <img src="docs/assets/sample-storage-chain-poster.png" alt="Market-theme editorial poster" width="300"><br>
+  <em>Market-theme editorial poster: storage-chain breakout / margin balance tops RMB 30tn (2026-06-24)</em>
+</p>
+
 ## 4. Design Positioning: Compared With Anthropic Financial Agents
 
 On May 5, 2026, Anthropic released ten ready-to-run financial-services agent templates for investment banking, asset management, finance, and compliance workflows. See [Agents for financial services](https://www.anthropic.com/news/finance-agents) and [anthropics/financial-services](https://github.com/anthropics/financial-services).
@@ -79,10 +93,15 @@ Install:
 python3.11 -m venv .venv
 . .venv/bin/activate
 pip install -U pip
-pip install -e ./DCF-builder -e ./industry-ananlysis -e ./morning-note \
+pip install -e ./financial-agent-runtime \
+  -e ./DCF-builder -e ./industry-ananlysis -e ./morning-note \
   -e ./screen -e ./sector -e ./thesis -e ./orchestrator \
-  -e ./single-stock-coverage
+  -e ./html-image-renderer -e ./single-stock-coverage
 ```
+
+> `financial-agent-runtime` is the shared runtime package used by every agent
+> and must be installed first; otherwise startup fails with
+> `ModuleNotFoundError: No module named 'financial_agent_runtime'`.
 
 Configure:
 
@@ -123,11 +142,39 @@ Run:
 
 After startup, choose either the top-level orchestrator or an individual research agent in LangGraph. For composite tasks, start with `deep_orchestrator`.
 
+### Run modes: local / cloud sandbox
+
+Since v0.2 the system supports two file backends, switchable via the `AGENT_BACKEND` environment variable (default `local`):
+
+| Mode | `AGENT_BACKEND` | Description |
+|---|---|---|
+| Local | `local` (default) | Code execution and artifact I/O happen on the host filesystem (`LocalShellBackend` / `FilesystemBackend`); outputs land under `AGENT_FILE_STORAGE_ROOT` (the repo workspace when empty). Best for fast development, debugging, and single-machine review. |
+| Cloud (experimental) | `daytona` | Each process spins up an ephemeral [Daytona](https://www.daytona.io/) cloud sandbox; the agents' code execution and artifact writes happen inside the sandbox, with the artifact root set by `DAYTONA_FILE_STORAGE_ROOT` (a Linux path inside the sandbox). Best for isolated execution, a uniform Linux runtime, and keeping the host clean. |
+
+Cloud mode needs Daytona credentials in `.env`:
+
+```bash
+AGENT_BACKEND=daytona
+DAYTONA_API_KEY=...
+DAYTONA_API_URL=https://app.daytona.io/api
+DAYTONA_FILE_STORAGE_ROOT=/home/daytona/financial-analysis
+```
+
+Both modes share the same agent code and skills; switching the backend requires no changes to business logic.
+
 ## 6. Version, Roadmap, and Contact
 
-Current version: `v0.1.1 research-preview`, as of 2026-06-25.
+Current version: `v0.2 research-preview`, as of 2026-06-28.
 
 ### Change Log
+
+#### v0.2.0 - 2026-06-28
+
+- Added a cloud run mode: with `AGENT_BACKEND=daytona`, all agents execute and persist artifacts inside an ephemeral Daytona cloud sandbox; the default stays `local`, and both modes share one agent codebase.
+- Extracted a shared `financial-agent-runtime` package that centralizes backend selection, artifact storage root, skills mirroring, artifact writes, and general-purpose subagent disabling, removing the duplicated per-agent implementations.
+- `.env.example` documents `AGENT_BACKEND`, `DAYTONA_*` credentials, and `DAYTONA_FILE_STORAGE_ROOT` (bilingual comments).
+- Install instructions now include the shared `financial-agent-runtime` package; `langgraph.json` registers it as the first dependency.
+- Added regression tests for the cloud/local backends and artifact paths.
 
 #### v0.1.1 - 2026-06-25
 
@@ -144,6 +191,7 @@ Current version: `v0.1.1 research-preview`, as of 2026-06-25.
 Implemented:
 
 - Top-level orchestrator and core research agents
+- Local and cloud (Daytona sandbox) run backends, switchable via `AGENT_BACKEND`
 - Unified Tonghuashun iFind MCP data access
 - Morning notes, sector research, capital-flow scans, announcement scans, single-stock research, three-statement models, DCF, and chart packs
 - Local Markdown / JSON / Excel / PPT / PNG artifacts
