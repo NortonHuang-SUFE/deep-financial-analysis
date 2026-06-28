@@ -4,8 +4,6 @@
 
 A multi-agent research system for China public markets. It connects pre-market intelligence, sector research, stock screening, single-stock research, three-statement modeling, DCF valuation, and chart packs into a local, auditable workflow.
 
-![System topology](docs/assets/system-topology.png)
-
 > Disclaimer: this project produces research workpapers and analytical materials. It does not provide investment advice. Outputs should be reviewed by qualified professionals before use.
 
 ## 1. What This Project Is
