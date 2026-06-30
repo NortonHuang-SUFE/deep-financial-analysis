@@ -12,6 +12,7 @@ import tempfile
 import threading
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Iterable
+from urllib.parse import urlparse, urlunparse
 
 from .concurrency import (
     load_and_register_mcp_tools,
@@ -29,6 +30,9 @@ _GENERAL_PURPOSE_SUBAGENT_DISABLED_KEYS: set[str] = set()
 _GENERAL_PURPOSE_SUBAGENT_LOCK = threading.Lock()
 _SKILLS_UPLOAD_MAX_BYTES = 512 * 1024
 _SKILLS_UPLOAD_MAX_FILES = 20
+_OPENAI_API_VERSION_PATH_RE = re.compile(
+    r"(^|/)(?:api/)?v\d+(?:/|$)", re.IGNORECASE
+)
 _TIMESTAMP_DIR_RE = re.compile(r"\d{8}-\d{6}(?:-\d+)?")
 
 
@@ -48,6 +52,7 @@ __all__ = [
     "make_concurrency_limit_middleware",
     "materialize_file_artifact",
     "mirror_skills_into_backend",
+    "normalize_openai_compatible_base_url",
     "read_bytes_artifact",
     "read_text_artifact",
     "register_limited_tools",
@@ -81,6 +86,18 @@ def file_storage_root(workspace_root: Path) -> Path:
     if path.is_absolute():
         return path.resolve()
     return (Path(workspace_root) / path).resolve()
+
+
+def normalize_openai_compatible_base_url(base_url: str) -> str:
+    """Return a ChatOpenAI base URL without corrupting explicit API versions."""
+    normalized = base_url.strip().rstrip("/")
+    parsed = urlparse(normalized)
+    path = parsed.path.rstrip("/")
+    if _OPENAI_API_VERSION_PATH_RE.search(path.lstrip("/")):
+        return normalized
+
+    path = f"{path}/v1" if path else "/v1"
+    return urlunparse(parsed._replace(path=path))
 
 
 def build_backend(workspace_root: Path, prefer_shell: bool = True):

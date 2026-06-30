@@ -2,6 +2,14 @@
 
 Version history for `Deep Financial Analysis`. 中文版本：[CHANGELOG.md](CHANGELOG.md)。Project overview: [README.en.md](README.en.md).
 
+## v0.3.1 - 2026-06-30
+
+- Fixed model-gateway `base_url` handling: added a shared `financial_agent_runtime.normalize_openai_compatible_base_url` helper that appends `/v1` only when the URL has no explicit API version segment. Gateways that already carry a version (e.g. Volcengine Ark `…/api/v3`) are left untouched instead of being mangled into `/api/v3/v1`, while bare hosts like DashScope `compatible-mode` still get `/v1`.
+- Updated all 9 agent `graph.py` files to use the shared helper, replacing the per-agent inline `base_url.rstrip("/")` and removing the duplicated logic.
+- Added Volcengine Ark credential resolution: when the gateway points to `volces.com` / `volcengineapi.com`, fall back through `ARK_API_KEY`, `VOLCENGINE_API_KEY`, and `VOLCENGINE_ARK_API_KEY`; the missing-key error now also points to provider-specific keys such as `DASHSCOPE_API_KEY` and `ARK_API_KEY`.
+- `.env.example` documents `ARK_API_KEY` and a Volcengine Ark gateway example.
+- Added regression tests for `normalize_openai_compatible_base_url` covering `/v1` insertion, explicit `/v1` preservation, `/api/v3` preservation, and local endpoints.
+
 ## v0.3.0 - 2026-06-30
 
 - Added external-tool concurrency limits: define `groups` in `tool-concurrency.yaml` at the workspace root. Each group is one shared, process-wide budget; when in-flight calls in a group reach `max_concurrency`, further calls (across all tools in that group, across all agents/subagents) queue and run serially until a slot frees.

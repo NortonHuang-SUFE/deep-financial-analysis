@@ -44,6 +44,28 @@ def _use_daytona_backend(monkeypatch, backend):
     return backend
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (
+            "https://dashscope.aliyuncs.com/compatible-mode",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        ),
+        (
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        ),
+        (
+            "https://ark.cn-beijing.volces.com/api/v3",
+            "https://ark.cn-beijing.volces.com/api/v3",
+        ),
+        ("http://localhost:8000", "http://localhost:8000/v1"),
+    ],
+)
+def test_normalize_openai_compatible_base_url(raw, expected):
+    assert runtime.normalize_openai_compatible_base_url(raw) == expected
+
+
 def test_daytona_relative_root_rejected(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENT_BACKEND", "daytona")
     monkeypatch.setenv("DAYTONA_FILE_STORAGE_ROOT", "relative/root")

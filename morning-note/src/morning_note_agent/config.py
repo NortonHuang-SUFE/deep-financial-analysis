@@ -185,4 +185,6 @@ def _model_api_key_env_names(base_url: str) -> list[str]:
         return ["MINIMAX_API_KEY"]
     if host.endswith("deepseek.com"):
         return ["DEEPSEEK_API_KEY"]
+    if host.endswith("volces.com") or host.endswith("volcengineapi.com"):
+        return ["ARK_API_KEY", "VOLCENGINE_API_KEY", "VOLCENGINE_ARK_API_KEY"]
     return []

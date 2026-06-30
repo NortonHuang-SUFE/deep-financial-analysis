@@ -36,6 +36,7 @@ if str(SRC_ROOT) not in sys.path:
 from financial_agent_runtime import (
     load_and_register_mcp_tools,
     make_concurrency_limit_middleware,
+    normalize_openai_compatible_base_url,
 )
 
 from market_researcher.config import (
@@ -249,7 +250,7 @@ async def _create_agent():
         from langchain_openai import ChatOpenAI
         import httpx
 
-        base_url = cfg.model.base_url.rstrip("/")
+        base_url = normalize_openai_compatible_base_url(cfg.model.base_url)
         parsed_base_url = urlparse(base_url)
         if not _is_allowed_model_gateway(parsed_base_url):
             raise ValueError(
@@ -259,11 +260,9 @@ async def _create_agent():
         if not cfg.model.api_key:
             raise ValueError(
                 "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
+                "a provider-specific key such as DASHSCOPE_API_KEY or ARK_API_KEY, "
                 "or model.api_key in config.yaml."
             )
-        # Use the configured base_url verbatim — no automatic "/v1" suffix.
-        # Whatever URL you set is exactly what ChatOpenAI sends to.
-
         # Detect proxy from env for async httpx client
         proxy_url = os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY") or os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY")
 
