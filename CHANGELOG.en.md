@@ -2,6 +2,13 @@
 
 Version history for `Deep Financial Analysis`. 中文版本：[CHANGELOG.md](CHANGELOG.md)。Project overview: [README.en.md](README.en.md).
 
+## v0.3.2 - 2026-07-01
+
+- Tightened the `single-stock-coverage` root orchestrator permissions: added `coverage_orchestration_tools`, leaving the root agent with only coverage-run creation, manifest updates, and coverage-state writes instead of direct business-artifact writers.
+- Disabled the root agent's generic `write_file`, `edit_file`, and `execute` built-ins, and updated the root prompt so Task 1-5 business artifacts must be written by their owning task subagents; missing or weak artifacts should trigger the matching child rerun or a blocker rather than root-authored placeholders.
+- Hardened `run_manifest.json` completion validation: a top-level task can be marked `completed` only when its matching subagent is recorded in `subagents_called` and all required task artifacts exist under the run directory; otherwise `update_run_manifest` returns a structured failure.
+- Added regression coverage for invalid completion rejection, simplified Task 2 artifact rejection, root-agent tool group / built-in exclusion wiring, and registry exposure in graph test mode.
+
 ## v0.3.1 - 2026-06-30
 
 - Fixed model-gateway `base_url` handling: added a shared `financial_agent_runtime.normalize_openai_compatible_base_url` helper that appends `/v1` only when the URL has no explicit API version segment. Gateways that already carry a version (e.g. Volcengine Ark `…/api/v3`) are left untouched instead of being mangled into `/api/v3/v1`, while bare hosts like DashScope `compatible-mode` still get `/v1`.

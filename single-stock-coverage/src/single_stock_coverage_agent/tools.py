@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import importlib.util
 import json
 import math
 import os
@@ -54,6 +55,58 @@ TASK2_MODEL_ARTIFACTS: tuple[str, ...] = (
     "integrated_model.xlsx",
     "model_audit.md",
 )
+
+TOP_LEVEL_TASK_COMPLETION_CONTRACTS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "task1_company_research": (
+        "task1_company_researcher",
+        (
+            "01_company_research/company_research.md",
+            "01_company_research/business_driver_map.json",
+            "01_company_research/source_log.json",
+        ),
+    ),
+    "task2_financial_model": (
+        "task2_financial_modeler",
+        (
+            "02_financial_model/financial_facts.json",
+            "02_financial_model/task2_context_packet.json",
+            "02_financial_model/revenue_build_spec.json",
+            "02_financial_model/income_statement_spec.json",
+            "02_financial_model/balance_sheet_spec.json",
+            "02_financial_model/cash_flow_statement_spec.json",
+            "02_financial_model/statement_spec_pack.json",
+            "02_financial_model/integrated_model.xlsx",
+            "02_financial_model/model_audit.md",
+        ),
+    ),
+    "task3_valuation": (
+        "task3_valuation_analyst",
+        (
+            "03_valuation/evidence_sufficiency.md",
+            "03_valuation/value_driver_map.json",
+            "03_valuation/assumption_pack.md",
+            "03_valuation/assumption_audit.md",
+            "03_valuation/dcf_model.xlsx",
+            "03_valuation/comps.xlsx",
+            "03_valuation/valuation_analysis.md",
+            "03_valuation/valuation_state.json",
+        ),
+    ),
+    "task4_chart_pack": (
+        "task4_chart_pack_generator",
+        (
+            "04_charts/chart_index.json",
+            "04_charts/chart_pack",
+        ),
+    ),
+    "task5_final_report": (
+        "task5_report_assembler",
+        (
+            "05_report/final_report.md",
+            "05_report/source_index.json",
+        ),
+    ),
+}
 
 STATEMENT_JSON_REQUIRED_FIELDS: tuple[str, ...] = (
     "statement_type",
@@ -4220,11 +4273,9 @@ def _scoped_validate_integrated_three_statement_model_reference(
     row_map_json: str = "",
 ) -> str:
     """Validate deterministic Task 2 integrated_model.xlsx structure and formulas."""
-    try:
-        import openpyxl
-    except ImportError as exc:
+    if importlib.util.find_spec("openpyxl") is None:
         return _json_result(
-            {"status": "ERROR", "message": f"openpyxl is not installed: {exc}"}
+            {"status": "ERROR", "message": "openpyxl is not installed"}
         )
 
     path = _resolve_workspace_path(excel_path)
@@ -4402,6 +4453,46 @@ def _scoped_validate_integrated_three_statement_model_reference(
     return _validation_result("PASS" if not critical else "FAIL", critical, warnings)
 
 
+def _completed_top_level_task_failures(
+    manifest: dict[str, Any],
+    run_dir: Path,
+) -> list[dict[str, Any]]:
+    tasks = manifest.get("tasks")
+    if not isinstance(tasks, dict):
+        return []
+
+    subagents_called = {
+        str(item)
+        for item in manifest.get("subagents_called", [])
+        if isinstance(item, str)
+    }
+    failures: list[dict[str, Any]] = []
+    for (
+        task_name,
+        (owner_subagent, required_paths),
+    ) in TOP_LEVEL_TASK_COMPLETION_CONTRACTS.items():
+        task_record = tasks.get(task_name)
+        if not isinstance(task_record, dict):
+            continue
+        if task_record.get("status") != "completed":
+            continue
+
+        missing_subagent = owner_subagent not in subagents_called
+        missing_artifacts = [
+            rel_path for rel_path in required_paths if not (run_dir / rel_path).exists()
+        ]
+        if missing_subagent or missing_artifacts:
+            failures.append(
+                {
+                    "task": task_name,
+                    "required_subagent": owner_subagent,
+                    "missing_subagent": missing_subagent,
+                    "missing_artifacts": missing_artifacts,
+                }
+            )
+    return failures
+
+
 @tool
 def update_run_manifest(
     patch_json: str,
@@ -4431,6 +4522,20 @@ def update_run_manifest(
             manifest[key].extend(value)
         else:
             manifest[key] = value
+    completion_failures = _completed_top_level_task_failures(manifest, out_dir)
+    if completion_failures:
+        return _json_result(
+            {
+                "status": "FAIL",
+                "reason": "invalid_top_level_task_completion",
+                "message": (
+                    "Top-level task completion requires the matching task "
+                    "subagent in subagents_called and all required artifacts "
+                    "under the run directory."
+                ),
+                "failures": completion_failures,
+            }
+        )
     manifest["updated_at"] = datetime.now().isoformat(timespec="seconds")
     _write_text(
         manifest_path,
@@ -5425,10 +5530,8 @@ def update_integrated_three_statement_model(
             }
         )
 
-    try:
-        import openpyxl
-    except ImportError as exc:
-        return _json_result({"status": "ERROR", "message": f"openpyxl is not installed: {exc}"})
+    if importlib.util.find_spec("openpyxl") is None:
+        return _json_result({"status": "ERROR", "message": "openpyxl is not installed"})
 
     out_dir = _resolve_workspace_path(run_dir)
     model_dir = _statement_model_dir(out_dir)
@@ -5928,8 +6031,6 @@ def validate_integrated_three_statement_model(
             }
         )
 
-    bs_for_debt = wb["Balance Sheet"]
-    debt_ws = wb["Debt & Interest"]
     values_bs_for_debt = wb_values["Balance Sheet"]
     values_debt_ws = wb_values["Debt & Interest"]
     source_spec_lookup = _historical_input_lookup(source_payload) if source_payload else {}

@@ -5,6 +5,13 @@
 # auditable without opening graph.py.
 
 tool_groups:
+  coverage_orchestration_tools:
+    description: Root coverage orchestration tools for run creation, manifest updates, and state updates only. Business artifacts must be written by task subagents.
+    tools:
+      - create_coverage_run_dir
+      - update_run_manifest
+      - write_coverage_state
+
   coverage_artifact_tools:
     description: Coverage run directory, artifact writers, manifest, and state tools.
     tools:
@@ -97,7 +104,11 @@ agents:
       - run manifest
       - coverage state
     tool_groups:
-      - coverage_artifact_tools
+      - coverage_orchestration_tools
+    excluded_builtin_tools:
+      - write_file
+      - edit_file
+      - execute
     skills: {}
     subagents:
       - task1_company_researcher
