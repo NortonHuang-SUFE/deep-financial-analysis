@@ -207,6 +207,13 @@ async def _get_mcp_tools(cfg) -> list:
     return tools
 
 
+def _is_allowed_model_gateway(parsed_base_url) -> bool:
+    host = parsed_base_url.hostname or ""
+    if parsed_base_url.scheme == "https" and parsed_base_url.netloc:
+        return True
+    return parsed_base_url.scheme == "http" and host in {"localhost", "127.0.0.1", "::1"}
+
+
 async def _create_agent():
     """Build and return the deep agent."""
     if os.getenv("MARKET_RESEARCHER_TEST_MODE") == "1":
@@ -243,31 +250,16 @@ async def _create_agent():
         import httpx
 
         base_url = cfg.model.base_url.rstrip("/")
-        allowed_hosts = (
-            "api.babelark.com",
-            "api.minimaxi.com",
-            "api.minimax.io",
-            "api.deepseek.com",
-            "dashscope.aliyuncs.com",
-        )
         parsed_base_url = urlparse(base_url)
-        if parsed_base_url.scheme != "https" or parsed_base_url.netloc.lower() not in allowed_hosts:
+        if not _is_allowed_model_gateway(parsed_base_url):
             raise ValueError(
-                "model.base_url must use BabelArk, MiniMax, DeepSeek, or Alibaba DashScope API: "
-                f"{', '.join(f'https://{host}' for host in allowed_hosts)}"
+                "model.base_url must be an HTTPS OpenAI-compatible gateway, "
+                "or a local HTTP gateway on localhost/127.0.0.1."
             )
         if not cfg.model.api_key:
-            if "babelark.com" in base_url:
-                env_name = "BABELARK_API_KEY"
-            elif "minimax" in base_url:
-                env_name = "MINIMAX_API_KEY"
-            elif "dashscope.aliyuncs.com" in base_url:
-                env_name = "DASHSCOPE_API_KEY"
-            else:
-                env_name = "DEEPSEEK_API_KEY"
             raise ValueError(
-                f"Missing model API key. Set {env_name} in .env, "
-                "or set model.api_key in config.yaml."
+                "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
+                "or model.api_key in config.yaml."
             )
         if not base_url.endswith("/v1"):
             base_url += "/v1"
