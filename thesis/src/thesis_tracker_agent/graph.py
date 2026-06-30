@@ -22,6 +22,11 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from financial_agent_runtime import (  # noqa: E402
+    load_and_register_mcp_tools,
+    make_concurrency_limit_middleware,
+)
+
 from thesis_tracker_agent.config import (  # noqa: E402
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
@@ -73,21 +78,9 @@ def _tool_error_message(request, exc: Exception) -> ToolMessage:
 
 
 async def _load_mcp_tools_from_config(server_configs: dict) -> list:
-    try:
-        from langchain_mcp_adapters.client import MultiServerMCPClient
-    except ImportError:
-        print("WARNING: langchain-mcp-adapters not installed. MCP tools disabled.")
-        return []
-
-    if not server_configs:
-        return []
-
-    try:
-        client = MultiServerMCPClient(server_configs)
-        return await client.get_tools()
-    except Exception as exc:
-        print(f"WARNING: Could not connect to MCP server(s): {exc}")
-        return []
+    return await load_and_register_mcp_tools(
+        server_configs, workspace_root=WORKSPACE_ROOT
+    )
 
 
 async def _get_mcp_tools(cfg) -> list:
@@ -197,7 +190,10 @@ async def _create_agent():
         system_prompt=system_prompt,
         tools=all_tools,
         skills=[mirror_skills_into_backend(backend, PROJECT_ROOT / "skills")],
-        middleware=[_make_tool_error_middleware()],
+        middleware=[
+            make_concurrency_limit_middleware(WORKSPACE_ROOT),
+            _make_tool_error_middleware(),
+        ],
         backend=backend,
         name="thesis_tracker",
     )

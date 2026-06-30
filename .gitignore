@@ -7,8 +7,11 @@
 !/.env.example
 !/README.md
 !/README.en.md
+!/CHANGELOG.md
+!/CHANGELOG.en.md
 !/langgraph.json
 !/single-stock-coverage-plan.md
+!/tool-concurrency.yaml
 !/docs/
 !/docs/**
 !/DCF-builder/

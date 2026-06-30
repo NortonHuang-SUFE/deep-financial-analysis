@@ -1,0 +1,37 @@
+# Concurrency limits for external tools / services.
+#
+# Each GROUP is one shared concurrency budget: when the number of in-flight
+# calls for a group reaches `max_concurrency`, additional calls (across ALL
+# tools in that group, across all agents/subagents in the same process) queue
+# and run serially until a slot frees.
+#
+# A tool joins a group by matching either:
+#   - an `mcp_servers` glob  -> matched against the MCP server name (e.g. ifind-stock)
+#   - a `tools` glob         -> matched against the tool's .name (e.g. web_search)
+#
+# Add as many groups as needed; several distinct tools/servers can share ONE
+# budget simply by living under the same group. If a tool matches more than one
+# group, the most restrictive (smallest max_concurrency) wins.
+#
+# Edit freely — changes take effect on the next graph load (restart `langgraph dev`).
+# Override the path to this file with the TOOL_CONCURRENCY_CONFIG env var.
+# If this file is absent, nothing is limited (the feature is a no-op).
+
+groups:
+  # Whole 同花顺 / iFinD service treated as one shared budget.
+  ifind:
+    max_concurrency: 2        # 1 = fully serial; >1 = bounded parallel
+    mcp_servers:              # globs matched against the MCP server name
+      - "ifind-*"
+
+  # --- examples of future groups (commented out) ---------------------------
+  # A different provider — independent budget, just another group:
+  # wind:
+  #   max_concurrency: 3
+  #   mcp_servers: ["wind-*"]
+  #
+  # Several DISTINCT tools sharing ONE budget (mix MCP servers + named tools):
+  # external-web:
+  #   max_concurrency: 2
+  #   mcp_servers: ["news-*"]
+  #   tools: ["web_search", "tavily*"]
