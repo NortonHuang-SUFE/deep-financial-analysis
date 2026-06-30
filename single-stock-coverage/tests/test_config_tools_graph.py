@@ -676,6 +676,109 @@ def test_coverage_run_and_artifact_tools(monkeypatch, tmp_path):
     assert manifest_failure["field"] == "patch_json"
 
 
+def test_manifest_rejects_completed_task_without_subagent(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    monkeypatch.setenv("SINGLE_STOCK_COVERAGE_OUTPUT_TIMESTAMP", "20260604-121000")
+
+    result = json.loads(
+        tools.create_coverage_run_dir.invoke(
+            {
+                "company": "测试公司",
+                "ticker": "000001.SZ",
+                "market": "A-share",
+                "task_type": "initiation",
+                "triggering_event": "",
+            }
+        )
+    )
+
+    failure = json.loads(
+        tools.update_run_manifest.invoke(
+            {
+                "patch_json": json.dumps(
+                    {
+                        "subagents_called": [],
+                        "tasks": {
+                            "task1_company_research": {
+                                "status": "completed",
+                                "artifacts": [
+                                    "01_company_research/company_research.md",
+                                    "01_company_research/business_driver_map.json",
+                                    "01_company_research/source_log.json",
+                                ],
+                            }
+                        },
+                    }
+                ),
+                "ticker": "000001.SZ",
+                "market": "A-share",
+                "run_dir": result["run_dir"],
+            }
+        )
+    )
+
+    assert failure["status"] == "FAIL"
+    assert failure["reason"] == "invalid_top_level_task_completion"
+    assert failure["failures"][0]["task"] == "task1_company_research"
+    assert failure["failures"][0]["required_subagent"] == "task1_company_researcher"
+    manifest = json.loads((tmp_path / result["manifest_path"]).read_text())
+    assert "tasks" not in manifest
+
+
+def test_manifest_rejects_simplified_task2_completion(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    tools._ACTIVE_RUNS.clear()
+    monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
+    monkeypatch.setenv("SINGLE_STOCK_COVERAGE_OUTPUT_TIMESTAMP", "20260604-121500")
+
+    result = json.loads(
+        tools.create_coverage_run_dir.invoke(
+            {
+                "company": "测试公司",
+                "ticker": "000001.SZ",
+                "market": "A-share",
+                "task_type": "initiation",
+                "triggering_event": "",
+            }
+        )
+    )
+    model_dir = tmp_path / result["run_dir"] / "02_financial_model"
+    model_dir.mkdir(parents=True)
+    (model_dir / "three_statement_model.md").write_text("# Model\n", encoding="utf-8")
+    (model_dir / "financial_drivers.json").write_text("{}", encoding="utf-8")
+
+    failure = json.loads(
+        tools.update_run_manifest.invoke(
+            {
+                "patch_json": json.dumps(
+                    {
+                        "subagents_called": ["task2_financial_modeler"],
+                        "tasks": {
+                            "task2_financial_model": {
+                                "status": "completed",
+                                "artifacts": [
+                                    "02_financial_model/three_statement_model.md",
+                                    "02_financial_model/financial_drivers.json",
+                                ],
+                            }
+                        },
+                    }
+                ),
+                "ticker": "000001.SZ",
+                "market": "A-share",
+                "run_dir": result["run_dir"],
+            }
+        )
+    )
+
+    assert failure["status"] == "FAIL"
+    missing = failure["failures"][0]["missing_artifacts"]
+    assert "02_financial_model/financial_facts.json" in missing
+    assert "02_financial_model/integrated_model.xlsx" in missing
+
+
 def test_agent_file_storage_root_controls_coverage_artifacts(monkeypatch, tmp_path):
     _clear_env(monkeypatch)
     tools._ACTIVE_RUNS.clear()
@@ -2046,6 +2149,19 @@ def test_model_update_executor_tool_copies_prior_workbook_and_validates(
 def test_agent_registry_exposes_task2_parallel_statement_context():
     registry = load_agent_registry()
 
+    root = describe_agent(registry, "single_stock_coverage")
+    assert root["tool_groups"] == ["coverage_orchestration_tools"]
+    assert root["tools"]["coverage_orchestration_tools"] == [
+        "create_coverage_run_dir",
+        "update_run_manifest",
+        "write_coverage_state",
+    ]
+    assert root["excluded_builtin_tools"] == [
+        "write_file",
+        "edit_file",
+        "execute",
+    ]
+
     task1 = describe_agent(registry, "task1_company_researcher")
     assert task1["tool_groups"] == ["mcp_tools", "coverage_artifact_tools"]
     assert task1["tools"]["coverage_artifact_tools"] == [
@@ -2212,6 +2328,14 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
 def test_statement_json_tool_groups_resolve_runtime_tools():
     resolver = ToolGroupResolver(mcp_tools=[])
 
+    assert [
+        tool.name
+        for tool in resolver.resolve(("coverage_orchestration_tools",))
+    ] == [
+        "create_coverage_run_dir",
+        "update_run_manifest",
+        "write_coverage_state",
+    ]
     assert [
         tool.name
         for tool in resolver.resolve(("statement_modeling_tools",))
@@ -2417,6 +2541,14 @@ def test_graph_factories_import_in_test_mode(monkeypatch):
     root_graph = asyncio.run(graph_module.graph())
     assert root_graph["name"] == "single_stock_coverage"
     assert root_graph["test_mode"] is True
+    assert root_graph["agent_config"]["tool_groups"] == [
+        "coverage_orchestration_tools"
+    ]
+    assert root_graph["agent_config"]["excluded_builtin_tools"] == [
+        "write_file",
+        "edit_file",
+        "execute",
+    ]
     assert root_graph["agent_config"]["subagents"] == [
         "task1_company_researcher",
         "task2_financial_modeler",

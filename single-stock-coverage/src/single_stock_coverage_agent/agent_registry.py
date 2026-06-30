@@ -91,7 +91,9 @@ class ToolGroupResolver:
 
     def _resolve_group(self, group_name: str) -> list[Any]:
         if group_name not in self._cache:
-            if group_name == "coverage_artifact_tools":
+            if group_name == "coverage_orchestration_tools":
+                self._cache[group_name] = _coverage_orchestration_tools()
+            elif group_name == "coverage_artifact_tools":
                 self._cache[group_name] = _coverage_artifact_tools()
             elif group_name == "mcp_tools":
                 self._cache[group_name] = self._mcp_tools
@@ -429,6 +431,14 @@ def _configured_tool_names(registry: AgentRegistry, group_name: str) -> list[str
     if group_name == "mcp_tools":
         return ["<runtime MCP tools from enabled config.yaml servers>"]
     return [f"<{group.get('description', 'runtime tools')}>"]
+
+
+def _coverage_orchestration_tools() -> list[Any]:
+    return [
+        create_coverage_run_dir,
+        update_run_manifest,
+        write_coverage_state,
+    ]
 
 
 def _coverage_artifact_tools() -> list[Any]:

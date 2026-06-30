@@ -2,6 +2,13 @@
 
 本文件记录 `Deep Financial Analysis` 的版本历史。English version: [CHANGELOG.en.md](CHANGELOG.en.md)。项目说明见 [README.md](README.md)。
 
+## v0.3.2 - 2026-07-01
+
+- 收紧 `single-stock-coverage` 根 orchestrator 权限：新增 `coverage_orchestration_tools`，根 agent 仅保留创建 coverage run、更新 manifest 和写 coverage state 的编排工具，不再直接持有业务 artifact 写入工具。
+- 禁用根 agent 的通用 `write_file`、`edit_file`、`execute` 内置工具，并在根 prompt 中明确要求 Task 1-5 业务产物必须由对应 task subagent 写入；缺失或质量不足时应重跑对应 child 或报告 blocker，不再由根 agent 补 placeholder。
+- 强化 `run_manifest.json` 完成态校验：顶层任务标记为 `completed` 时，必须同时满足对应 subagent 已记录在 `subagents_called` 中，且该任务必需产物已真实存在于 run directory 下；否则 `update_run_manifest` 会返回结构化失败。
+- 新增回归测试覆盖非法完成态拒绝、Task 2 简化产物拒绝、根 agent 工具组/内置工具排除配置，以及 graph test mode 下的 registry 配置暴露。
+
 ## v0.3.1 - 2026-06-30
 
 - 修复模型网关 `base_url` 处理：新增共享函数 `financial_agent_runtime.normalize_openai_compatible_base_url`，仅在 URL 未显式带 API 版本段时才补 `/v1`；已显式带版本的网关（如火山方舟 `…/api/v3`）保持原样，避免被错误地拼成 `/api/v3/v1`，同时仍兼容只填到域名的 DashScope `compatible-mode` 等场景。
