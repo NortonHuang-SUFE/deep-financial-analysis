@@ -261,8 +261,8 @@ async def _create_agent():
                 "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
                 "or model.api_key in config.yaml."
             )
-        if not base_url.endswith("/v1"):
-            base_url += "/v1"
+        # Use the configured base_url verbatim — no automatic "/v1" suffix.
+        # Whatever URL you set is exactly what ChatOpenAI sends to.
 
         # Detect proxy from env for async httpx client
         proxy_url = os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY") or os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY")
