@@ -27,7 +27,10 @@ load_dotenv()
 
 from langchain_core.messages import SystemMessage, ToolMessage
 
-from financial_agent_runtime import ensure_general_purpose_subagent_disabled
+from financial_agent_runtime import (
+    ensure_general_purpose_subagent_disabled,
+    normalize_openai_compatible_base_url,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -176,7 +179,7 @@ def _build_model(cfg):
         from langchain_openai import ChatOpenAI
         import httpx
 
-        base_url = cfg.model.base_url.rstrip("/")
+        base_url = normalize_openai_compatible_base_url(cfg.model.base_url)
         parsed_base_url = urlparse(base_url)
         if not _is_allowed_model_gateway(parsed_base_url):
             raise ValueError(
@@ -186,11 +189,9 @@ def _build_model(cfg):
         if not cfg.model.api_key:
             raise ValueError(
                 "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
-                "DASHSCOPE_API_KEY, or model.api_key."
+                "a provider-specific key such as DASHSCOPE_API_KEY or ARK_API_KEY, "
+                "or model.api_key."
             )
-        if not base_url.endswith("/v1"):
-            base_url += "/v1"
-
         model_kwargs = dict(
             model=model_id,
             base_url=base_url,

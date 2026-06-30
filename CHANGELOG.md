@@ -2,6 +2,14 @@
 
 本文件记录 `Deep Financial Analysis` 的版本历史。English version: [CHANGELOG.en.md](CHANGELOG.en.md)。项目说明见 [README.md](README.md)。
 
+## v0.3.1 - 2026-06-30
+
+- 修复模型网关 `base_url` 处理：新增共享函数 `financial_agent_runtime.normalize_openai_compatible_base_url`，仅在 URL 未显式带 API 版本段时才补 `/v1`；已显式带版本的网关（如火山方舟 `…/api/v3`）保持原样，避免被错误地拼成 `/api/v3/v1`，同时仍兼容只填到域名的 DashScope `compatible-mode` 等场景。
+- 全部 9 个 agent 的 `graph.py` 统一改用该共享函数，替换原先各自内联的 `base_url.rstrip("/")`，消除重复逻辑。
+- 新增火山方舟（Volcengine Ark）凭证识别：当网关指向 `volces.com` / `volcengineapi.com` 时，按序回退读取 `ARK_API_KEY`、`VOLCENGINE_API_KEY`、`VOLCENGINE_ARK_API_KEY`；缺失 key 的报错信息补充提示可使用 `DASHSCOPE_API_KEY`、`ARK_API_KEY` 等供应商专用 key。
+- `.env.example` 补充 `ARK_API_KEY` 说明与火山方舟网关示例。
+- 新增 `normalize_openai_compatible_base_url` 的回归测试，覆盖补 `/v1`、保留显式 `/v1`、保留 `/api/v3` 与本地端点等情况。
+
 ## v0.3.0 - 2026-06-30
 
 - 新增「外部工具并发限制」：在工作区根目录的 `tool-concurrency.yaml` 中定义 `groups`，每个 group 是一个进程级共享并发配额；当组内在途调用数达到 `max_concurrency`，后续调用（跨该组所有工具、跨所有 agent/subagent）排队串行执行，直到有空位释放。

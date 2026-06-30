@@ -36,6 +36,7 @@ if str(SRC_ROOT) not in sys.path:
 from financial_agent_runtime import (
     load_and_register_mcp_tools,
     make_concurrency_limit_middleware,
+    normalize_openai_compatible_base_url,
 )
 
 from market_researcher.config import (
@@ -207,6 +208,13 @@ async def _get_mcp_tools(cfg) -> list:
     return tools
 
 
+def _is_allowed_model_gateway(parsed_base_url) -> bool:
+    host = parsed_base_url.hostname or ""
+    if parsed_base_url.scheme == "https" and parsed_base_url.netloc:
+        return True
+    return parsed_base_url.scheme == "http" and host in {"localhost", "127.0.0.1", "::1"}
+
+
 async def _create_agent():
     """Build and return the deep agent."""
     if os.getenv("MARKET_RESEARCHER_TEST_MODE") == "1":
@@ -242,36 +250,19 @@ async def _create_agent():
         from langchain_openai import ChatOpenAI
         import httpx
 
-        base_url = cfg.model.base_url.rstrip("/")
-        allowed_hosts = (
-            "api.babelark.com",
-            "api.minimaxi.com",
-            "api.minimax.io",
-            "api.deepseek.com",
-            "dashscope.aliyuncs.com",
-        )
+        base_url = normalize_openai_compatible_base_url(cfg.model.base_url)
         parsed_base_url = urlparse(base_url)
-        if parsed_base_url.scheme != "https" or parsed_base_url.netloc.lower() not in allowed_hosts:
+        if not _is_allowed_model_gateway(parsed_base_url):
             raise ValueError(
-                "model.base_url must use BabelArk, MiniMax, DeepSeek, or Alibaba DashScope API: "
-                f"{', '.join(f'https://{host}' for host in allowed_hosts)}"
+                "model.base_url must be an HTTPS OpenAI-compatible gateway, "
+                "or a local HTTP gateway on localhost/127.0.0.1."
             )
         if not cfg.model.api_key:
-            if "babelark.com" in base_url:
-                env_name = "BABELARK_API_KEY"
-            elif "minimax" in base_url:
-                env_name = "MINIMAX_API_KEY"
-            elif "dashscope.aliyuncs.com" in base_url:
-                env_name = "DASHSCOPE_API_KEY"
-            else:
-                env_name = "DEEPSEEK_API_KEY"
             raise ValueError(
-                f"Missing model API key. Set {env_name} in .env, "
-                "or set model.api_key in config.yaml."
+                "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
+                "a provider-specific key such as DASHSCOPE_API_KEY or ARK_API_KEY, "
+                "or model.api_key in config.yaml."
             )
-        if not base_url.endswith("/v1"):
-            base_url += "/v1"
-
         # Detect proxy from env for async httpx client
         proxy_url = os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY") or os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY")
 
