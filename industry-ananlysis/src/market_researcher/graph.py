@@ -33,6 +33,11 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from financial_agent_runtime import (
+    load_and_register_mcp_tools,
+    make_concurrency_limit_middleware,
+)
+
 from market_researcher.config import (
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
@@ -95,20 +100,10 @@ def _make_tool_error_middleware():
 
 
 async def _load_mcp_tools_from_config(server_configs: dict) -> list:
-    """Load tools from MCP servers using the new (non-context-manager) API."""
-    try:
-        from langchain_mcp_adapters.client import MultiServerMCPClient
-    except ImportError:
-        print("WARNING: langchain-mcp-adapters not installed. MCP tools disabled.")
-        return []
-
-    try:
-        client = MultiServerMCPClient(server_configs)
-        tools = await client.get_tools()
-        return tools
-    except Exception as e:
-        print(f"WARNING: Could not connect to MCP server(s): {e}")
-        return []
+    """Load MCP tools and register any that match a concurrency-limited group."""
+    return await load_and_register_mcp_tools(
+        server_configs, workspace_root=WORKSPACE_ROOT
+    )
 
 
 def _get_ifind_news_tools_sync(search_cfg) -> list:
@@ -326,7 +321,10 @@ async def _create_agent():
         system_prompt=system_prompt,
         tools=all_tools,
         skills=[mirror_skills_into_backend(backend, PROJECT_ROOT / "skills")],
-        middleware=[_make_tool_error_middleware()],
+        middleware=[
+            make_concurrency_limit_middleware(WORKSPACE_ROOT),
+            _make_tool_error_middleware(),
+        ],
         backend=backend,
         name="market_researcher",
     )

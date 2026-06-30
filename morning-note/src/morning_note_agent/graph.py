@@ -18,7 +18,11 @@ load_dotenv()
 
 from langchain_core.messages import SystemMessage, ToolMessage
 
-from financial_agent_runtime import ensure_general_purpose_subagent_disabled
+from financial_agent_runtime import (
+    ensure_general_purpose_subagent_disabled,
+    load_and_register_mcp_tools,
+    make_concurrency_limit_middleware,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -27,6 +31,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from morning_note_agent.config import (  # noqa: E402
+    WORKSPACE_ROOT,
     enabled_mcp_server_configs,
     build_backend,
     mirror_skills_into_backend,
@@ -103,21 +108,9 @@ def _tool_error_message(request, exc: Exception) -> ToolMessage:
 
 
 async def _load_mcp_tools_from_config(server_configs: dict) -> list:
-    try:
-        from langchain_mcp_adapters.client import MultiServerMCPClient
-    except ImportError:
-        print("WARNING: langchain-mcp-adapters not installed. MCP tools disabled.")
-        return []
-
-    if not server_configs:
-        return []
-
-    try:
-        client = MultiServerMCPClient(server_configs)
-        return await client.get_tools()
-    except Exception as exc:
-        print(f"WARNING: Could not connect to MCP server(s): {exc}")
-        return []
+    return await load_and_register_mcp_tools(
+        server_configs, workspace_root=WORKSPACE_ROOT
+    )
 
 
 async def _get_mcp_tools(cfg) -> list:
@@ -254,6 +247,7 @@ async def _create_agent():
         tools=all_tools,
         skills=[mirror_skills_into_backend(backend, PROJECT_ROOT / "skills")],
         middleware=[
+            make_concurrency_limit_middleware(WORKSPACE_ROOT),
             _make_runtime_context_middleware(lambda: _runtime_context_prompt(cfg)),
             _make_tool_error_middleware(),
         ],

@@ -28,6 +28,11 @@ from dcf_builder.assumption_research import (
     ASSUMPTION_MCP_SERVER_NAMES,
     create_assumption_research_subagent_spec,
 )
+from financial_agent_runtime import (
+    load_and_register_mcp_tools,
+    make_concurrency_limit_middleware,
+)
+
 from dcf_builder.config import (
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
@@ -82,21 +87,9 @@ def _tool_error_message(request, exc: Exception) -> ToolMessage:
 
 
 async def _load_mcp_tools_from_config(server_configs: dict) -> list:
-    try:
-        from langchain_mcp_adapters.client import MultiServerMCPClient
-    except ImportError:
-        print("WARNING: langchain-mcp-adapters not installed. MCP tools disabled.")
-        return []
-
-    if not server_configs:
-        return []
-
-    try:
-        client = MultiServerMCPClient(server_configs)
-        return await client.get_tools()
-    except Exception as exc:
-        print(f"WARNING: Could not connect to MCP server(s): {exc}")
-        return []
+    return await load_and_register_mcp_tools(
+        server_configs, workspace_root=WORKSPACE_ROOT
+    )
 
 
 def _get_search_tools(cfg):
@@ -267,7 +260,10 @@ async def _create_agent():
     assumption_subagent = create_assumption_research_subagent_spec(
         model=model,
         tools=assumption_tools,
-        middleware=[_make_tool_error_middleware()],
+        middleware=[
+            make_concurrency_limit_middleware(WORKSPACE_ROOT),
+            _make_tool_error_middleware(),
+        ],
         backend=backend,
     )
 
@@ -284,7 +280,10 @@ async def _create_agent():
         tools=all_tools,
         subagents=[assumption_subagent],
         skills=[mirror_skills_into_backend(backend, PROJECT_ROOT / "skills")],
-        middleware=[_make_tool_error_middleware()],
+        middleware=[
+            make_concurrency_limit_middleware(WORKSPACE_ROOT),
+            _make_tool_error_middleware(),
+        ],
         backend=backend,
         name="dcf_builder",
     )

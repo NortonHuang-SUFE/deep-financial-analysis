@@ -16,6 +16,11 @@ load_dotenv()
 from langchain.agents.middleware.types import AgentMiddleware
 from langchain_core.messages import ToolMessage
 
+from financial_agent_runtime import (
+    load_and_register_mcp_tools,
+    make_concurrency_limit_middleware,
+)
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
@@ -82,21 +87,9 @@ def _tool_error_message(request, exc: Exception) -> ToolMessage:
 
 
 async def _load_mcp_tools_from_config(server_configs: dict) -> list:
-    try:
-        from langchain_mcp_adapters.client import MultiServerMCPClient
-    except ImportError:
-        print("WARNING: langchain-mcp-adapters not installed. MCP tools disabled.")
-        return []
-
-    if not server_configs:
-        return []
-
-    try:
-        client = MultiServerMCPClient(server_configs)
-        return await client.get_tools()
-    except Exception as exc:
-        print(f"WARNING: Could not connect to MCP server(s): {exc}")
-        return []
+    return await load_and_register_mcp_tools(
+        server_configs, workspace_root=WORKSPACE_ROOT
+    )
 
 
 async def _get_mcp_tools(cfg) -> list:
@@ -197,7 +190,10 @@ async def _create_agent(agent_name: str):
         return backend_cache[name]
 
     tool_resolver = ToolGroupResolver(mcp_tools=mcp_tools)
-    middleware = [_make_tool_error_middleware()]
+    middleware = [
+        make_concurrency_limit_middleware(WORKSPACE_ROOT),
+        _make_tool_error_middleware(),
+    ]
     runnable = create_registered_agent(
         agent_name,
         registry=registry,

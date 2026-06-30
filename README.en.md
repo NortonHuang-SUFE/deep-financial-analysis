@@ -6,6 +6,11 @@ A multi-agent research system for China public markets. It connects pre-market i
 
 > Disclaimer: this project produces research workpapers and analytical materials. It does not provide investment advice. Outputs should be reviewed by qualified professionals before use.
 
+<p align="center">
+  <img src="docs/assets/agentic-architecture-overview.png" alt="Deep Financial Analysis agentic architecture overview" width="900"><br>
+  <em>System architecture: the orchestrator fans out to 7 top-level specialist agents and 13 internal single-stock coverage agents.</em>
+</p>
+
 ## 1. What This Project Is
 
 `Deep Financial Analysis` is designed as a local equity-research workflow system for China public markets. It decomposes research work into specialized agents and lets them collaborate around one research task.
@@ -132,6 +137,8 @@ iFind MCP URLs are already stored in each subproject's `config.yaml`:
 | `ifind-global-stock` | `https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-global-stock-mcp` |
 | `ifind-index` | `https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-index-mcp` |
 
+External-tool concurrency limits live in `tool-concurrency.yaml` at the workspace root. Each group is a shared budget: when in-flight calls in a group reach `max_concurrency`, further calls queue and run serially. By default every `ifind-*` server shares one `ifind` group (limit 2), so the orchestrator fanning out to many subagents will not overwhelm iFind. Edit the threshold, add groups, or pull named tools (e.g. `web_search`) into a budget via `tools:` globs; the limit is shared process-wide. If the file is absent, nothing is limited.
+
 Run:
 
 ```bash
@@ -162,29 +169,9 @@ Both modes share the same agent code and skills; switching the backend requires 
 
 ## 6. Version, Roadmap, and Contact
 
-Current version: `v0.2 research-preview`, as of 2026-06-28.
+Current version: `v0.3 research-preview`, as of 2026-06-30.
 
-### Change Log
-
-#### v0.2.0 - 2026-06-28
-
-- Added a cloud run mode: with `AGENT_BACKEND=daytona`, all agents execute and persist artifacts inside an ephemeral Daytona cloud sandbox; the default stays `local`, and both modes share one agent codebase.
-- Extracted a shared `financial-agent-runtime` package that centralizes backend selection, artifact storage root, skills mirroring, artifact writes, and general-purpose subagent disabling, removing the duplicated per-agent implementations.
-- `.env.example` documents `AGENT_BACKEND`, `DAYTONA_*` credentials, and `DAYTONA_FILE_STORAGE_ROOT` (bilingual comments).
-- Install instructions now include the shared `financial-agent-runtime` package; `langgraph.json` registers it as the first dependency.
-- Added regression tests for the cloud/local backends and artifact paths.
-
-#### v0.1.1 - 2026-06-25
-
-- Unified the artifact directory contract between the orchestrator and subagents: each composite run now uses one mother folder, with all subagent outputs nested recursively underneath it.
-- Made upstream `output_dir` values exact task directories for `morning_note`, `stock_screen`, `sector_research`, `thesis_tracker`, and `market_researcher`, avoiding accidental second-level timestamp folders.
-- Updated `html_image_renderer` orchestration rules so it writes `html/` and `png/` directly under the assigned renderer subdirectory.
-- Synchronized mounted skill documentation so skills no longer instruct agents to create a separate top-level `out/<timestamp>` directory during orchestrated runs.
-- Added regression coverage for artifact root / output directory behavior.
-
-#### v0.1.0 - 2026-06-21
-
-- Initial research-preview with core research agents, Tonghuashun iFind MCP access, local artifact output, three-statement modeling, DCF, chart packs, and HTML image rendering.
+The full version history lives in [CHANGELOG.en.md](CHANGELOG.en.md) (中文版: [CHANGELOG.md](CHANGELOG.md)).
 
 Implemented:
 
