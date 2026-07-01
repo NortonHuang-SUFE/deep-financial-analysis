@@ -62,7 +62,9 @@ def _config_path(workspace_root: Path | str | None) -> Path | None:
     return Path(workspace_root) / _CONFIG_FILENAME
 
 
-def load_tool_concurrency_config(workspace_root: Path | str | None = None) -> dict[str, dict]:
+def load_tool_concurrency_config(
+    workspace_root: Path | str | None = None,
+) -> dict[str, dict]:
     """Parse the dedicated concurrency config, cached per resolved path.
 
     Returns ``{group: {"limit", "mcp_server_globs", "tool_globs"}}``. A missing
@@ -217,13 +219,16 @@ async def load_and_register_mcp_tools(
     server_configs: dict,
     *,
     workspace_root: Path | str | None = None,
+    tool_name_prefix: bool = True,
 ) -> list:
     """Load MCP tools per server and register any that match a concurrency group.
 
     Drop-in replacement for the per-package ``_load_mcp_tools_from_config``: same
     flat-list return shape and the same graceful degradation on missing adapters
     or connection failures. Loading per server is what lets us attribute each
-    tool to its server (and therefore to a concurrency group) reliably.
+    tool to its server (and therefore to a concurrency group) reliably. Tool
+    names are prefixed by server by default so providers with overlapping MCP
+    tool names remain separately callable by the model.
     """
     try:
         from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -235,7 +240,7 @@ async def load_and_register_mcp_tools(
         return []
 
     try:
-        client = MultiServerMCPClient(server_configs)
+        client = MultiServerMCPClient(server_configs, tool_name_prefix=tool_name_prefix)
     except Exception as exc:
         print(f"WARNING: Could not initialise MCP client: {exc}")
         return []
@@ -248,7 +253,8 @@ async def load_and_register_mcp_tools(
             # Older adapters without the server_name kwarg: per-server client.
             try:
                 tools = await MultiServerMCPClient(
-                    {name: server_configs[name]}
+                    {name: server_configs[name]},
+                    tool_name_prefix=tool_name_prefix,
                 ).get_tools()
             except Exception as exc:
                 print(f"WARNING: Could not connect to MCP server '{name}': {exc}")

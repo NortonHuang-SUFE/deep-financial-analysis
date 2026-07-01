@@ -1,5 +1,4 @@
-from pathlib import Path
-
+import financial_agent_runtime as runtime
 import thesis_tracker_agent.config as config_module
 from thesis_tracker_agent import tools
 from thesis_tracker_agent.config import (
@@ -48,6 +47,7 @@ def test_default_config_resolves_from_outside_project(monkeypatch, tmp_path):
     assert "ifind-bond" in cfg.mcp
     assert "ifind-global-stock" in cfg.mcp
     assert "ifind-index" in cfg.mcp
+    assert "mx-ds-mcp" in cfg.mcp
 
 
 def test_shared_ifind_auth_applies_to_all_ifind_servers(monkeypatch, tmp_path):
@@ -69,8 +69,53 @@ mcp:
     cfg = load_config(str(config_path))
     server_configs = enabled_mcp_server_configs(cfg)
 
-    assert server_configs["ifind-stock"]["headers"]["Authorization"] == "Bearer shared-token"
-    assert server_configs["ifind-news"]["headers"]["Authorization"] == "Bearer shared-token"
+    assert (
+        server_configs["ifind-stock"]["headers"]["Authorization"]
+        == "Bearer shared-token"
+    )
+    assert (
+        server_configs["ifind-news"]["headers"]["Authorization"]
+        == "Bearer shared-token"
+    )
+
+
+def test_mx_ds_auth_and_default_group_allowlist(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  ifind-stock:
+    url: https://example.test/stock
+    transport: streamable_http
+  mx-ds-mcp:
+    url: https://mxapi.eastmoney.com/mxds/mcp
+    transport: streamable-http
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+mcp_tool_groups:
+  default:
+    servers:
+      - mx-ds-mcp
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
+
+    cfg = load_config(str(config_path))
+    server_names = runtime.mcp_tool_group_server_names(
+        cfg.mcp_tool_groups,
+        "default",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
+
+    assert set(server_configs) == {"mx-ds-mcp"}
+    assert server_configs["mx-ds-mcp"]["transport"] == "streamable_http"
+    assert server_configs["mx-ds-mcp"]["headers"] == {"em_api_key": "mx-key"}
+    assert server_configs["mx-ds-mcp"]["timeout"] == 120
+    assert cfg.mcp["mx-ds-mcp"].connect_timeout == 10
 
 
 def test_timestamped_output_dir_is_workspace_relative(monkeypatch):

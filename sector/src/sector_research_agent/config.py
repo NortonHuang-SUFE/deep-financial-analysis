@@ -18,8 +18,15 @@ import yaml
 from pydantic import BaseModel, Field
 
 from financial_agent_runtime import (
+    MCPServerConfig,
+    MCPToolGroupConfig,
+    apply_mcp_env_overrides,
     build_backend as _shared_build_backend,
+    default_mcp_tool_groups,
+    enabled_mcp_server_configs as _shared_enabled_mcp_server_configs,
     file_storage_root as _shared_file_storage_root,
+    ifind_auth_headers as _shared_ifind_auth_headers,
+    mcp_servers_from_yaml_data,
     mirror_skills_into_backend as _shared_mirror_skills_into_backend,
 )
 
@@ -49,11 +56,6 @@ class ModelConfig(BaseModel):
     thinking: Literal["auto", "enabled", "disabled"] = "auto"
 
 
-class MCPServerConfig(BaseModel):
-    url: str = ""
-    transport: Literal["streamable_http", "sse", "stdio"] = "streamable_http"
-
-
 class OutputConfig(BaseModel):
     dir: str = "./out"
 
@@ -61,6 +63,9 @@ class OutputConfig(BaseModel):
 class Config(BaseModel):
     model: ModelConfig = Field(default_factory=ModelConfig)
     mcp: Dict[str, MCPServerConfig] = Field(default_factory=dict)
+    mcp_tool_groups: Dict[str, MCPToolGroupConfig] = Field(
+        default_factory=default_mcp_tool_groups
+    )
     output: OutputConfig = Field(default_factory=OutputConfig)
 
     @classmethod
@@ -72,10 +77,11 @@ class Config(BaseModel):
         with open(config_path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
-        if "mcp" in data and isinstance(data["mcp"], dict):
+        mcp_servers = mcp_servers_from_yaml_data(data)
+        if mcp_servers is not None:
             data["mcp"] = {
                 name: MCPServerConfig(**value) if isinstance(value, dict) else value
-                for name, value in data["mcp"].items()
+                for name, value in mcp_servers.items()
             }
         return cls(**data)
 
@@ -114,19 +120,10 @@ class Config(BaseModel):
                 if cfg.model.api_key:
                     break
 
-        if os.getenv("SECTOR_RESEARCH_DISABLE_MCP") == "1":
-            for server in cfg.mcp.values():
-                server.url = ""
-
-        for server_name, server_cfg in cfg.mcp.items():
-            prefix = _env_slug(server_name)
-            url_val = os.getenv(f"{prefix}_MCP_URL")
-            if url_val:
-                server_cfg.url = url_val
-
-            transport_val = os.getenv(f"{prefix}_MCP_TRANSPORT")
-            if transport_val:
-                server_cfg.transport = transport_val
+        apply_mcp_env_overrides(
+            cfg.mcp,
+            disable_env_var="SECTOR_RESEARCH_DISABLE_MCP",
+        )
 
         return cfg
 
@@ -135,32 +132,16 @@ def load_config(path: str = "config.yaml") -> Config:
     return Config.load(path)
 
 
-def enabled_mcp_server_configs(cfg: Config) -> dict[str, dict]:
-    server_configs: dict[str, dict] = {}
-    for name, srv in cfg.mcp.items():
-        if not srv.url:
-            continue
-        entry: dict = {
-            "url": srv.url.rstrip("/"),
-            "transport": srv.transport,
-        }
-        if name.startswith("ifind-"):
-            headers = ifind_auth_headers()
-            if headers:
-                entry["headers"] = headers
-        server_configs[name] = entry
-    return server_configs
+def enabled_mcp_server_configs(
+    cfg: Config,
+    *,
+    server_names: set[str] | None = None,
+) -> dict[str, dict]:
+    return _shared_enabled_mcp_server_configs(cfg, server_names=server_names)
 
 
 def ifind_auth_headers() -> dict[str, str]:
-    """Return the shared iFind MCP Authorization header from environment."""
-    shared_auth = os.getenv("IFIND_MCP_AUTHORIZATION")
-    if shared_auth:
-        return {"Authorization": shared_auth}
-    shared_token = os.getenv("IFIND_MCP_TOKEN")
-    if shared_token:
-        return {"Authorization": f"Bearer {shared_token}"}
-    return {}
+    return _shared_ifind_auth_headers()
 
 
 def _resolve_project_path(path: str) -> Path:
@@ -168,10 +149,6 @@ def _resolve_project_path(path: str) -> Path:
     if candidate.is_absolute() or candidate.exists():
         return candidate
     return PROJECT_ROOT / candidate
-
-
-def _env_slug(server_name: str) -> str:
-    return server_name.upper().replace("-", "_")
 
 
 def _model_api_key_env_names(base_url: str) -> list[str]:

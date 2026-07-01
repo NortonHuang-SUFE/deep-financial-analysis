@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -79,8 +80,25 @@ class AgentRegistry:
 class ToolGroupResolver:
     """Resolves configured tool groups to runtime tool objects."""
 
-    def __init__(self, *, mcp_tools: list[Any]) -> None:
-        self._mcp_tools = list(mcp_tools)
+    def __init__(
+        self,
+        *,
+        mcp_tools: list[Any] | None = None,
+        mcp_tool_groups: dict[str, list[Any]] | None = None,
+    ) -> None:
+        self._mcp_tool_groups = {
+            group_name: list(tools)
+            for group_name, tools in (mcp_tool_groups or {}).items()
+        }
+        if mcp_tools is not None:
+            self._mcp_tool_groups["mcp_tools"] = list(mcp_tools)
+        elif "mcp_tools" not in self._mcp_tool_groups:
+            self._mcp_tool_groups["mcp_tools"] = _dedupe_tools(
+                tool
+                for group_name, tools in self._mcp_tool_groups.items()
+                if group_name != "mcp_tools"
+                for tool in tools
+            )
         self._cache: dict[str, list[Any]] = {}
 
     def resolve(self, group_names: tuple[str, ...]) -> list[Any]:
@@ -95,8 +113,8 @@ class ToolGroupResolver:
                 self._cache[group_name] = _coverage_orchestration_tools()
             elif group_name == "coverage_artifact_tools":
                 self._cache[group_name] = _coverage_artifact_tools()
-            elif group_name == "mcp_tools":
-                self._cache[group_name] = self._mcp_tools
+            elif group_name in self._mcp_tool_groups:
+                self._cache[group_name] = self._mcp_tool_groups[group_name]
             elif group_name == "dcf_execution_tools":
                 self._cache[group_name] = _dcf_execution_tools()
             elif group_name == "task2_check_tools":
@@ -256,6 +274,34 @@ def agent_uses_tool_group(
         agent_uses_tool_group(registry, child_name, group_name, recursive=True)
         for child_name in spec.subagents
     )
+
+
+def mcp_tool_group_names(registry: AgentRegistry) -> tuple[str, ...]:
+    return tuple(
+        group_name
+        for group_name, group in registry.tool_groups.items()
+        if group.get("source") == "config.yaml:mcp"
+    )
+
+
+def mcp_tool_group_server_names(
+    registry: AgentRegistry,
+    group_name: str,
+    all_server_names: list[str],
+) -> set[str]:
+    group = registry.tool_groups[group_name]
+    servers = group.get("servers")
+    if servers in (None, "enabled"):
+        return set(all_server_names)
+    if isinstance(servers, str):
+        patterns = [servers]
+    else:
+        patterns = [str(pattern) for pattern in (servers or [])]
+    return {
+        server_name
+        for server_name in all_server_names
+        if any(fnmatch.fnmatch(server_name, pattern) for pattern in patterns)
+    }
 
 
 def create_registered_agent(
@@ -428,9 +474,26 @@ def _configured_tool_names(registry: AgentRegistry, group_name: str) -> list[str
     group = registry.tool_groups[group_name]
     if "tools" in group:
         return list(group["tools"])
-    if group_name == "mcp_tools":
-        return ["<runtime MCP tools from enabled config.yaml servers>"]
+    if group.get("source") == "config.yaml:mcp":
+        servers = group.get("servers", "enabled")
+        if servers == "enabled":
+            return ["<runtime MCP tools from all enabled config.yaml servers>"]
+        if isinstance(servers, str):
+            servers = [servers]
+        return [f"<runtime MCP tools from {', '.join(str(s) for s in servers)}>"]
     return [f"<{group.get('description', 'runtime tools')}>"]
+
+
+def _dedupe_tools(tools) -> list[Any]:
+    seen: set[tuple[str | None, int]] = set()
+    deduped: list[Any] = []
+    for tool in tools:
+        key = (getattr(tool, "name", None), id(tool))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(tool)
+    return deduped
 
 
 def _coverage_orchestration_tools() -> list[Any]:

@@ -1,3 +1,4 @@
+import financial_agent_runtime as runtime
 import sector_research_agent.config as config_module
 from sector_research_agent.config import (
     PROJECT_ROOT,
@@ -34,6 +35,9 @@ def _clear_env(monkeypatch):
         "ALIBABA_API_KEY",
         "IFIND_MCP_AUTHORIZATION",
         "IFIND_MCP_TOKEN",
+        "MX_DS_MCP_API_KEY",
+        "MX_DS_MCP_URL",
+        "MX_DS_MCP_TRANSPORT",
         "AGENT_FILE_STORAGE_ROOT",
         "SECTOR_RESEARCH_DISABLE_MCP",
         "SECTOR_RESEARCH_OUTPUT_TIMESTAMP",
@@ -54,6 +58,7 @@ def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
     assert cfg.model.base_url == "https://dashscope.aliyuncs.com/compatible-mode"
     assert cfg.output.dir == "./out"
     assert "ifind-stock" in cfg.mcp
+    assert "mx-ds-mcp" in cfg.mcp
     assert cfg.mcp["ifind-stock"].url
 
 
@@ -94,6 +99,45 @@ mcp:
     assert server_configs["ifind-news"]["headers"] == {
         "Authorization": "from-process-env"
     }
+
+
+def test_mx_ds_auth_and_group_allowlist(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  ifind-stock:
+    url: "https://example.test/stock"
+    transport: "streamable_http"
+  mx-ds-mcp:
+    url: "https://mxapi.eastmoney.com/mxds/mcp"
+    transport: "streamable-http"
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+mcp_tool_groups:
+  default:
+    servers:
+      - mx-ds-mcp
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
+
+    cfg = load_config(str(config_path))
+    server_names = runtime.mcp_tool_group_server_names(
+        cfg.mcp_tool_groups,
+        "default",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
+
+    assert set(server_configs) == {"mx-ds-mcp"}
+    assert server_configs["mx-ds-mcp"]["headers"] == {"em_api_key": "mx-key"}
+    assert server_configs["mx-ds-mcp"]["timeout"] == 120
+    assert cfg.mcp["mx-ds-mcp"].connect_timeout == 10
 
 
 def test_timestamped_output_dir_is_workspace_relative(monkeypatch):

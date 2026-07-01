@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 import financial_agent_runtime as runtime
+from market_researcher.config import enabled_mcp_server_configs, load_config
 from market_researcher import tools
 
 
@@ -38,7 +39,9 @@ def test_daytona_comps_workbook_uses_temp_file_and_upload(monkeypatch):
 
     ensured: list[str] = []
     uploads: list[tuple[str, str, int]] = []
-    monkeypatch.setattr(tools, "ensure_artifact_dir", lambda path: ensured.append(str(path)))
+    monkeypatch.setattr(
+        tools, "ensure_artifact_dir", lambda path: ensured.append(str(path))
+    )
 
     def fake_upload(local_path, remote_path):
         local = Path(local_path)
@@ -78,3 +81,49 @@ def test_daytona_comps_workbook_uses_temp_file_and_upload(monkeypatch):
         "/home/daytona/financial-analysis/out/20260625-130000/comps-fintech-payments-"
     )
     assert uploads[0][2] > 0
+
+
+def test_market_researcher_config_includes_mx_ds_mcp(monkeypatch, tmp_path):
+    for env_name in [
+        "IFIND_MCP_TOKEN",
+        "MX_DS_MCP_API_KEY",
+        "MX_DS_MCP_URL",
+        "MX_DS_MCP_TRANSPORT",
+    ]:
+        monkeypatch.delenv(env_name, raising=False)
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  ifind-stock:
+    url: https://stock.example/mcp
+    transport: streamable_http
+  mx-ds-mcp:
+    url: https://mxapi.eastmoney.com/mxds/mcp
+    transport: streamable-http
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+mcp_tool_groups:
+  default:
+    servers:
+      - mx-ds-mcp
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
+
+    cfg = load_config(str(config_path))
+    server_names = runtime.mcp_tool_group_server_names(
+        cfg.mcp_tool_groups,
+        "default",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
+
+    assert set(server_configs) == {"mx-ds-mcp"}
+    assert server_configs["mx-ds-mcp"]["headers"] == {"em_api_key": "mx-key"}
+    assert server_configs["mx-ds-mcp"]["timeout"] == 120
+    assert cfg.mcp["mx-ds-mcp"].connect_timeout == 10

@@ -1,6 +1,6 @@
 # Morning Note
 
-Morning Note 是一个独立的 LangGraph Deep Agents 项目，用于生成中国市场 A 股开盘前早会纪要。它优先使用 iFind MCP，覆盖隔夜美股/港股/中概、商品、汇率、政策监管、交易所公告、上市公司公告、业绩快报/预告、机构调研、龙虎榜、北向资金、ETF 和期指等信息。
+Morning Note 是一个独立的 LangGraph Deep Agents 项目，用于生成中国市场 A 股开盘前早会纪要。它优先使用 iFind MCP 与妙想 MX DS MCP，覆盖隔夜美股/港股/中概、商品、汇率、政策监管、交易所公告、上市公司公告、业绩快报/预告、机构调研、龙虎榜、北向资金、ETF 和期指等信息。
 
 ## 配置
 
@@ -22,6 +22,7 @@ MODEL_GATEWAY_API_KEY=...
 IFIND_MCP_TOKEN=...
 # 或
 IFIND_MCP_AUTHORIZATION="Bearer ..."
+MX_DS_MCP_API_KEY=...
 ```
 
 支持按 server 覆盖 URL/transport，但 iFind 鉴权仍只使用上面的共享 key：
@@ -29,6 +30,8 @@ IFIND_MCP_AUTHORIZATION="Bearer ..."
 ```bash
 IFIND_NEWS_MCP_URL=https://...
 IFIND_NEWS_MCP_TRANSPORT=streamable_http
+MX_DS_MCP_URL=https://mxapi.eastmoney.com/mxds/mcp
+MX_DS_MCP_TRANSPORT=streamable-http
 ```
 
 已配置的 iFind MCP：
@@ -40,6 +43,10 @@ IFIND_NEWS_MCP_TRANSPORT=streamable_http
 - `ifind-bond`
 - `ifind-global-stock`
 - `ifind-index`
+- `mx-ds-mcp`
+
+可用 `config.yaml` 的 `mcp_tool_groups.default.servers` 收窄本 agent 可用的
+MCP server。
 
 测试或离线调试时可设置：
 

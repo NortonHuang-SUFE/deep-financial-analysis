@@ -123,6 +123,9 @@ MODEL_MAX_TOKENS=16000
 # choose one
 IFIND_MCP_TOKEN=...
 IFIND_MCP_AUTHORIZATION=Bearer ...
+
+# optional for projects that already use iFind MCP: Eastmoney MX DS MCP
+MX_DS_MCP_API_KEY=...
 ```
 
 iFind MCP URLs are already stored in each subproject's `config.yaml`:
@@ -137,7 +140,15 @@ iFind MCP URLs are already stored in each subproject's `config.yaml`:
 | `ifind-global-stock` | `https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-global-stock-mcp` |
 | `ifind-index` | `https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-index-mcp` |
 
-External-tool concurrency limits live in `tool-concurrency.yaml` at the workspace root. Each group is a shared budget: when in-flight calls in a group reach `max_concurrency`, further calls queue and run serially. By default every `ifind-*` server shares one `ifind` group (limit 2), so the orchestrator fanning out to many subagents will not overwhelm iFind. Edit the threshold, add groups, or pull named tools (e.g. `web_search`) into a budget via `tools:` globs; the limit is shared process-wide. If the file is absent, nothing is limited.
+Subprojects that already configure `ifind-*` MCP also configure Eastmoney MX DS MCP (`DCF-builder`, `morning-note`, `industry-ananlysis`, `sector`, `screen`, `thesis`, and `single-stock-coverage`):
+
+| Server | URL |
+|---|---|
+| `mx-ds-mcp` | `https://mxapi.eastmoney.com/mxds/mcp` |
+
+`mx-ds-mcp` reads `MX_DS_MCP_API_KEY` from `.env` and sends it as the `em_api_key` header. `single-stock-coverage/agents/registry.yaml` splits MCP access into `ifind_mcp_tools` and `mx_ds_mcp_tools`; the other standalone agents can narrow their MCP access through `mcp_tool_groups.default.servers` in each `config.yaml`, and `DCF-builder` has separate parent and `assumption_researcher` MCP groups.
+
+External-tool concurrency limits live in `tool-concurrency.yaml` at the workspace root. Each group is a shared budget: when in-flight calls in a group reach `max_concurrency`, further calls queue and run serially. By default every `ifind-*` server shares one `ifind` group (limit 5), while `mx-ds-mcp` has its own `mx-ds` group (limit 2), so the orchestrator fanning out to many subagents will not overwhelm external services. Edit the threshold, add groups, or pull named tools (e.g. `web_search`) into a budget via `tools:` globs; the limit is shared process-wide. If the file is absent, nothing is limited.
 
 Run:
 

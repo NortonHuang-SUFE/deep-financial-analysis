@@ -36,6 +36,7 @@ if str(SRC_ROOT) not in sys.path:
 from financial_agent_runtime import (
     load_and_register_mcp_tools,
     make_concurrency_limit_middleware,
+    mcp_tool_group_server_names,
     normalize_openai_compatible_base_url,
 )
 
@@ -199,7 +200,12 @@ def _get_search_tools(cfg):
 
 async def _get_mcp_tools(cfg) -> list:
     """Load MCP tools from all configured servers that have a non-empty URL."""
-    server_configs = enabled_mcp_server_configs(cfg)
+    server_names = mcp_tool_group_server_names(
+        cfg.mcp_tool_groups,
+        "default",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
     if not server_configs:
         return []
     tools = await _load_mcp_tools_from_config(server_configs)

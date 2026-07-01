@@ -1,5 +1,6 @@
 import importlib
 
+import financial_agent_runtime as runtime
 import stock_screen_agent.config as config_module
 from stock_screen_agent.config import (
     PROJECT_ROOT,
@@ -54,6 +55,7 @@ def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
     assert "ifind-bond" in cfg.mcp
     assert "ifind-global-stock" in cfg.mcp
     assert "ifind-index" in cfg.mcp
+    assert "mx-ds-mcp" in cfg.mcp
 
 
 def test_shared_ifind_credential_applies_to_all_ifind_servers(monkeypatch, tmp_path):
@@ -75,8 +77,65 @@ mcp:
     cfg = load_config(str(config_path))
     server_configs = enabled_mcp_server_configs(cfg)
 
-    assert server_configs["ifind-stock"]["headers"]["Authorization"] == "Bearer shared-token"
-    assert server_configs["ifind-news"]["headers"]["Authorization"] == "Bearer shared-token"
+    assert (
+        server_configs["ifind-stock"]["headers"]["Authorization"]
+        == "Bearer shared-token"
+    )
+    assert (
+        server_configs["ifind-news"]["headers"]["Authorization"]
+        == "Bearer shared-token"
+    )
+
+
+def test_mx_ds_credential_and_tool_group_allowlist(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  ifind-stock:
+    url: https://stock.example/mcp
+    transport: streamable_http
+  ifind-news:
+    url: https://news.example/mcp
+    transport: streamable_http
+  mx-ds-mcp:
+    url: https://mxapi.eastmoney.com/mxds/mcp
+    transport: streamable-http
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+mcp_tool_groups:
+  default:
+    servers:
+      - ifind-news
+      - mx-ds-mcp
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IFIND_MCP_TOKEN", "shared-token")
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
+
+    cfg = load_config(str(config_path))
+    server_names = runtime.mcp_tool_group_server_names(
+        cfg.mcp_tool_groups,
+        "default",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
+
+    assert set(server_configs) == {"ifind-news", "mx-ds-mcp"}
+    assert (
+        server_configs["ifind-news"]["headers"]["Authorization"]
+        == "Bearer shared-token"
+    )
+    assert server_configs["mx-ds-mcp"] == {
+        "url": "https://mxapi.eastmoney.com/mxds/mcp",
+        "transport": "streamable_http",
+        "headers": {"em_api_key": "mx-key"},
+        "timeout": 120,
+    }
+    assert cfg.mcp["mx-ds-mcp"].connect_timeout == 10
 
 
 def test_workspace_root_env_file_is_loaded(monkeypatch, tmp_path):
@@ -165,7 +224,11 @@ def test_orchestrator_output_dir_is_used_exactly(monkeypatch, tmp_path):
     output_dir = storage_root / "out" / "20260625-101500" / "screen"
     out_path = tools.create_task_output_dir.invoke({"output_dir": str(output_dir)})
     markdown_path = tools.write_markdown_report.invoke(
-        {"markdown": "# Screen\n", "filename": "screen.md", "output_dir": str(output_dir)}
+        {
+            "markdown": "# Screen\n",
+            "filename": "screen.md",
+            "output_dir": str(output_dir),
+        }
     )
     json_path = tools.write_json_artifact.invoke(
         {

@@ -22,9 +22,21 @@ tool_groups:
       - write_coverage_state
 
   mcp_tools:
-    description: Runtime MCP tools loaded from enabled servers in single-stock-coverage/config.yaml.
+    description: Legacy compatibility group for all runtime MCP tools loaded from enabled servers in single-stock-coverage/config.yaml. Prefer provider-specific MCP groups on agents.
     source: config.yaml:mcp
     servers: enabled
+
+  ifind_mcp_tools:
+    description: Runtime iFind MCP tools loaded from ifind-* servers in single-stock-coverage/config.yaml.
+    source: config.yaml:mcp
+    servers:
+      - ifind-*
+
+  mx_ds_mcp_tools:
+    description: Runtime Eastmoney MX DS MCP tools loaded from mx-ds-mcp in single-stock-coverage/config.yaml.
+    source: config.yaml:mcp
+    servers:
+      - mx-ds-mcp
 
   dcf_execution_tools:
     description: Local deterministic DCF-builder tools imported from ../DCF-builder.
@@ -131,7 +143,8 @@ agents:
       - 01_company_research/business_driver_map.json
       - 01_company_research/source_log.json
     tool_groups:
-      - mcp_tools
+      - ifind_mcp_tools
+      - mx_ds_mcp_tools
       - coverage_artifact_tools
     skills:
       single_stock_coverage:
@@ -184,7 +197,8 @@ agents:
       - 02_financial_model/financial_facts.json
       - 02_financial_model/task2_context_packet.json
     tool_groups:
-      - mcp_tools
+      - ifind_mcp_tools
+      - mx_ds_mcp_tools
       - task2_financial_fact_artifact_tools
     skills:
       single_stock_coverage:
@@ -333,7 +347,8 @@ agents:
       - 03_valuation/valuation_summary.md
       - 03_valuation/dcf_model.xlsx
     tool_groups:
-      - mcp_tools
+      - ifind_mcp_tools
+      - mx_ds_mcp_tools
       - coverage_artifact_tools
     skills:
       single_stock_coverage:
@@ -357,7 +372,8 @@ agents:
     outputs:
       - assumption pack content for task3_valuation_analyst
     tool_groups:
-      - mcp_tools
+      - ifind_mcp_tools
+      - mx_ds_mcp_tools
       - coverage_artifact_tools
     skills:
       single_stock_coverage:

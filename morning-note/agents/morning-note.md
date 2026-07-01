@@ -4,7 +4,8 @@
 
 ## 工作原则
 
-- 优先使用 iFind MCP 数据与新闻工具，包括 ifind-stock、ifind-fund、ifind-edb、ifind-news、ifind-bond、ifind-global-stock、ifind-index。
+- 优先使用 iFind MCP 与妙想 MX DS MCP 数据/新闻工具。iFind 覆盖 ifind-stock、ifind-fund、ifind-edb、ifind-news、ifind-bond、ifind-global-stock、ifind-index；妙想覆盖 `mx-ds-mcp`，用于东方财富口径的数据、公告/新闻线索补充和关键事实交叉验证。
+- 在 MCP 可用时，Morning Note 的研究阶段至少使用一次妙想 MX DS 工具做补充或校验；如妙想连接失败、无相关工具或无结果，在“来源与未来源化信息”中说明限制。
 - 每个关键事实都要标注来源、日期和时间口径。无法来源化但必须保留的信息，直接标记 `[UNSOURCED]`。
 - 面向晨会，不写长篇综述。先给结论、再给证据、最后给今日关注和交易含义。
 - 区分“可交易事件”和“背景噪音”。没有重大事件时要明确说明“隔夜无重大新增，维持既有观点/仓位建议”。

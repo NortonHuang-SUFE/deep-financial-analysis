@@ -7,7 +7,6 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-from collections.abc import Sequence
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -24,17 +23,18 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from dcf_builder.assumption_research import (
-    ASSUMPTION_MCP_SERVER_NAMES,
-    create_assumption_research_subagent_spec,
-)
+from dcf_builder.assumption_research import create_assumption_research_subagent_spec
 from financial_agent_runtime import (
     load_and_register_mcp_tools,
     make_concurrency_limit_middleware,
+    mcp_tool_group_server_names,
     normalize_openai_compatible_base_url,
 )
 
 from dcf_builder.config import (
+    ASSUMPTION_RESEARCHER_MCP_TOOL_GROUP,
+    DCF_BUILDER_MCP_TOOL_GROUP,
+    DEFAULT_ASSUMPTION_MCP_SERVER_NAMES,
     WORKSPACE_ROOT,
     enabled_mcp_server_configs,
     build_backend,
@@ -143,18 +143,25 @@ def _get_search_tools(cfg):
     return []
 
 
-async def _get_mcp_tools(cfg, server_names: Sequence[str] | None = None) -> list:
-    server_configs = enabled_mcp_server_configs(cfg)
-    if server_names is not None:
-        allowed = set(server_names)
-        server_configs = {
-            name: server_config
-            for name, server_config in server_configs.items()
-            if name in allowed
-        }
+async def _get_mcp_tools(
+    cfg,
+    *,
+    group_name: str = DCF_BUILDER_MCP_TOOL_GROUP,
+    default_servers="enabled",
+) -> list:
+    server_names = mcp_tool_group_server_names(
+        cfg.mcp_tool_groups,
+        group_name,
+        list(cfg.mcp),
+        default_servers=default_servers,
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
     tools = await _load_mcp_tools_from_config(server_configs)
     if tools:
-        print(f"INFO: Loaded {len(tools)} MCP tool(s) from: {list(server_configs)}")
+        print(
+            f"INFO: Loaded {len(tools)} MCP tool(s) for group '{group_name}' "
+            f"from: {list(server_configs)}"
+        )
     return tools
 
 
@@ -245,8 +252,12 @@ async def _create_agent():
     system_prompt = prompt_path.read_text(encoding="utf-8")
 
     model = _build_model(cfg)
-    mcp_tools = await _get_mcp_tools(cfg)
-    assumption_mcp_tools = await _get_mcp_tools(cfg, ASSUMPTION_MCP_SERVER_NAMES)
+    mcp_tools = await _get_mcp_tools(cfg, group_name=DCF_BUILDER_MCP_TOOL_GROUP)
+    assumption_mcp_tools = await _get_mcp_tools(
+        cfg,
+        group_name=ASSUMPTION_RESEARCHER_MCP_TOOL_GROUP,
+        default_servers=DEFAULT_ASSUMPTION_MCP_SERVER_NAMES,
+    )
     search_tools = _get_search_tools(cfg)
     local_tools = [
         build_comps_excel,

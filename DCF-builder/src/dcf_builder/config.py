@@ -19,8 +19,14 @@ import yaml
 from pydantic import BaseModel, Field
 
 from financial_agent_runtime import (
+    MCPServerConfig,
+    MCPToolGroupConfig,
+    apply_mcp_env_overrides,
     build_backend as _shared_build_backend,
+    enabled_mcp_server_configs as _shared_enabled_mcp_server_configs,
     file_storage_root as _shared_file_storage_root,
+    ifind_auth_headers as _shared_ifind_auth_headers,
+    mcp_servers_from_yaml_data,
     mirror_skills_into_backend as _shared_mirror_skills_into_backend,
 )
 
@@ -28,6 +34,15 @@ from financial_agent_runtime import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
 WORKSPACE_ENV_PATH = WORKSPACE_ROOT / ".env"
+DCF_BUILDER_MCP_TOOL_GROUP = "dcf_builder"
+ASSUMPTION_RESEARCHER_MCP_TOOL_GROUP = "assumption_researcher"
+DEFAULT_ASSUMPTION_MCP_SERVER_NAMES = (
+    "ifind-stock",
+    "ifind-edb",
+    "ifind-news",
+    "ifind-index",
+    "mx-ds-mcp",
+)
 
 
 def file_storage_root() -> Path:
@@ -58,11 +73,6 @@ class ModelConfig(BaseModel):
     profiles: Dict[str, ModelProfile] = Field(default_factory=dict)
 
 
-class MCPServerConfig(BaseModel):
-    url: str = ""
-    transport: Literal["streamable_http", "sse", "stdio"] = "streamable_http"
-
-
 class SearchConfig(BaseModel):
     provider: Literal["tavily", "serper", "duckduckgo", "ifind-news", "none"] = "none"
     api_key: str = ""
@@ -78,6 +88,14 @@ class OutputConfig(BaseModel):
 class Config(BaseModel):
     model: ModelConfig = Field(default_factory=ModelConfig)
     mcp: Dict[str, MCPServerConfig] = Field(default_factory=dict)
+    mcp_tool_groups: Dict[str, MCPToolGroupConfig] = Field(
+        default_factory=lambda: {
+            DCF_BUILDER_MCP_TOOL_GROUP: MCPToolGroupConfig(servers="enabled"),
+            ASSUMPTION_RESEARCHER_MCP_TOOL_GROUP: MCPToolGroupConfig(
+                servers=list(DEFAULT_ASSUMPTION_MCP_SERVER_NAMES)
+            ),
+        }
+    )
     search: SearchConfig = Field(default_factory=SearchConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
@@ -90,10 +108,11 @@ class Config(BaseModel):
         with open(config_path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
-        if "mcp" in data and isinstance(data["mcp"], dict):
+        mcp_servers = mcp_servers_from_yaml_data(data)
+        if mcp_servers is not None:
             data["mcp"] = {
                 name: MCPServerConfig(**value) if isinstance(value, dict) else value
-                for name, value in data["mcp"].items()
+                for name, value in mcp_servers.items()
             }
         return cls(**data)
 
@@ -135,20 +154,10 @@ class Config(BaseModel):
                 if cfg.model.api_key:
                     break
 
-        if os.getenv("DCF_BUILDER_DISABLE_MCP") == "1":
-            for server in cfg.mcp.values():
-                server.url = ""
-
-        for server_name in list(cfg.mcp.keys()):
-            server_cfg = cfg.mcp[server_name]
-            prefix = _env_slug(server_name)
-            url_val = os.getenv(f"{prefix}_MCP_URL")
-            if url_val:
-                server_cfg.url = url_val
-
-            transport_val = os.getenv(f"{prefix}_MCP_TRANSPORT")
-            if transport_val:
-                server_cfg.transport = transport_val
+        apply_mcp_env_overrides(
+            cfg.mcp,
+            disable_env_var="DCF_BUILDER_DISABLE_MCP",
+        )
 
         if not cfg.search.api_key:
             if cfg.search.provider == "tavily":
@@ -188,37 +197,18 @@ def _apply_model_profile(model: ModelConfig) -> None:
         model.thinking = profile.thinking
 
 
-def enabled_mcp_server_configs(cfg: Config) -> dict[str, dict]:
+def enabled_mcp_server_configs(
+    cfg: Config,
+    *,
+    server_names: set[str] | None = None,
+) -> dict[str, dict]:
     """Return MultiServerMCPClient-ready server configs."""
-    server_configs: dict[str, dict] = {}
-    for name, srv in cfg.mcp.items():
-        if not srv.url:
-            continue
-        entry: dict = {
-            "url": srv.url.rstrip("/"),
-            "transport": srv.transport,
-        }
-        if name.startswith("ifind-"):
-            headers = ifind_auth_headers()
-            if headers:
-                entry["headers"] = headers
-        server_configs[name] = entry
-    return server_configs
+    return _shared_enabled_mcp_server_configs(cfg, server_names=server_names)
 
 
 def ifind_auth_headers() -> dict[str, str]:
     """Return the shared iFind MCP Authorization header from environment."""
-    shared_auth = os.getenv("IFIND_MCP_AUTHORIZATION")
-    if shared_auth:
-        return {"Authorization": shared_auth}
-    shared_token = os.getenv("IFIND_MCP_TOKEN")
-    if shared_token:
-        return {"Authorization": f"Bearer {shared_token}"}
-    return {}
-
-
-def _env_slug(server_name: str) -> str:
-    return server_name.upper().replace("-", "_")
+    return _shared_ifind_auth_headers()
 
 
 def _model_api_key_env_names(base_url: str) -> list[str]:

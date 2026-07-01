@@ -18,6 +18,7 @@ MODEL_GATEWAY_API_KEY=
 IFIND_MCP_TOKEN=
 # 或者直接传 Authorization 原文
 IFIND_MCP_AUTHORIZATION=
+MX_DS_MCP_API_KEY=
 ```
 
 每个 iFind server 支持单独覆盖 URL/transport，但不支持单独 key：
@@ -25,9 +26,11 @@ IFIND_MCP_AUTHORIZATION=
 ```bash
 IFIND_NEWS_MCP_URL=...
 IFIND_NEWS_MCP_TRANSPORT=streamable_http
+MX_DS_MCP_URL=https://mxapi.eastmoney.com/mxds/mcp
+MX_DS_MCP_TRANSPORT=streamable-http
 ```
 
-已配置的 MCP server 包括 `ifind-stock`、`ifind-fund`、`ifind-edb`、`ifind-news`、`ifind-bond`、`ifind-global-stock`、`ifind-index`。
+已配置的 MCP server 包括 `ifind-stock`、`ifind-fund`、`ifind-edb`、`ifind-news`、`ifind-bond`、`ifind-global-stock`、`ifind-index`、`mx-ds-mcp`。可用 `config.yaml` 的 `mcp_tool_groups.default.servers` 收窄本 agent 可用的 MCP server。
 
 ## 运行
 

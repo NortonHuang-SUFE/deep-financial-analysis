@@ -43,7 +43,14 @@ IFIND_MCP_TOKEN=...
 IFIND_MCP_AUTHORIZATION=...
 ```
 
-`config.yaml` 只保留 MCP URL 和 transport，不保存 token/header。
+东方财富妙想 MX DS MCP 配置为 `mx-ds-mcp`，同样只从 `.env` 读取凭证：
+
+```bash
+MX_DS_MCP_API_KEY=...
+```
+
+`config.yaml` 只保留 MCP URL、transport、非敏感 header 占位和 tool group
+allowlist，不保存真实 token/header。
 
 ## 输出目录
 

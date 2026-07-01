@@ -38,6 +38,8 @@ from single_stock_coverage_agent.agent_registry import (  # noqa: E402
     create_registered_agent,
     describe_agent,
     load_agent_registry,
+    mcp_tool_group_names,
+    mcp_tool_group_server_names,
 )
 from single_stock_coverage_agent.config import (  # noqa: E402
     enabled_mcp_server_configs,
@@ -93,12 +95,42 @@ async def _load_mcp_tools_from_config(server_configs: dict) -> list:
     )
 
 
-async def _get_mcp_tools(cfg) -> list:
-    server_configs = enabled_mcp_server_configs(cfg)
+async def _get_mcp_tools(
+    cfg,
+    *,
+    server_names: set[str],
+    group_name: str,
+) -> list:
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
     tools = await _load_mcp_tools_from_config(server_configs)
     if tools:
-        print(f"INFO: Loaded {len(tools)} MCP tool(s) from: {list(server_configs)}")
+        print(
+            f"INFO: Loaded {len(tools)} MCP tool(s) for group '{group_name}' "
+            f"from: {list(server_configs)}"
+        )
     return tools
+
+
+async def _get_mcp_tool_groups(cfg, registry, agent_name: str) -> dict[str, list]:
+    tool_groups: dict[str, list] = {}
+    all_server_names = list(cfg.mcp)
+    for group_name in mcp_tool_group_names(registry):
+        if not agent_uses_tool_group(registry, agent_name, group_name):
+            continue
+        server_names = mcp_tool_group_server_names(
+            registry,
+            group_name,
+            all_server_names,
+        )
+        if not server_names:
+            tool_groups[group_name] = []
+            continue
+        tool_groups[group_name] = await _get_mcp_tools(
+            cfg,
+            server_names=server_names,
+            group_name=group_name,
+        )
+    return tool_groups
 
 
 def _build_model(cfg):
@@ -174,10 +206,14 @@ async def _create_agent(agent_name: str):
 
     cfg = load_config()
     model = _build_model(cfg)
-    needs_mcp = agent_uses_tool_group(registry, agent_name, "mcp_tools")
-    mcp_tools = []
+    mcp_group_names = mcp_tool_group_names(registry)
+    needs_mcp = any(
+        agent_uses_tool_group(registry, agent_name, group_name)
+        for group_name in mcp_group_names
+    )
+    mcp_tool_groups: dict[str, list] = {}
     if needs_mcp and os.getenv("SINGLE_STOCK_COVERAGE_DISABLE_MCP") != "1":
-        mcp_tools = await _get_mcp_tools(cfg)
+        mcp_tool_groups = await _get_mcp_tool_groups(cfg, registry, agent_name)
 
     backend_cache: dict[str, object] = {}
 
@@ -188,7 +224,7 @@ async def _create_agent(agent_name: str):
             )
         return backend_cache[name]
 
-    tool_resolver = ToolGroupResolver(mcp_tools=mcp_tools)
+    tool_resolver = ToolGroupResolver(mcp_tool_groups=mcp_tool_groups)
     middleware = [
         make_concurrency_limit_middleware(WORKSPACE_ROOT),
         _make_tool_error_middleware(),
@@ -206,9 +242,17 @@ async def _create_agent(agent_name: str):
         f"INFO: Single Stock Coverage agent '{agent_name}' ready; "
         f"tool groups: {agent_config['tool_groups']}; "
         f"subagents: {agent_config['subagents']}; "
-        f"backend: {_backend_type_for_agent(agent_name)}; MCP: {len(mcp_tools)}."
+        f"backend: {_backend_type_for_agent(agent_name)}; "
+        f"MCP: {_mcp_group_counts(mcp_tool_groups)}."
     )
     return runnable
+
+
+def _mcp_group_counts(mcp_tool_groups: dict[str, list]) -> dict[str, int]:
+    return {
+        group_name: len(tools)
+        for group_name, tools in sorted(mcp_tool_groups.items())
+    }
 
 
 def _uses_local_shell_backend(agent_name: str) -> bool:

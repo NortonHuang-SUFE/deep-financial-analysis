@@ -41,6 +41,24 @@ mcp:
   ifind-global-stock:
     url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-global-stock-mcp"
     transport: "streamable_http"
+  mx-ds-mcp:
+    url: "https://mxapi.eastmoney.com/mxds/mcp"
+    transport: "streamable-http"
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+
+mcp_tool_groups:
+  dcf_builder:
+    servers: enabled
+  assumption_researcher:
+    servers:
+      - ifind-stock
+      - ifind-edb
+      - ifind-news
+      - ifind-index
+      - mx-ds-mcp
 
 search:
   provider: "none"

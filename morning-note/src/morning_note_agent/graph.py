@@ -22,6 +22,7 @@ from financial_agent_runtime import (
     ensure_general_purpose_subagent_disabled,
     load_and_register_mcp_tools,
     make_concurrency_limit_middleware,
+    mcp_tool_group_server_names,
     normalize_openai_compatible_base_url,
 )
 
@@ -115,7 +116,12 @@ async def _load_mcp_tools_from_config(server_configs: dict) -> list:
 
 
 async def _get_mcp_tools(cfg) -> list:
-    server_configs = enabled_mcp_server_configs(cfg)
+    server_names = mcp_tool_group_server_names(
+        cfg.mcp_tool_groups,
+        "default",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
     tools = await _load_mcp_tools_from_config(server_configs)
     if tools:
         print(f"INFO: Loaded {len(tools)} MCP tool(s) from: {list(server_configs)}")

@@ -18,6 +18,7 @@ MODEL_GATEWAY_API_KEY=...
 DASHSCOPE_API_KEY=...
 IFIND_MCP_TOKEN=...
 IFIND_MCP_AUTHORIZATION=...
+MX_DS_MCP_API_KEY=...
 ```
 
 iFind 鉴权只支持共享 key；单 server 只允许覆盖 URL/transport，例如：
@@ -25,6 +26,8 @@ iFind 鉴权只支持共享 key；单 server 只允许覆盖 URL/transport，例
 ```bash
 IFIND_EDB_MCP_URL=https://example.test/mcp
 IFIND_EDB_MCP_TRANSPORT=streamable_http
+MX_DS_MCP_URL=https://mxapi.eastmoney.com/mxds/mcp
+MX_DS_MCP_TRANSPORT=streamable-http
 ```
 
 ## MCP
@@ -38,6 +41,10 @@ IFIND_EDB_MCP_TRANSPORT=streamable_http
 - `ifind-bond`
 - `ifind-global-stock`
 - `ifind-index`
+- `mx-ds-mcp`
+
+可用 `config.yaml` 的 `mcp_tool_groups.default.servers` 收窄本 agent 可用的
+MCP server。
 
 如需本地导入或测试时禁用 MCP：
 

@@ -20,9 +20,16 @@
 groups:
   # Whole 同花顺 / iFinD service treated as one shared budget.
   ifind:
-    max_concurrency: 2        # 1 = fully serial; >1 = bounded parallel
+    max_concurrency: 5        # 1 = fully serial; >1 = bounded parallel
     mcp_servers:              # globs matched against the MCP server name
       - "ifind-*"
+
+  # Eastmoney 妙想 MX data service. Keep it separate from iFind so each
+  # provider has its own independent back-pressure budget.
+  mx-ds:
+    max_concurrency: 2
+    mcp_servers:
+      - "mx-ds-mcp"
 
   # --- examples of future groups (commented out) ---------------------------
   # A different provider — independent budget, just another group:

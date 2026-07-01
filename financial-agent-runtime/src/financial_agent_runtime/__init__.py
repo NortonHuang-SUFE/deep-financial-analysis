@@ -21,6 +21,20 @@ from .concurrency import (
     register_limited_tools,
     resolve_tool_group,
 )
+from .mcp_config import (
+    MCPServerConfig,
+    MCPToolGroupConfig,
+    MX_DS_MCP_SERVER_NAME,
+    MX_DS_MCP_URL,
+    apply_mcp_env_overrides,
+    default_mcp_tool_groups,
+    enabled_mcp_server_configs,
+    ifind_auth_headers,
+    mcp_server_names_from_patterns,
+    mcp_servers_from_yaml_data,
+    mcp_tool_group_server_names,
+    mx_ds_auth_headers,
+)
 
 
 DEFAULT_DAYTONA_FILE_STORAGE_ROOT = "/home/daytona/financial-analysis"
@@ -38,20 +52,32 @@ _TIMESTAMP_DIR_RE = re.compile(r"\d{8}-\d{6}(?:-\d+)?")
 
 __all__ = [
     "DEFAULT_DAYTONA_FILE_STORAGE_ROOT",
+    "MCPServerConfig",
+    "MCPToolGroupConfig",
+    "MX_DS_MCP_SERVER_NAME",
+    "MX_DS_MCP_URL",
     "artifact_exists",
+    "apply_mcp_env_overrides",
     "backend_is_daytona",
     "build_backend",
     "contains_task_timestamp_dir",
     "copy_artifact",
+    "default_mcp_tool_groups",
     "ensure_artifact_dir",
     "ensure_general_purpose_subagent_disabled",
+    "enabled_mcp_server_configs",
     "file_storage_root",
+    "ifind_auth_headers",
     "list_artifact_dir",
     "load_and_register_mcp_tools",
     "load_tool_concurrency_config",
     "make_concurrency_limit_middleware",
     "materialize_file_artifact",
     "mirror_skills_into_backend",
+    "mcp_server_names_from_patterns",
+    "mcp_servers_from_yaml_data",
+    "mcp_tool_group_server_names",
+    "mx_ds_auth_headers",
     "normalize_openai_compatible_base_url",
     "read_bytes_artifact",
     "read_text_artifact",

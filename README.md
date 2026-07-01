@@ -128,6 +128,9 @@ MODEL_MAX_TOKENS=16000
 # 二选一
 IFIND_MCP_TOKEN=...
 IFIND_MCP_AUTHORIZATION=Bearer ...
+
+# 已有 iFind MCP 项目可选：东方财富妙想 MX DS MCP
+MX_DS_MCP_API_KEY=...
 ```
 
 同花顺 iFind MCP URL 已写入各子项目 `config.yaml`：
@@ -142,7 +145,15 @@ IFIND_MCP_AUTHORIZATION=Bearer ...
 | `ifind-global-stock` | `https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-global-stock-mcp` |
 | `ifind-index` | `https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-index-mcp` |
 
-外部工具并发限制写在工作区根目录的 `tool-concurrency.yaml`。每个 group 是一个共享并发配额：当组内在途调用数达到 `max_concurrency`，后续调用排队串行执行。默认把所有 `ifind-*` 归为一个 `ifind` 组（上限 2），避免 orchestrator 并行派发多个子 agent 时打爆同花顺。可在该文件里改阈值、加 group，或用 `tools:` 通配符把具名工具（如 `web_search`）纳入同一配额；该限制是进程级共享的。文件不存在则不做任何限制。
+已有 `ifind-*` MCP 的子项目也配置了东方财富妙想 MX DS MCP（`DCF-builder`、`morning-note`、`industry-ananlysis`、`sector`、`screen`、`thesis`、`single-stock-coverage`）：
+
+| Server | URL |
+|---|---|
+| `mx-ds-mcp` | `https://mxapi.eastmoney.com/mxds/mcp` |
+
+`mx-ds-mcp` 使用 `.env` 中的 `MX_DS_MCP_API_KEY` 作为 `em_api_key` header。`single-stock-coverage/agents/registry.yaml` 将 MCP 拆成 `ifind_mcp_tools` 与 `mx_ds_mcp_tools` 两个 tool group；其它 standalone agent 通过各自 `config.yaml` 的 `mcp_tool_groups.default.servers` 收窄可用 MCP server，`DCF-builder` 额外区分 parent 与 `assumption_researcher` 两组。
+
+外部工具并发限制写在工作区根目录的 `tool-concurrency.yaml`。每个 group 是一个共享并发配额：当组内在途调用数达到 `max_concurrency`，后续调用排队串行执行。默认把所有 `ifind-*` 归为一个 `ifind` 组（上限 5），把 `mx-ds-mcp` 归为独立的 `mx-ds` 组（上限 2），避免 orchestrator 并行派发多个子 agent 时打爆外部服务。可在该文件里改阈值、加 group，或用 `tools:` 通配符把具名工具（如 `web_search`）纳入同一配额；该限制是进程级共享的。文件不存在则不做任何限制。
 
 运行：
 

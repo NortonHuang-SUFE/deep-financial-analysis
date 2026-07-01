@@ -43,7 +43,7 @@ model:
 `MODEL_NAME`, `MODEL_MAX_TOKENS`, and `MODEL_THINKING` still work as direct
 overrides when you need a one-off run.
 
-## iFind MCP Key
+## MCP Keys
 
 iFind uses the same key across all configured iFind MCP servers. Put it once in
 the workspace root `../.env`:
@@ -62,6 +62,16 @@ IFIND_MCP_AUTHORIZATION=
 
 Do not put iFind keys in `config.yaml`; it contains only safe MCP URLs and
 non-secret defaults.
+
+Eastmoney MX DS MCP is configured as `mx-ds-mcp` anywhere this project already
+uses iFind MCP. Put its credential in the same workspace `.env`:
+
+```bash
+MX_DS_MCP_API_KEY=
+```
+
+`config.yaml` keeps parent and assumption-researcher MCP allowlists under
+`mcp_tool_groups`.
 
 ## Test
 

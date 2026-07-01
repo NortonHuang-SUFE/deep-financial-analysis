@@ -75,15 +75,16 @@ def test_morning_note_disables_general_purpose_task_tool(monkeypatch, tmp_path):
 
 
 def test_morning_note_prompt_forbids_general_purpose_subagent():
-    prompt = (PROJECT_ROOT / "agents" / "morning-note.md").read_text(
-        encoding="utf-8"
-    )
+    prompt = (PROJECT_ROOT / "agents" / "morning-note.md").read_text(encoding="utf-8")
     skill = (PROJECT_ROOT / "skills" / "morning-note" / "SKILL.md").read_text(
         encoding="utf-8"
     )
 
     assert "禁止调用或请求 `general-purpose` subagent" in prompt
     assert "禁止调用或请求 `general-purpose` subagent" in skill
+    assert "妙想 MX DS" in prompt
+    assert "至少使用一次妙想" in prompt
+    assert "妙想 MX DS" in skill
 
 
 def test_morning_note_graph_uses_shared_general_purpose_disable_helper(monkeypatch):
@@ -99,9 +100,7 @@ def test_morning_note_graph_uses_shared_general_purpose_disable_helper(monkeypat
 
 
 def test_morning_note_prompt_and_runtime_define_artifact_root():
-    prompt = (PROJECT_ROOT / "agents" / "morning-note.md").read_text(
-        encoding="utf-8"
-    )
+    prompt = (PROJECT_ROOT / "agents" / "morning-note.md").read_text(encoding="utf-8")
     skill = (PROJECT_ROOT / "skills" / "morning-note" / "SKILL.md").read_text(
         encoding="utf-8"
     )
@@ -114,7 +113,55 @@ def test_morning_note_prompt_and_runtime_define_artifact_root():
     cfg = morning_graph.load_config()
     context = morning_graph._runtime_context_prompt(cfg)
     assert (
-        "Artifact root: if the task description provides an output directory"
-        in context
+        "Artifact root: if the task description provides an output directory" in context
     )
     assert "do not create your own new top-level out/<timestamp>/ folder" in context
+
+
+def test_morning_note_config_includes_mx_ds_mcp(monkeypatch, tmp_path):
+    import financial_agent_runtime as runtime
+    from morning_note_agent.config import enabled_mcp_server_configs, load_config
+
+    for env_name in [
+        "IFIND_MCP_TOKEN",
+        "MX_DS_MCP_API_KEY",
+        "MX_DS_MCP_URL",
+        "MX_DS_MCP_TRANSPORT",
+    ]:
+        monkeypatch.delenv(env_name, raising=False)
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  ifind-news:
+    url: https://news.example/mcp
+    transport: streamable_http
+  mx-ds-mcp:
+    url: https://mxapi.eastmoney.com/mxds/mcp
+    transport: streamable-http
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+mcp_tool_groups:
+  default:
+    servers:
+      - mx-ds-mcp
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
+
+    cfg = load_config(str(config_path))
+    server_names = runtime.mcp_tool_group_server_names(
+        cfg.mcp_tool_groups,
+        "default",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
+
+    assert set(server_configs) == {"mx-ds-mcp"}
+    assert server_configs["mx-ds-mcp"]["transport"] == "streamable_http"
+    assert server_configs["mx-ds-mcp"]["headers"] == {"em_api_key": "mx-key"}
+    assert cfg.mcp["mx-ds-mcp"].connect_timeout == 10

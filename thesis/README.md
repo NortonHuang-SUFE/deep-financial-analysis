@@ -16,6 +16,7 @@ MODEL_GATEWAY_API_KEY=...
 IFIND_MCP_TOKEN=...
 # 或
 IFIND_MCP_AUTHORIZATION="Bearer ..."
+MX_DS_MCP_API_KEY=...
 ```
 
 iFind 鉴权只支持全局共享 key；单 server 可覆盖 URL/transport，例如：
@@ -23,7 +24,12 @@ iFind 鉴权只支持全局共享 key；单 server 可覆盖 URL/transport，例
 ```bash
 IFIND_STOCK_MCP_URL=https://example.test/mcp
 IFIND_STOCK_MCP_TRANSPORT=streamable_http
+MX_DS_MCP_URL=https://mxapi.eastmoney.com/mxds/mcp
+MX_DS_MCP_TRANSPORT=streamable-http
 ```
+
+`mx-ds-mcp` 随已有 iFind MCP 配置一起启用。可用 `config.yaml` 的
+`mcp_tool_groups.default.servers` 收窄本 agent 可用的 MCP server。
 
 调试开关：
 

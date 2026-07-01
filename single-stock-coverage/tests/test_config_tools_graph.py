@@ -3,6 +3,7 @@ import importlib
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import single_stock_coverage_agent.config as config_module
 from single_stock_coverage_agent.agent_registry import (
@@ -10,6 +11,8 @@ from single_stock_coverage_agent.agent_registry import (
     agent_uses_tool_group,
     describe_agent,
     load_agent_registry,
+    mcp_tool_group_names,
+    mcp_tool_group_server_names,
 )
 from single_stock_coverage_agent.config import (
     PROJECT_ROOT,
@@ -408,16 +411,35 @@ def _nested_a_share_model_input() -> dict:
                             "2027E: -5.5亿",
                             "2028E: -6.5亿",
                         ]
-                    }
+                    },
                 },
             },
             "balance_sheet": {
                 "assumption_requirements": [
-                    {"name": "AR Days (DSO)", "forecast_values": {"2026E": 60, "2027E": 58, "2028E": 55}},
-                    {"name": "Inventory Days (DIO)", "forecast_values": {"2026E": 100, "2027E": 95, "2028E": 90}},
-                    {"name": "AP Days (DPO)", "forecast_values": {"2026E": 52, "2027E": 50, "2028E": 50}},
-                    {"name": "CapEx as % of Revenue", "forecast_values": {"2026E": 6, "2027E": 5, "2028E": 4}},
-                    {"name": "Dividend Payout Ratio", "forecast_values": {"2026E": "35% of NI", "2027E": "35% of NI", "2028E": "35% of NI"}},
+                    {
+                        "name": "AR Days (DSO)",
+                        "forecast_values": {"2026E": 60, "2027E": 58, "2028E": 55},
+                    },
+                    {
+                        "name": "Inventory Days (DIO)",
+                        "forecast_values": {"2026E": 100, "2027E": 95, "2028E": 90},
+                    },
+                    {
+                        "name": "AP Days (DPO)",
+                        "forecast_values": {"2026E": 52, "2027E": 50, "2028E": 50},
+                    },
+                    {
+                        "name": "CapEx as % of Revenue",
+                        "forecast_values": {"2026E": 6, "2027E": 5, "2028E": 4},
+                    },
+                    {
+                        "name": "Dividend Payout Ratio",
+                        "forecast_values": {
+                            "2026E": "35% of NI",
+                            "2027E": "35% of NI",
+                            "2028E": "35% of NI",
+                        },
+                    },
                 ]
             },
             "cash_flow": {},
@@ -441,7 +463,11 @@ def _nested_a_share_model_input() -> dict:
 
 
 def _write_model_source_files(model_dir, payload: dict) -> None:
-    financial_facts = payload.get("financial_facts") if isinstance(payload.get("financial_facts"), dict) else payload
+    financial_facts = (
+        payload.get("financial_facts")
+        if isinstance(payload.get("financial_facts"), dict)
+        else payload
+    )
     context_packet = payload.get("task2_context_packet")
     if not isinstance(context_packet, dict):
         context_packet = {
@@ -482,7 +508,9 @@ def _write_model_source_files(model_dir, payload: dict) -> None:
     )
     revenue_build_spec = payload.get("revenue_build_spec")
     if not isinstance(revenue_build_spec, dict):
-        income_spec = (statement_pack.get("statement_specs") or {}).get("income_statement")
+        income_spec = (statement_pack.get("statement_specs") or {}).get(
+            "income_statement"
+        )
         if isinstance(income_spec, dict):
             revenue_build_spec = income_spec.get("revenue_build_spec")
     if isinstance(revenue_build_spec, dict):
@@ -531,6 +559,13 @@ def _clear_env(monkeypatch):
         "ALIBABA_API_KEY",
         "IFIND_MCP_AUTHORIZATION",
         "IFIND_MCP_TOKEN",
+        "MX_DS_MCP_API_KEY",
+        "MX_DS_MCP_EM_API_KEY",
+        "EASTMONEY_MX_DS_MCP_API_KEY",
+        "MX_DS_MCP_URL",
+        "MX_DS_MCP_TRANSPORT",
+        "MX_DS_MCP_MCP_URL",
+        "MX_DS_MCP_MCP_TRANSPORT",
         "AGENT_FILE_STORAGE_ROOT",
         "SINGLE_STOCK_COVERAGE_DISABLE_MCP",
         "SINGLE_STOCK_COVERAGE_TEST_MODE",
@@ -551,6 +586,7 @@ def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
     assert cfg.model.default == "qwen-3.7-max"
     assert cfg.output.dir == "./out/coverage"
     assert "ifind-stock" in cfg.mcp
+    assert "mx-ds-mcp" in cfg.mcp
 
 
 def test_workspace_env_and_process_env_override_ifind_auth(monkeypatch, tmp_path):
@@ -584,6 +620,79 @@ mcp:
     assert server_configs["ifind-stock"]["headers"] == {
         "Authorization": "from-process-env"
     }
+
+
+def test_mx_ds_mcp_config_uses_env_header_and_nested_servers(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    workspace_env = tmp_path / ".env"
+    workspace_env.write_text("MX_DS_MCP_API_KEY=from-workspace-env\n", encoding="utf-8")
+    monkeypatch.setattr(config_module, "WORKSPACE_ENV_PATH", workspace_env)
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  servers:
+    ifind-stock:
+      url: "https://example.test/stock"
+      transport: "streamable_http"
+    mx-ds-mcp:
+      url: "https://mxapi.eastmoney.com/mxds/mcp"
+      transport: "streamable-http"
+      connectTimeout: 10
+      timeout: 120
+      headers:
+        em_api_key: "${MX_DS_MCP_API_KEY}"
+""",
+        encoding="utf-8",
+    )
+
+    cfg = load_config(str(config_path))
+    assert cfg.mcp["mx-ds-mcp"].transport == "streamable_http"
+    assert cfg.mcp["mx-ds-mcp"].connect_timeout == 10
+
+    server_configs = enabled_mcp_server_configs(cfg)
+    assert server_configs["mx-ds-mcp"] == {
+        "url": "https://mxapi.eastmoney.com/mxds/mcp",
+        "transport": "streamable_http",
+        "headers": {"em_api_key": "from-workspace-env"},
+        "timeout": 120,
+    }
+    assert set(enabled_mcp_server_configs(cfg, server_names={"mx-ds-mcp"})) == {
+        "mx-ds-mcp"
+    }
+
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "from-process-env")
+    cfg = load_config(str(config_path))
+    server_configs = enabled_mcp_server_configs(cfg)
+    assert server_configs["mx-ds-mcp"]["headers"] == {"em_api_key": "from-process-env"}
+
+
+def test_mx_ds_mcp_url_and_transport_env_aliases(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    monkeypatch.setattr(config_module, "WORKSPACE_ENV_PATH", tmp_path / "missing.env")
+    monkeypatch.setenv("MX_DS_MCP_URL", "https://example.test/mx")
+    monkeypatch.setenv("MX_DS_MCP_TRANSPORT", "streamable-http")
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "env-key")
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  mx-ds-mcp:
+    url: ""
+    transport: "sse"
+    headers:
+      em_api_key: ""
+""",
+        encoding="utf-8",
+    )
+
+    cfg = load_config(str(config_path))
+    server_configs = enabled_mcp_server_configs(cfg)
+    assert server_configs["mx-ds-mcp"]["url"] == "https://example.test/mx"
+    assert server_configs["mx-ds-mcp"]["transport"] == "streamable_http"
+    assert server_configs["mx-ds-mcp"]["headers"] == {"em_api_key": "env-key"}
 
 
 def test_coverage_run_and_artifact_tools(monkeypatch, tmp_path):
@@ -1008,9 +1117,12 @@ def test_statement_json_tools_validate_write_and_read_context(monkeypatch, tmp_p
     assert (run_dir / "02_financial_model" / "income_statement_spec.json").exists()
     assert (run_dir / "02_financial_model" / "revenue_build_spec.json").exists()
 
-    assert json.loads(
-        tools.validate_balance_sheet_json.invoke({"run_dir": str(run_dir)})
-    )["status"] == "PASS"
+    assert (
+        json.loads(tools.validate_balance_sheet_json.invoke({"run_dir": str(run_dir)}))[
+            "status"
+        ]
+        == "PASS"
+    )
     tools.write_balance_sheet_json.invoke(
         {
             "ticker": "EXM",
@@ -1020,9 +1132,12 @@ def test_statement_json_tools_validate_write_and_read_context(monkeypatch, tmp_p
     )
     assert (run_dir / "02_financial_model" / "balance_sheet_spec.json").exists()
 
-    assert json.loads(
-        tools.validate_cash_flow_json.invoke({"run_dir": str(run_dir)})
-    )["status"] == "PASS"
+    assert (
+        json.loads(tools.validate_cash_flow_json.invoke({"run_dir": str(run_dir)}))[
+            "status"
+        ]
+        == "PASS"
+    )
     tools.write_cash_flow_json.invoke(
         {
             "ticker": "EXM",
@@ -1111,9 +1226,18 @@ def test_statement_tools_handle_nested_financial_facts_modeler_keys(
         raise AssertionError(key)
 
     model_dir = run_dir / "02_financial_model"
-    assert historical_value(model_dir / "income_statement_spec.json", "revenue_total") == 1581.79
-    assert historical_value(model_dir / "balance_sheet_spec.json", "total_assets") == 2362.69
-    assert historical_value(model_dir / "cash_flow_statement_spec.json", "cfo_total") == 352.69
+    assert (
+        historical_value(model_dir / "income_statement_spec.json", "revenue_total")
+        == 1581.79
+    )
+    assert (
+        historical_value(model_dir / "balance_sheet_spec.json", "total_assets")
+        == 2362.69
+    )
+    assert (
+        historical_value(model_dir / "cash_flow_statement_spec.json", "cfo_total")
+        == 352.69
+    )
 
 
 def test_resolve_task2_handoff_reuses_existing_task1_run(monkeypatch, tmp_path):
@@ -1152,7 +1276,9 @@ def test_verify_task2_artifacts_blocks_wrong_root_statement(monkeypatch, tmp_pat
     _clear_env(monkeypatch)
     tools._ACTIVE_RUNS.clear()
     monkeypatch.setattr(tools, "_workspace_root", lambda: tmp_path)
-    monkeypatch.setattr(tools, "_project_root", lambda: tmp_path / "single-stock-coverage")
+    monkeypatch.setattr(
+        tools, "_project_root", lambda: tmp_path / "single-stock-coverage"
+    )
 
     run_dir = tmp_path / "out" / "coverage" / "us-exm" / "runs" / "20260604-120000"
     _write_task1_fixture(run_dir)
@@ -1174,11 +1300,16 @@ def test_verify_task2_artifacts_blocks_wrong_root_statement(monkeypatch, tmp_pat
 
     verification = json.loads(
         tools.verify_task2_artifacts.invoke(
-            {"run_dir": "out/coverage/us-exm/runs/20260604-120000", "stage": "statements"}
+            {
+                "run_dir": "out/coverage/us-exm/runs/20260604-120000",
+                "stage": "statements",
+            }
         )
     )
     assert verification["status"] == "FAIL"
-    assert any(item["category"] == "Wrong Artifact Root" for item in verification["critical"])
+    assert any(
+        item["category"] == "Wrong Artifact Root" for item in verification["critical"]
+    )
     assert verification["wrong_root_artifacts"][0]["canonical_path"].startswith(
         "out/coverage/us-exm/runs/20260604-120000"
     )
@@ -1241,9 +1372,7 @@ def test_statement_validation_allows_supplemental_parent_canonical_key():
     validation = tools._validate_statement_payload(payload, "cash_flow")
     assert validation["status"] == "PASS"
     assert not [
-        item
-        for item in validation["warnings"]
-        if "asset_impairment" in item["issue"]
+        item for item in validation["warnings"] if "asset_impairment" in item["issue"]
     ]
 
 
@@ -1336,7 +1465,9 @@ def test_reconcile_statement_specs_preserves_existing_financial_context(
     )
     assert result["status"] == "PASS"
     preserved_facts = json.loads((model_dir / "financial_facts.json").read_text())
-    preserved_context = json.loads((model_dir / "task2_context_packet.json").read_text())
+    preserved_context = json.loads(
+        (model_dir / "task2_context_packet.json").read_text()
+    )
     assert preserved_facts["sources"] == ["financial_facts_modeler"]
     assert preserved_facts["historicals"][0]["revenue"] == 123
     assert preserved_context["custom_context"] == "preserve me"
@@ -1352,9 +1483,7 @@ def test_integrated_three_statement_builder_and_validator(monkeypatch, tmp_path)
     _write_model_source_files(run_dir / "02_financial_model", _minimal_model_input())
 
     result = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": str(run_dir)}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": str(run_dir)})
     )
     workbook_path = tmp_path / result["workbook_path"]
 
@@ -1379,7 +1508,9 @@ def test_integrated_three_statement_builder_and_validator(monkeypatch, tmp_path)
     assert wb["Checks"]["D9"].value.startswith("=")
     wb_values = openpyxl.load_workbook(workbook_path, data_only=True)
     revenue_total_row = result["row_map"]["revenue_build"]["revenue_total"]
-    assert wb_values["Revenue Build"].cell(row=revenue_total_row, column=4).value == 1050
+    assert (
+        wb_values["Revenue Build"].cell(row=revenue_total_row, column=4).value == 1050
+    )
     assert wb_values["Income Statement"]["D8"].value == 1050
     assert wb_values["Cash Flow Statement"]["D25"].value is not None
 
@@ -1408,9 +1539,7 @@ def test_integrated_builder_handles_nested_a_share_facts_and_three_year_forecast
     _write_model_source_files(model_dir, payload)
 
     result = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": str(run_dir)}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": str(run_dir)})
     )
     workbook_path = tmp_path / result["workbook_path"]
 
@@ -1442,41 +1571,73 @@ def test_integrated_builder_handles_nested_a_share_facts_and_three_year_forecast
         "FY2027E",
         "FY2028E",
     ]
-    assert [wb["Income Statement"].cell(row=8, column=col).value for col in range(3, 7)] == [
+    assert [
+        wb["Income Statement"].cell(row=8, column=col).value for col in range(3, 7)
+    ] == [
         33.1057,
         30.9761,
         86.4683,
         248.4185,
     ]
-    assert [wb["Assumptions"].cell(row=40, column=col).value for col in range(7, 10)] == [190, 180, 160]
-    assert [wb["Assumptions"].cell(row=42, column=col).value for col in range(7, 10)] == [160, 290, 420]
-    assert [wb["Assumptions"].cell(row=44, column=col).value for col in range(7, 10)] == [30, 40, 60]
-    assert [wb["Revenue Build"].cell(row=8, column=1).value, wb["Revenue Build"].cell(row=13, column=1).value, wb["Revenue Build"].cell(row=18, column=1).value] == [
+    assert [
+        wb["Assumptions"].cell(row=40, column=col).value for col in range(7, 10)
+    ] == [190, 180, 160]
+    assert [
+        wb["Assumptions"].cell(row=42, column=col).value for col in range(7, 10)
+    ] == [160, 290, 420]
+    assert [
+        wb["Assumptions"].cell(row=44, column=col).value for col in range(7, 10)
+    ] == [30, 40, 60]
+    assert [
+        wb["Revenue Build"].cell(row=8, column=1).value,
+        wb["Revenue Build"].cell(row=13, column=1).value,
+        wb["Revenue Build"].cell(row=18, column=1).value,
+    ] == [
         "800G Revenue Revenue",
         "1.6T Revenue Revenue",
         "Other Revenue Revenue",
     ]
     revenue_total_row = result["row_map"]["revenue_build"]["revenue_total"]
-    assert wb["Revenue Build"].cell(row=revenue_total_row, column=7).value == "=SUM(G8,G13,G18,G23)"
-    assert wb["Revenue Build"].cell(row=revenue_total_row, column=8).value == "=SUM(H8,H13,H18,H23)"
-    assert wb["Revenue Build"].cell(row=revenue_total_row, column=9).value == "=SUM(I8,I13,I18,I23)"
-    assert wb["Debt & Interest"]["F16"].value == '=IF(F12>MAX(F11*5,0.01),"CHECK SHORT-TERM RAW > TOTAL DEBT","OK")'
+    assert (
+        wb["Revenue Build"].cell(row=revenue_total_row, column=7).value
+        == "=SUM(G8,G13,G18,G23)"
+    )
+    assert (
+        wb["Revenue Build"].cell(row=revenue_total_row, column=8).value
+        == "=SUM(H8,H13,H18,H23)"
+    )
+    assert (
+        wb["Revenue Build"].cell(row=revenue_total_row, column=9).value
+        == "=SUM(I8,I13,I18,I23)"
+    )
+    assert (
+        wb["Debt & Interest"]["F16"].value
+        == '=IF(F12>MAX(F11*5,0.01),"CHECK SHORT-TERM RAW > TOTAL DEBT","OK")'
+    )
     wb_values = openpyxl.load_workbook(workbook_path, data_only=True)
     assert "Integrated 3-Statement Model" in wb_values["Cover"]["A1"].value
     assert wb_values["Cover"]["B17"].value == "PASS"
-    assert [wb_values["Cover"].cell(row=23, column=col).value for col in range(7, 10)] == [
+    assert [
+        wb_values["Cover"].cell(row=23, column=col).value for col in range(7, 10)
+    ] == [
         380,
         510,
         640,
     ]
     assert wb_values["Cover"]["A34"].value == "Workbook Navigation"
     assert wb_values["Cover"]["A50"].value == "Formatting Legend"
-    assert [wb_values["Revenue Build"].cell(row=revenue_total_row, column=col).value for col in range(7, 10)] == [
+    assert [
+        wb_values["Revenue Build"].cell(row=revenue_total_row, column=col).value
+        for col in range(7, 10)
+    ] == [
         380,
         510,
         640,
     ]
-    assert [wb_values["Income Statement"].cell(row=8, column=col).value for col in range(7, 10)] == [
+    assert [
+        wb_values["Income Statement"].cell(row=8, column=col).value
+        for col in range(7, 10)
+    ] == [
         380,
         510,
         640,
@@ -1484,7 +1645,9 @@ def test_integrated_builder_handles_nested_a_share_facts_and_three_year_forecast
     assert wb_values["Balance Sheet"]["F20"].value == 0.1493887
     assert wb_values["Debt & Interest"]["F11"].value == 0.1493887
     assert wb_values["Debt & Interest"]["F12"].value == 15.5258
-    assert wb_values["Debt & Interest"]["F16"].value == "CHECK SHORT-TERM RAW > TOTAL DEBT"
+    assert (
+        wb_values["Debt & Interest"]["F16"].value == "CHECK SHORT-TERM RAW > TOTAL DEBT"
+    )
     assert wb_values["DCF Inputs"]["F14"].value == 0.1493887
     assert wb["DCF Inputs"]["F10"].value.startswith("=IF(")
     assert wb_values["Income Statement"]["G22"].value is not None
@@ -1520,7 +1683,9 @@ def test_integrated_builder_uses_standalone_spec_driven_components(
                 "segment_id": "subscription",
                 "display_name": "Subscription",
                 "driver_type": "seat_count_x_arpu",
-                "historical": {"FY2023": {"revenue": 600, "cost": 210, "gross_profit": 390}},
+                "historical": {
+                    "FY2023": {"revenue": 600, "cost": 210, "gross_profit": 390}
+                },
                 "forecast_revenue": [
                     {"period": "FY2024E", "value": 660},
                     {"period": "FY2025E", "value": 720},
@@ -1530,7 +1695,9 @@ def test_integrated_builder_uses_standalone_spec_driven_components(
                 "segment_id": "services",
                 "display_name": "Services",
                 "driver_type": "utilization_x_rate",
-                "historical": {"FY2023": {"revenue": 250, "cost": 150, "gross_profit": 100}},
+                "historical": {
+                    "FY2023": {"revenue": 250, "cost": 150, "gross_profit": 100}
+                },
                 "forecast_revenue": [
                     {"period": "FY2024E", "value": 260},
                     {"period": "FY2025E", "value": 275},
@@ -1540,7 +1707,9 @@ def test_integrated_builder_uses_standalone_spec_driven_components(
                 "segment_id": "marketplace",
                 "display_name": "Marketplace",
                 "driver_type": "gmv_x_take_rate",
-                "historical": {"FY2023": {"revenue": 150, "cost": 40, "gross_profit": 110}},
+                "historical": {
+                    "FY2023": {"revenue": 150, "cost": 40, "gross_profit": 110}
+                },
                 "forecast_revenue": [
                     {"period": "FY2024E", "value": 130},
                     {"period": "FY2025E", "value": 155},
@@ -1557,9 +1726,7 @@ def test_integrated_builder_uses_standalone_spec_driven_components(
     _write_model_source_files(model_dir, payload)
 
     result = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": str(run_dir)}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": str(run_dir)})
     )
     workbook_path = tmp_path / result["workbook_path"]
 
@@ -1576,10 +1743,15 @@ def test_integrated_builder_uses_standalone_spec_driven_components(
     assert "800G Revenue" not in labels
     assert "1.6T Revenue" not in labels
     revenue_total_row = result["row_map"]["revenue_build"]["revenue_total"]
-    assert wb["Revenue Build"].cell(row=revenue_total_row, column=4).value == "=SUM(D8,D13,D18,D23)"
+    assert (
+        wb["Revenue Build"].cell(row=revenue_total_row, column=4).value
+        == "=SUM(D8,D13,D18,D23)"
+    )
 
     wb_values = openpyxl.load_workbook(workbook_path, data_only=True)
-    assert wb_values["Revenue Build"].cell(row=revenue_total_row, column=4).value == 1050
+    assert (
+        wb_values["Revenue Build"].cell(row=revenue_total_row, column=4).value == 1050
+    )
     assert wb_values["Income Statement"]["D8"].value == 1050
     validation = json.loads(
         tools.validate_integrated_three_statement_model.invoke(
@@ -1675,20 +1847,53 @@ def test_integrated_builder_consumes_five_component_spec_and_excludes_interim(
         "revenue_build_spec": {
             "statement_type": "revenue_build",
             "segments": [
-                {"segment_id": "raw", "display_name": "Raw Product", "historical": {"FY2024": {"revenue": 350, "cost": 180}, "FY2025": {"revenue": 380, "cost": 195}}},
-                {"segment_id": "trading", "display_name": "Trading Product", "historical": {"FY2024": {"revenue": 280, "cost": 270}, "FY2025": {"revenue": 300, "cost": 289}}},
-                {"segment_id": "processed", "display_name": "Processed Product", "historical": {"FY2024": {"revenue": 180, "cost": 90}, "FY2025": {"revenue": 200, "cost": 100}}},
-                {"segment_id": "power", "display_name": "Power Service", "historical": {"FY2024": {"revenue": 120, "cost": 95}, "FY2025": {"revenue": 140, "cost": 110}}},
-                {"segment_id": "other", "display_name": "Other Operations", "historical": {"FY2024": {"revenue": 70, "cost": 50}, "FY2025": {"revenue": 80, "cost": 60}}},
+                {
+                    "segment_id": "raw",
+                    "display_name": "Raw Product",
+                    "historical": {
+                        "FY2024": {"revenue": 350, "cost": 180},
+                        "FY2025": {"revenue": 380, "cost": 195},
+                    },
+                },
+                {
+                    "segment_id": "trading",
+                    "display_name": "Trading Product",
+                    "historical": {
+                        "FY2024": {"revenue": 280, "cost": 270},
+                        "FY2025": {"revenue": 300, "cost": 289},
+                    },
+                },
+                {
+                    "segment_id": "processed",
+                    "display_name": "Processed Product",
+                    "historical": {
+                        "FY2024": {"revenue": 180, "cost": 90},
+                        "FY2025": {"revenue": 200, "cost": 100},
+                    },
+                },
+                {
+                    "segment_id": "power",
+                    "display_name": "Power Service",
+                    "historical": {
+                        "FY2024": {"revenue": 120, "cost": 95},
+                        "FY2025": {"revenue": 140, "cost": 110},
+                    },
+                },
+                {
+                    "segment_id": "other",
+                    "display_name": "Other Operations",
+                    "historical": {
+                        "FY2024": {"revenue": 70, "cost": 50},
+                        "FY2025": {"revenue": 80, "cost": 60},
+                    },
+                },
             ],
         },
     }
     _write_model_source_files(model_dir, payload)
 
     result = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": str(run_dir)}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": str(run_dir)})
     )
     workbook_path = tmp_path / result["workbook_path"]
 
@@ -1719,7 +1924,8 @@ def test_integrated_builder_consumes_five_component_spec_and_excludes_interim(
     assert "1.6T Revenue" not in labels
     assert any(
         wb["Sources"].cell(row=row, column=1).value == "Q1-2026"
-        and wb["Sources"].cell(row=row, column=4).value == "Excluded from annual model columns"
+        and wb["Sources"].cell(row=row, column=4).value
+        == "Excluded from annual model columns"
         for row in range(1, wb["Sources"].max_row + 1)
     )
 
@@ -1747,9 +1953,7 @@ def test_integrated_validator_rejects_placeholder_shell_workbook(
     _write_model_source_files(model_dir, payload)
 
     result = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": str(run_dir)}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": str(run_dir)})
     )
     workbook_path = tmp_path / result["workbook_path"]
 
@@ -1779,7 +1983,10 @@ def test_integrated_validator_rejects_placeholder_shell_workbook(
     assert "Default Metadata" in categories
     assert "Missing Forecast Period" in categories
     assert "Placeholder Assumption" in categories
-    assert "Historical Values Missing" in categories or "Historical Value Mismatch" in categories
+    assert (
+        "Historical Values Missing" in categories
+        or "Historical Value Mismatch" in categories
+    )
 
 
 def test_integrated_validator_rejects_zero_workbook_debt_against_source(
@@ -1795,9 +2002,7 @@ def test_integrated_validator_rejects_zero_workbook_debt_against_source(
     _write_model_source_files(model_dir, payload)
 
     result = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": str(run_dir)}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": str(run_dir)})
     )
     workbook_path = tmp_path / result["workbook_path"]
 
@@ -1833,9 +2038,7 @@ def test_integrated_validator_rejects_missing_formula_cache(
     run_dir.mkdir(parents=True)
     _write_model_source_files(run_dir / "02_financial_model", _minimal_model_input())
     result = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": str(run_dir)}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": str(run_dir)})
     )
     workbook_path = tmp_path / result["workbook_path"]
 
@@ -1865,9 +2068,7 @@ def test_integrated_three_statement_validator_flags_missing_tab(monkeypatch, tmp
     run_dir.mkdir(parents=True)
     _write_model_source_files(run_dir / "02_financial_model", _minimal_model_input())
     result = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": str(run_dir)}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": str(run_dir)})
     )
     workbook_path = tmp_path / result["workbook_path"]
 
@@ -1896,9 +2097,7 @@ def test_integrated_three_statement_validator_flags_hardcode_and_cash_break(
     run_dir.mkdir(parents=True)
     _write_model_source_files(run_dir / "02_financial_model", _minimal_model_input())
     result = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": str(run_dir)}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": str(run_dir)})
     )
     workbook_path = tmp_path / result["workbook_path"]
 
@@ -2019,9 +2218,7 @@ def test_task2_artifact_flow_defaults_to_out_coverage_after_task1_fixture(
     assert "income_statement" in context["canonical_row_keys"]
 
     build = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": run["run_dir"]}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": run["run_dir"]})
     )
     assert build["status"] == "OK"
     assert build["workbook_path"].startswith(run["run_dir"])
@@ -2090,9 +2287,7 @@ def test_model_update_executor_tool_copies_prior_workbook_and_validates(
     prior_run.mkdir(parents=True)
     _write_model_source_files(prior_run / "02_financial_model", _minimal_model_input())
     prior_build = json.loads(
-        tools.build_integrated_three_statement_model.invoke(
-            {"run_dir": str(prior_run)}
-        )
+        tools.build_integrated_three_statement_model.invoke({"run_dir": str(prior_run)})
     )
     prior_workbook = tmp_path / prior_build["workbook_path"]
     assert prior_workbook.exists()
@@ -2149,6 +2344,23 @@ def test_model_update_executor_tool_copies_prior_workbook_and_validates(
 def test_agent_registry_exposes_task2_parallel_statement_context():
     registry = load_agent_registry()
 
+    assert mcp_tool_group_names(registry) == (
+        "mcp_tools",
+        "ifind_mcp_tools",
+        "mx_ds_mcp_tools",
+    )
+    all_server_names = ["ifind-stock", "ifind-news", "mx-ds-mcp"]
+    assert mcp_tool_group_server_names(
+        registry,
+        "ifind_mcp_tools",
+        all_server_names,
+    ) == {"ifind-stock", "ifind-news"}
+    assert mcp_tool_group_server_names(
+        registry,
+        "mx_ds_mcp_tools",
+        all_server_names,
+    ) == {"mx-ds-mcp"}
+
     root = describe_agent(registry, "single_stock_coverage")
     assert root["tool_groups"] == ["coverage_orchestration_tools"]
     assert root["tools"]["coverage_orchestration_tools"] == [
@@ -2163,7 +2375,13 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     ]
 
     task1 = describe_agent(registry, "task1_company_researcher")
-    assert task1["tool_groups"] == ["mcp_tools", "coverage_artifact_tools"]
+    assert task1["tool_groups"] == [
+        "ifind_mcp_tools",
+        "mx_ds_mcp_tools",
+        "coverage_artifact_tools",
+    ]
+    assert task1["tools"]["ifind_mcp_tools"] == ["<runtime MCP tools from ifind-*>"]
+    assert task1["tools"]["mx_ds_mcp_tools"] == ["<runtime MCP tools from mx-ds-mcp>"]
     assert task1["tools"]["coverage_artifact_tools"] == [
         "create_coverage_run_dir",
         "write_markdown_artifact",
@@ -2204,7 +2422,17 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     assert not agent_uses_tool_group(
         registry, "task2_financial_modeler", "mcp_tools", recursive=False
     )
-    assert agent_uses_tool_group(registry, "task2_financial_modeler", "mcp_tools")
+    assert not agent_uses_tool_group(registry, "task2_financial_modeler", "mcp_tools")
+    assert agent_uses_tool_group(
+        registry,
+        "task2_financial_modeler",
+        "ifind_mcp_tools",
+    )
+    assert agent_uses_tool_group(
+        registry,
+        "task2_financial_modeler",
+        "mx_ds_mcp_tools",
+    )
     assert not agent_uses_tool_group(
         registry, "task2_financial_modeler", "coverage_artifact_tools"
     )
@@ -2212,7 +2440,8 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
     financial_facts_modeler = describe_agent(registry, "financial_facts_modeler")
     assert financial_facts_modeler["parent"] == "task2_financial_modeler"
     assert financial_facts_modeler["tool_groups"] == [
-        "mcp_tools",
+        "ifind_mcp_tools",
+        "mx_ds_mcp_tools",
         "task2_financial_fact_artifact_tools",
     ]
     assert financial_facts_modeler["tools"]["task2_financial_fact_artifact_tools"] == [
@@ -2259,7 +2488,21 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         ]
     }
     assert bs_modeler["outputs"] == ["02_financial_model/balance_sheet_spec.json"]
-    assert not agent_uses_tool_group(registry, "bs_modeler", "mcp_tools", recursive=False)
+    assert not agent_uses_tool_group(
+        registry, "bs_modeler", "mcp_tools", recursive=False
+    )
+    assert not agent_uses_tool_group(
+        registry,
+        "bs_modeler",
+        "ifind_mcp_tools",
+        recursive=False,
+    )
+    assert not agent_uses_tool_group(
+        registry,
+        "bs_modeler",
+        "mx_ds_mcp_tools",
+        recursive=False,
+    )
 
     cf_modeler = describe_agent(registry, "cf_modeler")
     assert cf_modeler["parent"] == "task2_financial_modeler"
@@ -2273,9 +2516,7 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
             "statement-json-checks",
         ]
     }
-    assert cf_modeler["outputs"] == [
-        "02_financial_model/cash_flow_statement_spec.json"
-    ]
+    assert cf_modeler["outputs"] == ["02_financial_model/cash_flow_statement_spec.json"]
 
     workbook_builder = describe_agent(registry, "workbook_builder")
     assert workbook_builder["parent"] == "task2_financial_modeler"
@@ -2315,6 +2556,18 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         "mcp_tools",
         recursive=False,
     )
+    assert not agent_uses_tool_group(
+        registry,
+        "model_update_executor",
+        "ifind_mcp_tools",
+        recursive=False,
+    )
+    assert not agent_uses_tool_group(
+        registry,
+        "model_update_executor",
+        "mx_ds_mcp_tools",
+        recursive=False,
+    )
     assert model_update_executor["skills"] == {
         "single_stock_coverage": [
             "model-update",
@@ -2324,22 +2577,33 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         ]
     }
 
+    valuation = describe_agent(registry, "task3_valuation_analyst")
+    assert valuation["tool_groups"] == [
+        "ifind_mcp_tools",
+        "mx_ds_mcp_tools",
+        "coverage_artifact_tools",
+    ]
+    assert valuation["subagents"] == ["assumption_generator", "dcf_execution"]
+
+    assumption_generator = describe_agent(registry, "assumption_generator")
+    assert assumption_generator["tool_groups"] == [
+        "ifind_mcp_tools",
+        "mx_ds_mcp_tools",
+        "coverage_artifact_tools",
+    ]
+
 
 def test_statement_json_tool_groups_resolve_runtime_tools():
     resolver = ToolGroupResolver(mcp_tools=[])
 
     assert [
-        tool.name
-        for tool in resolver.resolve(("coverage_orchestration_tools",))
+        tool.name for tool in resolver.resolve(("coverage_orchestration_tools",))
     ] == [
         "create_coverage_run_dir",
         "update_run_manifest",
         "write_coverage_state",
     ]
-    assert [
-        tool.name
-        for tool in resolver.resolve(("statement_modeling_tools",))
-    ] == [
+    assert [tool.name for tool in resolver.resolve(("statement_modeling_tools",))] == [
         "read_statement_context",
         "validate_income_statement_json",
         "write_income_statement_json",
@@ -2358,12 +2622,13 @@ def test_statement_json_tool_groups_resolve_runtime_tools():
         "update_run_manifest",
     ]
     assert [
-        tool.name
-        for tool in resolver.resolve(("task2_financial_fact_artifact_tools",))
+        tool.name for tool in resolver.resolve(("task2_financial_fact_artifact_tools",))
     ] == [
         "write_json_artifact",
     ]
-    assert [tool.name for tool in resolver.resolve(("task2_audit_artifact_tools",))] == [
+    assert [
+        tool.name for tool in resolver.resolve(("task2_audit_artifact_tools",))
+    ] == [
         "write_markdown_artifact",
     ]
     assert [tool.name for tool in resolver.resolve(("workbook_authoring_tools",))] == [
@@ -2393,15 +2658,33 @@ def test_statement_json_tool_groups_resolve_runtime_tools():
         "write_cash_flow_json",
     ):
         assert "statement_json" not in resolved_tools[name].args
-    assert "model_input_json" not in resolved_tools[
-        "build_integrated_three_statement_model"
-    ].args
-    assert "model_input_json" not in resolved_tools[
-        "update_integrated_three_statement_model"
-    ].args
-    assert "statement_spec_pack_json" not in resolved_tools[
-        "update_integrated_three_statement_model"
-    ].args
+    assert (
+        "model_input_json"
+        not in resolved_tools["build_integrated_three_statement_model"].args
+    )
+    assert (
+        "model_input_json"
+        not in resolved_tools["update_integrated_three_statement_model"].args
+    )
+    assert (
+        "statement_spec_pack_json"
+        not in resolved_tools["update_integrated_three_statement_model"].args
+    )
+
+
+def test_mcp_tool_groups_resolve_runtime_tools_by_provider():
+    ifind_tool = SimpleNamespace(name="ifind_quote")
+    mx_tool = SimpleNamespace(name="mx_ds_query")
+    resolver = ToolGroupResolver(
+        mcp_tool_groups={
+            "ifind_mcp_tools": [ifind_tool],
+            "mx_ds_mcp_tools": [mx_tool],
+        }
+    )
+
+    assert resolver.resolve(("ifind_mcp_tools",)) == [ifind_tool]
+    assert resolver.resolve(("mx_ds_mcp_tools",)) == [mx_tool]
+    assert resolver.resolve(("mcp_tools",)) == [ifind_tool, mx_tool]
 
 
 def test_root_coverage_prompt_nests_under_artifact_root():
@@ -2419,7 +2702,9 @@ def test_task2_prompts_are_json_first_with_parent_gates():
     assert "verify_task2_artifacts" in parent
     assert "write_task2_model_audit" in parent
     assert "reconcile_statement_specs" in parent
-    assert "must use exactly the `run_dir` returned by `resolve_task2_handoff`" in parent
+    assert (
+        "must use exactly the `run_dir` returned by `resolve_task2_handoff`" in parent
+    )
     assert "assign `workbook_builder`" in parent.lower()
     assert "assign `model_update_executor`" in parent.lower()
     assert "build_integrated_three_statement_model" not in parent
@@ -2468,7 +2753,11 @@ def test_task2_prompts_are_json_first_with_parent_gates():
             "write_cash_flow_json",
         ),
     }
-    for prompt_name, (statement_type, validate_tool, write_tool) in prompt_expectations.items():
+    for prompt_name, (
+        statement_type,
+        validate_tool,
+        write_tool,
+    ) in prompt_expectations.items():
         prompt = _agent_prompt(prompt_name)
         assert f'statement_type="{statement_type}"' in prompt
         assert "Do not create, open, edit, or save `integrated_model.xlsx`" in prompt
@@ -2514,7 +2803,9 @@ def test_root_langgraph_registers_single_stock_debug_entries():
         == "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_bs_modeler_graph"
     )
     assert (
-        langgraph_config["graphs"]["single_stock_coverage_task2_financial_facts_modeler"]
+        langgraph_config["graphs"][
+            "single_stock_coverage_task2_financial_facts_modeler"
+        ]
         == "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_financial_facts_modeler_graph"
     )
     assert (
@@ -2541,9 +2832,7 @@ def test_graph_factories_import_in_test_mode(monkeypatch):
     root_graph = asyncio.run(graph_module.graph())
     assert root_graph["name"] == "single_stock_coverage"
     assert root_graph["test_mode"] is True
-    assert root_graph["agent_config"]["tool_groups"] == [
-        "coverage_orchestration_tools"
-    ]
+    assert root_graph["agent_config"]["tool_groups"] == ["coverage_orchestration_tools"]
     assert root_graph["agent_config"]["excluded_builtin_tools"] == [
         "write_file",
         "edit_file",
@@ -2582,7 +2871,8 @@ def test_graph_factories_import_in_test_mode(monkeypatch):
     facts_graph = asyncio.run(graph_module.task2_financial_facts_modeler_graph())
     assert facts_graph["name"] == "financial_facts_modeler"
     assert facts_graph["agent_config"]["tool_groups"] == [
-        "mcp_tools",
+        "ifind_mcp_tools",
+        "mx_ds_mcp_tools",
         "task2_financial_fact_artifact_tools",
     ]
     assert facts_graph["agent_config"]["excluded_builtin_tools"] == ["task"]
