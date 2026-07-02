@@ -141,6 +141,9 @@ MX_DS_MCP_API_KEY=...
 
 打开 `http://127.0.0.1:8765`，保存后会更新根目录 `model-routing.yaml`。
 `model-routing.yaml` 已入库，只保存模型 profile、agent 绑定和 `api_key_env` 变量名，不保存真实密钥。
+在 `model-routing.yaml` 中，`default_model` 配置默认主模型，`default_multimodal_model`
+配置默认多模态兜底模型；每个 agent/subagent 也可以在 `agent_models.<name>.model`
+和 `agent_models.<name>.multimodal_fallback_model` 单独覆盖。
 
 同花顺 iFind MCP URL 统一写在根目录 `tool-concurrency.yaml` 的 `mcp_servers`：
 
@@ -194,7 +197,7 @@ DAYTONA_FILE_STORAGE_ROOT=/home/daytona/financial-analysis
 
 ## 6. 当前版本、迭代方向和联系
 
-当前版本：`v0.4.0 research-preview`，截至 2026-07-02。
+当前版本：`v0.4.1 research-preview`，截至 2026-07-02。
 
 完整版本历史见 [CHANGELOG.md](CHANGELOG.md)（English changelog: [CHANGELOG.en.md](CHANGELOG.en.md)）。
 
@@ -202,7 +205,7 @@ DAYTONA_FILE_STORAGE_ROOT=/home/daytona/financial-analysis
 
 - 顶层 orchestrator 和核心投研 agent
 - 本地 / 云端（Daytona 沙箱）两种运行后端，通过 `AGENT_BACKEND` 切换
-- 根级 `model-routing.yaml` 模型路由和本地模型配置管理页
+- 根级 `model-routing.yaml` 模型路由、本地模型配置管理页和多模态兜底模型配置
 - 根级 `tool-concurrency.yaml` 工具授权、MCP 配置和外部工具并发限制
 - 同花顺 iFind MCP 统一数据接入
 - 晨报、行业研究、资金扫描、公告扫描、个股研究、三表模型、DCF 和图表包

@@ -2,6 +2,13 @@
 
 本文件记录 `Deep Financial Analysis` 的版本历史。English version: [CHANGELOG.en.md](CHANGELOG.en.md)。项目说明见 [README.md](README.md)。
 
+## v0.4.1 - 2026-07-02
+
+- 新增模型路由的多模态兜底配置：`model-routing.yaml` 支持根级 `default_multimodal_model`，也支持每个 agent/subagent 通过 `agent_models.<name>.multimodal_fallback_model` 单独覆盖。
+- 更新 `financial_agent_runtime.build_chat_model_for_agent`：当配置了兜底模型且不同于主模型时，返回带 fallback 的 ChatModel 包装器，并保持工具绑定后的 fallback 行为。
+- 更新本地模型配置管理页，可编辑默认多模态兜底模型和每个 agent/subagent 的兜底模型绑定。
+- 扩展 `model-routing.yaml` 默认配置和模型路由回归测试，覆盖字符串式旧配置、结构化 agent route、默认兜底、agent 级覆盖、未知 profile 报错和保存时省略空字段。
+
 ## v0.4.0 - 2026-07-02
 
 - 新增根级模型路由配置：`model-routing.yaml` 统一保存模型 profile、`api_key_env` 变量名、默认模型和每个 agent/subagent 的模型绑定；真实密钥仍只放在 `.env` 或进程环境变量中。
