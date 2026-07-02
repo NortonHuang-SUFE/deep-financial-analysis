@@ -69,7 +69,7 @@ def _timestamped_output_dir(output_dir: str | None = None) -> Path:
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     candidate = base / timestamp
-    if artifact_exists(candidate) and os.getenv("MORNING_NOTE_OUTPUT_TIMESTAMP") is None:
+    if os.getenv("MORNING_NOTE_OUTPUT_TIMESTAMP") is None and artifact_exists(candidate):
         suffix = 2
         while artifact_exists(base / f"{timestamp}-{suffix}"):
             suffix += 1
@@ -119,7 +119,7 @@ def create_task_output_dir(output_dir: str | None = None) -> str:
         output_dir: Optional base output directory. Relative paths are resolved
             from the shared file storage root. If the path already contains a
             task timestamp directory, it is used exactly. Defaults to
-            config.yaml output.dir.
+            root tool-concurrency.yaml agent_configs.morning_note.output.dir.
 
     Returns:
         Absolute path of the task output directory.
@@ -141,7 +141,7 @@ def write_markdown_report(
         filename: Output filename. Unsafe characters are normalized.
         output_dir: Optional base/output directory resolved from the shared file
             storage root. If the path already contains a task timestamp
-            directory, write directly into it. Defaults to config.yaml output.dir.
+            directory, write directly into it. Defaults to root tool-concurrency.yaml output.dir.
 
     Returns:
         Absolute path of the written markdown file.
@@ -166,7 +166,7 @@ def write_json_artifact(
         filename: Output filename. Unsafe characters are normalized.
         output_dir: Optional base/output directory resolved from the shared file
             storage root. If the path already contains a task timestamp
-            directory, write directly into it. Defaults to config.yaml output.dir.
+            directory, write directly into it. Defaults to root tool-concurrency.yaml output.dir.
 
     Returns:
         Absolute path of the written JSON file.

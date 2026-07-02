@@ -120,10 +120,10 @@ cp .env.example .env
 `.env` 中至少填写：
 
 ```bash
-MODEL_GATEWAY_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode
-MODEL_GATEWAY_API_KEY=...
-MODEL_NAME=qwen-3.7-max
-MODEL_MAX_TOKENS=16000
+# model-routing.yaml 只保存 api_key_env 变量名；真实模型密码放在 .env。
+DASHSCOPE_API_KEY=...
+MINIMAX_API_KEY=...
+ARK_API_KEY=...
 
 # 二选一
 IFIND_MCP_TOKEN=...
@@ -133,7 +133,16 @@ IFIND_MCP_AUTHORIZATION=Bearer ...
 MX_DS_MCP_API_KEY=...
 ```
 
-同花顺 iFind MCP URL 已写入各子项目 `config.yaml`：
+可以用本地配置页编辑模型 profile、`api_key_env` 变量名和 agent/subagent 绑定：
+
+```bash
+.venv/bin/python -m financial_agent_runtime.model_admin
+```
+
+打开 `http://127.0.0.1:8765`，保存后会更新根目录 `model-routing.yaml`。
+`model-routing.yaml` 已入库，只保存模型 profile、agent 绑定和 `api_key_env` 变量名，不保存真实密钥。
+
+同花顺 iFind MCP URL 统一写在根目录 `tool-concurrency.yaml` 的 `mcp_servers`：
 
 | Server | URL |
 |---|---|
@@ -145,15 +154,15 @@ MX_DS_MCP_API_KEY=...
 | `ifind-global-stock` | `https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-global-stock-mcp` |
 | `ifind-index` | `https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-index-mcp` |
 
-已有 `ifind-*` MCP 的子项目也配置了东方财富妙想 MX DS MCP（`DCF-builder`、`morning-note`、`industry-ananlysis`、`sector`、`screen`、`thesis`、`single-stock-coverage`）：
+东方财富妙想 MX DS MCP 也统一写在根目录 `tool-concurrency.yaml`：
 
 | Server | URL |
 |---|---|
 | `mx-ds-mcp` | `https://mxapi.eastmoney.com/mxds/mcp` |
 
-`mx-ds-mcp` 使用 `.env` 中的 `MX_DS_MCP_API_KEY` 作为 `em_api_key` header。`single-stock-coverage/agents/registry.yaml` 将 MCP 拆成 `ifind_mcp_tools` 与 `mx_ds_mcp_tools` 两个 tool group；其它 standalone agent 通过各自 `config.yaml` 的 `mcp_tool_groups.default.servers` 收窄可用 MCP server，`DCF-builder` 额外区分 parent 与 `assumption_researcher` 两组。
+`mx-ds-mcp` 使用 `.env` 中的 `MX_DS_MCP_API_KEY` 作为 `em_api_key` header。根目录 `tool-concurrency.yaml` 还统一保存 `agent_configs`、`tool_groups` 和 `agent_tools`，包括每个 agent/subagent 可见的 MCP、本地工具、搜索默认值和输出目录。
 
-外部工具并发限制写在工作区根目录的 `tool-concurrency.yaml`。每个 group 是一个共享并发配额：当组内在途调用数达到 `max_concurrency`，后续调用排队串行执行。默认把所有 `ifind-*` 归为一个 `ifind` 组（上限 5），把 `mx-ds-mcp` 归为独立的 `mx-ds` 组（上限 2），避免 orchestrator 并行派发多个子 agent 时打爆外部服务。可在该文件里改阈值、加 group，或用 `tools:` 通配符把具名工具（如 `web_search`）纳入同一配额；该限制是进程级共享的。文件不存在则不做任何限制。
+外部工具并发限制也写在工作区根目录的 `tool-concurrency.yaml`。该文件同时保存 agent/subagent 工具授权，请保留；其中 `groups` 是共享并发配额：当组内在途调用数达到 `max_concurrency`，后续调用排队串行执行。默认把所有 `ifind-*` 归为一个 `ifind` 组（上限 5），把 `mx-ds-mcp` 归为独立的 `mx-ds` 组（上限 2），避免 orchestrator 并行派发多个子 agent 时打爆外部服务。可在该文件里改阈值、加 group，或用 `tools:` 通配符把具名工具（如 `web_search`）纳入同一配额；该限制是进程级共享的。缺少或清空 `groups` 只会关闭并发限制，不代表工具授权可缺省。
 
 运行：
 
@@ -185,7 +194,7 @@ DAYTONA_FILE_STORAGE_ROOT=/home/daytona/financial-analysis
 
 ## 6. 当前版本、迭代方向和联系
 
-当前版本：`v0.3 research-preview`，截至 2026-06-30。
+当前版本：`v0.4.0 research-preview`，截至 2026-07-02。
 
 完整版本历史见 [CHANGELOG.md](CHANGELOG.md)（English changelog: [CHANGELOG.en.md](CHANGELOG.en.md)）。
 
@@ -193,6 +202,8 @@ DAYTONA_FILE_STORAGE_ROOT=/home/daytona/financial-analysis
 
 - 顶层 orchestrator 和核心投研 agent
 - 本地 / 云端（Daytona 沙箱）两种运行后端，通过 `AGENT_BACKEND` 切换
+- 根级 `model-routing.yaml` 模型路由和本地模型配置管理页
+- 根级 `tool-concurrency.yaml` 工具授权、MCP 配置和外部工具并发限制
 - 同花顺 iFind MCP 统一数据接入
 - 晨报、行业研究、资金扫描、公告扫描、个股研究、三表模型、DCF 和图表包
 - 本地 Markdown / JSON / Excel / PPT / HTML / PNG artifacts 输出

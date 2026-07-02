@@ -5,43 +5,23 @@ LangGraph DCF valuation agent. The graph entry is `dcf_builder` in
 
 ## Model Gateway
 
-All model calls default to Alibaba DashScope's OpenAI-compatible gateway.
-Configure live values once in the workspace root `../.env`:
+Model profiles and agent/subagent bindings live in the workspace root
+`../model-routing.yaml`. Keep only live credentials in the workspace root
+`../.env`:
 
 ```bash
-MODEL_GATEWAY_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode
-MODEL_GATEWAY_API_KEY=
-# or DASHSCOPE_API_KEY=
+DASHSCOPE_API_KEY=
+MINIMAX_API_KEY=
+ARK_API_KEY=
 ```
 
-Choose which model to use with `MODEL_PROFILE`. It can be a configured preset:
+Edit model routing with the local admin page:
 
 ```bash
-MODEL_PROFILE=qwen
+.venv/bin/python -m financial_agent_runtime.model_admin
 ```
 
-Or a direct model ID that is not listed in `config.yaml`:
-
-```bash
-MODEL_PROFILE=qwen-3.7-max
-```
-
-Profiles live in `config.yaml` under `model.profiles` only for shared defaults
-such as `max_tokens` and `thinking`. Add or edit profiles there when you want a
-named preset; direct model IDs do not need registration or code changes:
-
-```yaml
-model:
-  active: "qwen"
-  profiles:
-    qwen:
-      name: "qwen-3.7-max"
-      max_tokens: 16000
-      thinking: "auto"
-```
-
-`MODEL_NAME`, `MODEL_MAX_TOKENS`, and `MODEL_THINKING` still work as direct
-overrides when you need a one-off run.
+Open `http://127.0.0.1:8765`; saving writes `model-routing.yaml`.
 
 ## MCP Keys
 
@@ -60,8 +40,8 @@ If iFind gives you the full raw Authorization header value instead, use:
 IFIND_MCP_AUTHORIZATION=
 ```
 
-Do not put iFind keys in `config.yaml`; it contains only safe MCP URLs and
-non-secret defaults.
+MCP URLs, search defaults, output defaults, and tool grants live in the
+workspace root `tool-concurrency.yaml`; live credentials stay only in `.env`.
 
 Eastmoney MX DS MCP is configured as `mx-ds-mcp` anywhere this project already
 uses iFind MCP. Put its credential in the same workspace `.env`:
@@ -70,8 +50,8 @@ uses iFind MCP. Put its credential in the same workspace `.env`:
 MX_DS_MCP_API_KEY=
 ```
 
-`config.yaml` keeps parent and assumption-researcher MCP allowlists under
-`mcp_tool_groups`.
+The workspace root `tool-concurrency.yaml` keeps parent and
+`dcf-assumption-researcher` tool grants, including their MCP allowlists.
 
 ## Test
 

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 import financial_agent_runtime as runtime
+from financial_agent_runtime import tool_access
 from market_researcher.config import enabled_mcp_server_configs, load_config
 from market_researcher import tools
 
@@ -42,6 +43,7 @@ def test_daytona_comps_workbook_uses_temp_file_and_upload(monkeypatch):
     monkeypatch.setattr(
         tools, "ensure_artifact_dir", lambda path: ensured.append(str(path))
     )
+    monkeypatch.setattr(tools, "artifact_exists", lambda path: False)
 
     def fake_upload(local_path, remote_path):
         local = Path(local_path)
@@ -89,8 +91,10 @@ def test_market_researcher_config_includes_mx_ds_mcp(monkeypatch, tmp_path):
         "MX_DS_MCP_API_KEY",
         "MX_DS_MCP_URL",
         "MX_DS_MCP_TRANSPORT",
+        "TOOL_CONCURRENCY_CONFIG",
     ]:
         monkeypatch.delenv(env_name, raising=False)
+    tool_access._ACCESS_CONFIG_CACHE.clear()
 
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -106,19 +110,32 @@ mcp:
     timeout: 120
     headers:
       em_api_key: "${MX_DS_MCP_API_KEY}"
-mcp_tool_groups:
-  default:
-    servers:
-      - mx-ds-mcp
 """,
         encoding="utf-8",
     )
+    tool_config_path = tmp_path / "tool-concurrency.yaml"
+    tool_config_path.write_text(
+        """
+tool_groups:
+  test_mcp:
+    source: mcp
+    servers:
+      - mx-ds-mcp
+agent_tools:
+  market_researcher:
+    tool_groups:
+      - test_mcp
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("TOOL_CONCURRENCY_CONFIG", str(tool_config_path))
     monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
 
     cfg = load_config(str(config_path))
-    server_names = runtime.mcp_tool_group_server_names(
-        cfg.mcp_tool_groups,
-        "default",
+    access_config = runtime.load_tool_access_config(None)
+    server_names = runtime.mcp_server_names_for_tool_group(
+        access_config,
+        "test_mcp",
         list(cfg.mcp),
     )
     server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)

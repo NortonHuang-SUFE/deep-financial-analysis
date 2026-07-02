@@ -1,6 +1,7 @@
 import importlib
 
 import financial_agent_runtime as runtime
+from financial_agent_runtime import tool_access
 import stock_screen_agent.config as config_module
 from stock_screen_agent.config import (
     PROJECT_ROOT,
@@ -10,6 +11,13 @@ from stock_screen_agent.config import (
     load_config,
 )
 from stock_screen_agent import tools
+
+
+def _write_tool_access_config(path, text: str):
+    cfg = path / "tool-concurrency.yaml"
+    cfg.write_text(text, encoding="utf-8")
+    tool_access._ACCESS_CONFIG_CACHE.clear()
+    return cfg
 
 
 def test_screen_prompt_defines_artifact_root():
@@ -25,17 +33,9 @@ def test_screen_prompt_defines_artifact_root():
 
 def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
     for env_name in [
-        "MODEL_NAME",
-        "MODEL_GATEWAY_BASE_URL",
-        "MODEL_GATEWAY_API_KEY",
-        "MODEL_RELAY_BASE_URL",
-        "MODEL_RELAY_API_KEY",
-        "MODEL_BASE_URL",
-        "MODEL_API_KEY",
-        "MODEL_THINKING",
-        "MODEL_MAX_TOKENS",
         "DASHSCOPE_API_KEY",
-        "ALIBABA_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "ARK_API_KEY",
     ]:
         monkeypatch.delenv(env_name, raising=False)
     monkeypatch.setattr(config_module, "WORKSPACE_ENV_PATH", tmp_path / "missing.env")
@@ -45,8 +45,6 @@ def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
 
     assert PROJECT_ROOT.name == "screen"
     assert WORKSPACE_ROOT == PROJECT_ROOT.parent
-    assert cfg.model.default == "qwen-3.7-max"
-    assert cfg.model.base_url == "https://dashscope.aliyuncs.com/compatible-mode"
     assert cfg.output.dir == "./out"
     assert "ifind-stock" in cfg.mcp
     assert "ifind-fund" in cfg.mcp
@@ -105,21 +103,33 @@ mcp:
     timeout: 120
     headers:
       em_api_key: "${MX_DS_MCP_API_KEY}"
-mcp_tool_groups:
-  default:
-    servers:
-      - ifind-news
-      - mx-ds-mcp
 """,
         encoding="utf-8",
     )
+    tool_config_path = _write_tool_access_config(
+        tmp_path,
+        """
+tool_groups:
+  test_mcp:
+    source: mcp
+    servers:
+      - ifind-news
+      - mx-ds-mcp
+agent_tools:
+  stock_screen:
+    tool_groups:
+      - test_mcp
+""",
+    )
+    monkeypatch.setenv("TOOL_CONCURRENCY_CONFIG", str(tool_config_path))
     monkeypatch.setenv("IFIND_MCP_TOKEN", "shared-token")
     monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
 
     cfg = load_config(str(config_path))
-    server_names = runtime.mcp_tool_group_server_names(
-        cfg.mcp_tool_groups,
-        "default",
+    access_config = runtime.load_tool_access_config(None)
+    server_names = runtime.mcp_server_names_for_tool_group(
+        access_config,
+        "test_mcp",
         list(cfg.mcp),
     )
     server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
@@ -142,21 +152,26 @@ def test_workspace_root_env_file_is_loaded(monkeypatch, tmp_path):
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         """
-model:
-  default: yaml-model
-  base_url: https://dashscope.aliyuncs.com/compatible-mode
-mcp: {}
+mcp:
+  ifind-stock:
+    url: https://stock.example/mcp
+    transport: streamable_http
 """,
         encoding="utf-8",
     )
     env_path = tmp_path / ".env"
-    env_path.write_text("MODEL_NAME=workspace-env-model\n", encoding="utf-8")
+    env_path.write_text("IFIND_MCP_TOKEN=workspace-token\n", encoding="utf-8")
     monkeypatch.setattr(config_module, "WORKSPACE_ENV_PATH", env_path)
-    monkeypatch.delenv("MODEL_NAME", raising=False)
+    monkeypatch.delenv("IFIND_MCP_AUTHORIZATION", raising=False)
+    monkeypatch.delenv("IFIND_MCP_TOKEN", raising=False)
 
     cfg = load_config(str(config_path))
+    server_configs = enabled_mcp_server_configs(cfg)
 
-    assert cfg.model.default == "workspace-env-model"
+    assert (
+        server_configs["ifind-stock"]["headers"]["Authorization"]
+        == "Bearer workspace-token"
+    )
 
 
 def test_timestamped_output_dir_is_workspace_relative(monkeypatch):

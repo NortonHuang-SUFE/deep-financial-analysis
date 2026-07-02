@@ -115,10 +115,10 @@ cp .env.example .env
 Minimum `.env` values:
 
 ```bash
-MODEL_GATEWAY_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode
-MODEL_GATEWAY_API_KEY=...
-MODEL_NAME=qwen-3.7-max
-MODEL_MAX_TOKENS=16000
+# model-routing.yaml stores only api_key_env names; live model keys stay in .env.
+DASHSCOPE_API_KEY=...
+MINIMAX_API_KEY=...
+ARK_API_KEY=...
 
 # choose one
 IFIND_MCP_TOKEN=...
@@ -128,7 +128,19 @@ IFIND_MCP_AUTHORIZATION=Bearer ...
 MX_DS_MCP_API_KEY=...
 ```
 
-iFind MCP URLs are already stored in each subproject's `config.yaml`:
+Edit model profiles, `api_key_env` names, and agent/subagent bindings with the
+local admin page:
+
+```bash
+.venv/bin/python -m financial_agent_runtime.model_admin
+```
+
+Then open `http://127.0.0.1:8765`; saving writes the workspace
+`model-routing.yaml`.
+`model-routing.yaml` is tracked and stores only model profiles, agent bindings,
+and `api_key_env` variable names, never live keys.
+
+iFind MCP URLs are stored in the root `tool-concurrency.yaml` under `mcp_servers`:
 
 | Server | URL |
 |---|---|
@@ -140,15 +152,15 @@ iFind MCP URLs are already stored in each subproject's `config.yaml`:
 | `ifind-global-stock` | `https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-global-stock-mcp` |
 | `ifind-index` | `https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-index-mcp` |
 
-Subprojects that already configure `ifind-*` MCP also configure Eastmoney MX DS MCP (`DCF-builder`, `morning-note`, `industry-ananlysis`, `sector`, `screen`, `thesis`, and `single-stock-coverage`):
+Eastmoney MX DS MCP is also configured in the root `tool-concurrency.yaml`:
 
 | Server | URL |
 |---|---|
 | `mx-ds-mcp` | `https://mxapi.eastmoney.com/mxds/mcp` |
 
-`mx-ds-mcp` reads `MX_DS_MCP_API_KEY` from `.env` and sends it as the `em_api_key` header. `single-stock-coverage/agents/registry.yaml` splits MCP access into `ifind_mcp_tools` and `mx_ds_mcp_tools`; the other standalone agents can narrow their MCP access through `mcp_tool_groups.default.servers` in each `config.yaml`, and `DCF-builder` has separate parent and `assumption_researcher` MCP groups.
+`mx-ds-mcp` reads `MX_DS_MCP_API_KEY` from `.env` and sends it as the `em_api_key` header. The workspace root `tool-concurrency.yaml` also owns `agent_configs`, `tool_groups`, and `agent_tools`, including each agent/subagent's MCP access, local tools, search defaults, and output directory.
 
-External-tool concurrency limits live in `tool-concurrency.yaml` at the workspace root. Each group is a shared budget: when in-flight calls in a group reach `max_concurrency`, further calls queue and run serially. By default every `ifind-*` server shares one `ifind` group (limit 5), while `mx-ds-mcp` has its own `mx-ds` group (limit 2), so the orchestrator fanning out to many subagents will not overwhelm external services. Edit the threshold, add groups, or pull named tools (e.g. `web_search`) into a budget via `tools:` globs; the limit is shared process-wide. If the file is absent, nothing is limited.
+External-tool concurrency limits also live in `tool-concurrency.yaml` at the workspace root. This file also stores required agent/subagent tool grants, so keep it present. Its `groups` section contains shared budgets: when in-flight calls in a group reach `max_concurrency`, further calls queue and run serially. By default every `ifind-*` server shares one `ifind` group (limit 5), while `mx-ds-mcp` has its own `mx-ds` group (limit 2), so the orchestrator fanning out to many subagents will not overwhelm external services. Edit the threshold, add groups, or pull named tools (e.g. `web_search`) into a budget via `tools:` globs; the limit is shared process-wide. A missing or empty `groups` section only disables concurrency limiting; tool grants are still required.
 
 Run:
 
@@ -180,7 +192,7 @@ Both modes share the same agent code and skills; switching the backend requires 
 
 ## 6. Version, Roadmap, and Contact
 
-Current version: `v0.3 research-preview`, as of 2026-06-30.
+Current version: `v0.4.0 research-preview`, as of 2026-07-02.
 
 The full version history lives in [CHANGELOG.en.md](CHANGELOG.en.md) (中文版: [CHANGELOG.md](CHANGELOG.md)).
 
@@ -188,6 +200,8 @@ Implemented:
 
 - Top-level orchestrator and core research agents
 - Local and cloud (Daytona sandbox) run backends, switchable via `AGENT_BACKEND`
+- Root-level `model-routing.yaml` model routing and a local model configuration UI
+- Root-level `tool-concurrency.yaml` tool grants, MCP configuration, and external-tool concurrency limits
 - Unified Tonghuashun iFind MCP data access
 - Morning notes, sector research, capital-flow scans, announcement scans, single-stock research, three-statement models, DCF, and chart packs
 - Local Markdown / JSON / Excel / PPT / PNG artifacts

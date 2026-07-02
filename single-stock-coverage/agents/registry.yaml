@@ -1,97 +1,6 @@
 # Human-readable wiring for the single-stock-coverage Deep Agents stack.
 #
-# Tool groups describe where runtime tools come from. Agent entries below
-# choose tool groups and skill names explicitly so each agent's context is
-# auditable without opening graph.py.
-
-tool_groups:
-  coverage_orchestration_tools:
-    description: Root coverage orchestration tools for run creation, manifest updates, and state updates only. Business artifacts must be written by task subagents.
-    tools:
-      - create_coverage_run_dir
-      - update_run_manifest
-      - write_coverage_state
-
-  coverage_artifact_tools:
-    description: Coverage run directory, artifact writers, manifest, and state tools.
-    tools:
-      - create_coverage_run_dir
-      - write_markdown_artifact
-      - write_json_artifact
-      - update_run_manifest
-      - write_coverage_state
-
-  mcp_tools:
-    description: Legacy compatibility group for all runtime MCP tools loaded from enabled servers in single-stock-coverage/config.yaml. Prefer provider-specific MCP groups on agents.
-    source: config.yaml:mcp
-    servers: enabled
-
-  ifind_mcp_tools:
-    description: Runtime iFind MCP tools loaded from ifind-* servers in single-stock-coverage/config.yaml.
-    source: config.yaml:mcp
-    servers:
-      - ifind-*
-
-  mx_ds_mcp_tools:
-    description: Runtime Eastmoney MX DS MCP tools loaded from mx-ds-mcp in single-stock-coverage/config.yaml.
-    source: config.yaml:mcp
-    servers:
-      - mx-ds-mcp
-
-  dcf_execution_tools:
-    description: Local deterministic DCF-builder tools imported from ../DCF-builder.
-    tools:
-      - build_comps_excel
-      - build_dcf_model
-      - validate_dcf_model
-      - write_assumption_analysis
-      - write_valuation_summary
-
-  task2_check_tools:
-    description: Task 2 parent handoff, artifact verification, reconciliation, and compact audit tools.
-    tools:
-      - resolve_task2_handoff
-      - verify_task2_artifacts
-      - reconcile_statement_specs
-      - write_task2_model_audit
-
-  run_manifest_tools:
-    description: Run manifest update tool for parent coordinators after typed gates pass.
-    tools:
-      - update_run_manifest
-
-  task2_financial_fact_artifact_tools:
-    description: Task 2 financial facts JSON writer; must use the parent-resolved run_dir.
-    tools:
-      - write_json_artifact
-
-  task2_audit_artifact_tools:
-    description: Task 2 model audit Markdown writer; must use the parent-resolved run_dir.
-    tools:
-      - write_markdown_artifact
-
-  statement_modeling_tools:
-    description: Shared Task 2 statement JSON context, validation, and write tools.
-    tools:
-      - read_statement_context
-      - validate_income_statement_json
-      - write_income_statement_json
-      - validate_balance_sheet_json
-      - write_balance_sheet_json
-      - validate_cash_flow_json
-      - write_cash_flow_json
-
-  workbook_authoring_tools:
-    description: Task 2 workbook child tools for final Excel build and validation.
-    tools:
-      - build_integrated_three_statement_model
-      - validate_integrated_three_statement_model
-
-  workbook_update_tools:
-    description: Task 2 update child tools for prior-workbook refresh and validation.
-    tools:
-      - update_integrated_three_statement_model
-      - validate_integrated_three_statement_model
+# Tool access is configured only in the workspace root tool-concurrency.yaml.
 
 skill_sources:
   single_stock_coverage:
@@ -115,8 +24,6 @@ agents:
       - coverage run directory
       - run manifest
       - coverage state
-    tool_groups:
-      - coverage_orchestration_tools
     excluded_builtin_tools:
       - write_file
       - edit_file
@@ -142,10 +49,6 @@ agents:
       - 01_company_research/company_research.md
       - 01_company_research/business_driver_map.json
       - 01_company_research/source_log.json
-    tool_groups:
-      - ifind_mcp_tools
-      - mx_ds_mcp_tools
-      - coverage_artifact_tools
     skills:
       single_stock_coverage:
         - company-research
@@ -167,9 +70,6 @@ agents:
       - 02_financial_model/statement_spec_pack.json
       - 02_financial_model/integrated_model.xlsx
       - 02_financial_model/model_audit.md
-    tool_groups:
-      - task2_check_tools
-      - run_manifest_tools
     skills:
       single_stock_coverage:
         - model-update
@@ -196,10 +96,6 @@ agents:
     outputs:
       - 02_financial_model/financial_facts.json
       - 02_financial_model/task2_context_packet.json
-    tool_groups:
-      - ifind_mcp_tools
-      - mx_ds_mcp_tools
-      - task2_financial_fact_artifact_tools
     skills:
       single_stock_coverage:
         - financial-data-normalization
@@ -220,8 +116,6 @@ agents:
     outputs:
       - 02_financial_model/revenue_build_spec.json
       - 02_financial_model/income_statement_spec.json
-    tool_groups:
-      - statement_modeling_tools
     skills:
       single_stock_coverage:
         - financial-data-normalization
@@ -242,8 +136,6 @@ agents:
       - 02_financial_model/task2_context_packet.json
     outputs:
       - 02_financial_model/balance_sheet_spec.json
-    tool_groups:
-      - statement_modeling_tools
     skills:
       single_stock_coverage:
         - financial-data-normalization
@@ -264,8 +156,6 @@ agents:
       - 02_financial_model/task2_context_packet.json
     outputs:
       - 02_financial_model/cash_flow_statement_spec.json
-    tool_groups:
-      - statement_modeling_tools
     skills:
       single_stock_coverage:
         - financial-data-normalization
@@ -289,9 +179,6 @@ agents:
     outputs:
       - 02_financial_model/integrated_model.xlsx
       - 02_financial_model/model_audit.md
-    tool_groups:
-      - workbook_update_tools
-      - task2_audit_artifact_tools
     skills:
       single_stock_coverage:
         - model-update
@@ -319,9 +206,6 @@ agents:
     outputs:
       - 02_financial_model/integrated_model.xlsx
       - 02_financial_model/model_audit.md
-    tool_groups:
-      - workbook_authoring_tools
-      - task2_audit_artifact_tools
     skills:
       single_stock_coverage:
         - three-statement-model
@@ -346,10 +230,6 @@ agents:
       - 03_valuation/assumption_pack.md
       - 03_valuation/valuation_summary.md
       - 03_valuation/dcf_model.xlsx
-    tool_groups:
-      - ifind_mcp_tools
-      - mx_ds_mcp_tools
-      - coverage_artifact_tools
     skills:
       single_stock_coverage:
         - valuation-methodologies
@@ -371,10 +251,6 @@ agents:
       - parent valuation audit feedback
     outputs:
       - assumption pack content for task3_valuation_analyst
-    tool_groups:
-      - ifind_mcp_tools
-      - mx_ds_mcp_tools
-      - coverage_artifact_tools
     skills:
       single_stock_coverage:
         - dcf-assumption-generation
@@ -395,9 +271,6 @@ agents:
       - comps workbook
       - DCF validation artifacts
       - valuation summary
-    tool_groups:
-      - dcf_execution_tools
-      - coverage_artifact_tools
     skills:
       dcf_builder:
         - dcf-model
@@ -420,8 +293,6 @@ agents:
     outputs:
       - 04_chart_pack/chart_index.json
       - chart pack artifacts
-    tool_groups:
-      - coverage_artifact_tools
     skills:
       single_stock_coverage:
         - chart-pack
@@ -441,8 +312,6 @@ agents:
     outputs:
       - 05_report/final_report.md
       - coverage state update
-    tool_groups:
-      - coverage_artifact_tools
     skills:
       single_stock_coverage:
         - report-assembly

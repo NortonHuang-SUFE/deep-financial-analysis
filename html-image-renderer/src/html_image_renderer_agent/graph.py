@@ -9,7 +9,6 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -19,7 +18,7 @@ from langchain_core.messages import SystemMessage, ToolMessage
 
 from financial_agent_runtime import (
     backend_is_daytona,
-    normalize_openai_compatible_base_url,
+    build_chat_model_for_agent,
     upload_file_artifact,
 )
 
@@ -27,6 +26,7 @@ from financial_agent_runtime import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
 SKILLS_DIR = PROJECT_ROOT / "skills"
+AGENT_NAME = "html_image_renderer"
 _RENDER_HELPER_BACKEND_PATH: Path | None = None
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
@@ -117,60 +117,6 @@ def _tool_error_message(request, exc: Exception) -> ToolMessage:
     )
 
 
-def _build_model(cfg):
-    model_id = cfg.model.default
-    if cfg.model.base_url:
-        from langchain_openai import ChatOpenAI
-        import httpx
-
-        base_url = normalize_openai_compatible_base_url(cfg.model.base_url)
-        parsed_base_url = urlparse(base_url)
-        if not _is_allowed_model_gateway(parsed_base_url):
-            raise ValueError(
-                "model.base_url must be an HTTPS OpenAI-compatible gateway, "
-                "or a local HTTP gateway on localhost/127.0.0.1."
-            )
-        if not cfg.model.api_key:
-            raise ValueError(
-                "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
-                "a provider-specific key such as DASHSCOPE_API_KEY or ARK_API_KEY, "
-                "or model.api_key."
-            )
-        model_kwargs = dict(
-            model=model_id,
-            base_url=base_url,
-            api_key=cfg.model.api_key,
-            max_tokens=cfg.model.max_tokens,
-            streaming=False,
-            max_retries=3,
-            timeout=300,
-        )
-
-        proxy_url = (
-            os.environ.get("https_proxy")
-            or os.environ.get("HTTPS_PROXY")
-            or os.environ.get("http_proxy")
-            or os.environ.get("HTTP_PROXY")
-        )
-        if proxy_url:
-            model_kwargs["http_async_client"] = httpx.AsyncClient(
-                proxy=proxy_url,
-                verify=False,
-            )
-            model_kwargs["http_client"] = httpx.Client(proxy=proxy_url, verify=False)
-
-        return ChatOpenAI(**model_kwargs)
-
-    model_kwargs: dict = {"max_tokens": cfg.model.max_tokens}
-    if cfg.model.api_key:
-        model_kwargs["api_key"] = cfg.model.api_key
-    if ":" not in model_id:
-        model_id = f"openai:{model_id}"
-    from langchain.chat_models import init_chat_model
-
-    return init_chat_model(model_id, **model_kwargs)
-
-
 def _runtime_context_prompt(cfg) -> str:
     now = datetime.now(ZoneInfo("Asia/Shanghai"))
     output_base = resolve_output_base(cfg.output.dir)
@@ -207,17 +153,6 @@ def _runtime_context_prompt(cfg) -> str:
     )
 
 
-def _is_allowed_model_gateway(parsed_base_url) -> bool:
-    host = parsed_base_url.hostname or ""
-    if parsed_base_url.scheme == "https" and parsed_base_url.netloc:
-        return True
-    return parsed_base_url.scheme == "http" and host in {
-        "localhost",
-        "127.0.0.1",
-        "::1",
-    }
-
-
 def _create_backend():
     return build_backend(prefer_shell=True)
 
@@ -225,7 +160,7 @@ def _create_backend():
 def _create_agent():
     if os.getenv("HTML_IMAGE_RENDERER_TEST_MODE") == "1":
         return {
-            "name": "html_image_renderer",
+            "name": AGENT_NAME,
             "test_mode": True,
             "backend_type": "localshell",
             "backend_root": str(file_storage_root()),
@@ -246,7 +181,7 @@ def _create_agent():
         )
     system_prompt = prompt_path.read_text(encoding="utf-8")
 
-    model = _build_model(cfg)
+    model = build_chat_model_for_agent(WORKSPACE_ROOT, AGENT_NAME, timeout=300)
     backend = _create_backend()
 
     return create_deep_agent(
@@ -259,7 +194,7 @@ def _create_agent():
             _make_tool_error_middleware(),
         ],
         backend=backend,
-        name="html_image_renderer",
+        name=AGENT_NAME,
     )
 
 
@@ -268,5 +203,5 @@ try:
 except Exception as exc:
     raise RuntimeError(
         f"Failed to initialise html_image_renderer agent: {exc}\n"
-        "Check html-image-renderer/config.yaml, workspace .env, and installed packages."
+        "Check root tool-concurrency.yaml, model-routing.yaml, .env, and installed packages."
     ) from exc

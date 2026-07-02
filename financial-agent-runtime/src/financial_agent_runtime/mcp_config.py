@@ -5,13 +5,17 @@ from __future__ import annotations
 import fnmatch
 import os
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any, Literal
 
+import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 MX_DS_MCP_SERVER_NAME = "mx-ds-mcp"
 MX_DS_MCP_URL = "https://mxapi.eastmoney.com/mxds/mcp"
+ROOT_TOOL_CONFIG_ENV_VAR = "TOOL_CONCURRENCY_CONFIG"
+ROOT_TOOL_CONFIG_FILENAME = "tool-concurrency.yaml"
 
 
 class MCPServerConfig(BaseModel):
@@ -52,6 +56,9 @@ def default_mcp_tool_groups() -> dict[str, MCPToolGroupConfig]:
 def mcp_servers_from_yaml_data(data: Mapping[str, Any]) -> dict[str, Any] | None:
     """Return the MCP server mapping from either supported YAML shape."""
 
+    mcp_servers = data.get("mcp_servers")
+    if isinstance(mcp_servers, dict):
+        return mcp_servers
     mcp = data.get("mcp")
     if not isinstance(mcp, dict):
         return None
@@ -59,6 +66,49 @@ def mcp_servers_from_yaml_data(data: Mapping[str, Any]) -> dict[str, Any] | None
     if isinstance(servers, dict):
         return servers
     return mcp
+
+
+def root_tool_config_path(workspace_root: Path | str) -> Path:
+    """Return the root workspace tool/runtime config path."""
+
+    override = os.getenv(ROOT_TOOL_CONFIG_ENV_VAR)
+    if override:
+        return Path(override).expanduser()
+    return Path(workspace_root) / ROOT_TOOL_CONFIG_FILENAME
+
+
+def load_workspace_agent_config(
+    workspace_root: Path | str,
+    agent_name: str,
+    *,
+    path: Path | str | None = None,
+) -> dict[str, Any]:
+    """Load one agent's root-level runtime config.
+
+    The root config owns shared MCP server definitions under ``mcp_servers`` and
+    per-agent non-secret settings under ``agent_configs``.
+    """
+
+    config_path = Path(path) if path is not None else root_tool_config_path(workspace_root)
+    if not config_path.exists():
+        return {}
+    with open(config_path, encoding="utf-8") as f:
+        raw = yaml.safe_load(f) or {}
+    if not isinstance(raw, Mapping):
+        return {}
+
+    agent_configs = raw.get("agent_configs") or {}
+    agent_data = {}
+    if isinstance(agent_configs, Mapping):
+        configured = agent_configs.get(agent_name) or {}
+        if isinstance(configured, Mapping):
+            agent_data = dict(configured)
+
+    if "mcp" not in agent_data:
+        mcp_servers = mcp_servers_from_yaml_data(raw)
+        if mcp_servers is not None:
+            agent_data["mcp"] = mcp_servers
+    return agent_data
 
 
 def apply_mcp_env_overrides(

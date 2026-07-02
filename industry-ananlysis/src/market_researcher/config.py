@@ -1,11 +1,10 @@
 """Configuration loader for Market Researcher.
 
 Merge order (highest priority last overrides):
-  config.yaml  <  workspace .env / process environment
+  root tool-concurrency.yaml < workspace .env / process environment
 
-`config.yaml` is resolved from the project root. Secrets are read from the
-parent workspace `.env`, so sibling agents share one model and iFind credential
-source.
+Runtime defaults are read from the workspace root. Secrets are read from the
+parent workspace `.env`, so sibling agents share one credential source.
 """
 
 from __future__ import annotations
@@ -13,20 +12,18 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Dict, Literal
-from urllib.parse import urlparse
 
 import yaml
 from pydantic import BaseModel, Field
 
 from financial_agent_runtime import (
     MCPServerConfig,
-    MCPToolGroupConfig,
     apply_mcp_env_overrides,
     build_backend as _shared_build_backend,
-    default_mcp_tool_groups,
     enabled_mcp_server_configs as _shared_enabled_mcp_server_configs,
     file_storage_root as _shared_file_storage_root,
     ifind_auth_headers as _shared_ifind_auth_headers,
+    load_workspace_agent_config,
     mcp_servers_from_yaml_data,
     mirror_skills_into_backend as _shared_mirror_skills_into_backend,
 )
@@ -35,6 +32,7 @@ from financial_agent_runtime import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
 WORKSPACE_ENV_PATH = WORKSPACE_ROOT / ".env"
+AGENT_NAME = "market_researcher"
 
 
 def file_storage_root() -> Path:
@@ -47,17 +45,6 @@ def build_backend(*, prefer_shell: bool = True):
 
 def mirror_skills_into_backend(backend, local_dir) -> str:
     return _shared_mirror_skills_into_backend(backend, local_dir, file_storage_root())
-
-
-# ── Sub-models ────────────────────────────────────────────────────────────────
-
-
-class ModelConfig(BaseModel):
-    default: str = "qwen-3.7-max"
-    max_tokens: int = 16000
-    base_url: str = "https://dashscope.aliyuncs.com/compatible-mode"
-    api_key: str = ""
-    thinking: Literal["auto", "enabled", "disabled"] = "auto"
 
 
 class SearchConfig(BaseModel):
@@ -78,31 +65,28 @@ class OutputConfig(BaseModel):
 
 
 class Config(BaseModel):
-    model: ModelConfig = Field(default_factory=ModelConfig)
     mcp: Dict[str, MCPServerConfig] = Field(default_factory=dict)
-    mcp_tool_groups: Dict[str, MCPToolGroupConfig] = Field(
-        default_factory=default_mcp_tool_groups
-    )
     search: SearchConfig = Field(default_factory=SearchConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
     @classmethod
-    def _from_yaml(cls, path: str = "config.yaml") -> "Config":
-        config_path = _resolve_project_path(path)
-        if config_path.exists():
-            with open(config_path) as f:
+    def _from_yaml(cls, path: str | None = None) -> "Config":
+        if path:
+            config_path = _resolve_project_path(path)
+            with open(config_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
-            mcp_servers = mcp_servers_from_yaml_data(data)
-            if mcp_servers is not None:
-                data["mcp"] = {
-                    k: MCPServerConfig(**v) if isinstance(v, dict) else v
-                    for k, v in mcp_servers.items()
-                }
-            return cls(**data)
-        return cls()
+        else:
+            data = load_workspace_agent_config(WORKSPACE_ROOT, AGENT_NAME)
+        mcp_servers = mcp_servers_from_yaml_data(data)
+        if mcp_servers is not None:
+            data["mcp"] = {
+                k: MCPServerConfig(**v) if isinstance(v, dict) else v
+                for k, v in mcp_servers.items()
+            }
+        return cls(**data)
 
     @classmethod
-    def load(cls, config_yaml_path: str = "config.yaml") -> "Config":
+    def load(cls, override_path: str | None = None) -> "Config":
         """Load config from YAML and apply environment variable overrides."""
         try:
             from dotenv import load_dotenv
@@ -111,32 +95,7 @@ class Config(BaseModel):
         except ImportError:
             pass
 
-        cfg = cls._from_yaml(config_yaml_path)
-
-        # Model overrides
-        cfg.model.default = os.getenv("MODEL_NAME") or cfg.model.default
-        cfg.model.base_url = (
-            os.getenv("MODEL_GATEWAY_BASE_URL")
-            or os.getenv("MODEL_RELAY_BASE_URL")
-            or os.getenv("MODEL_BASE_URL")
-            or cfg.model.base_url
-        )
-        cfg.model.api_key = (
-            os.getenv("MODEL_GATEWAY_API_KEY")
-            or os.getenv("MODEL_RELAY_API_KEY")
-            or os.getenv("MODEL_API_KEY")
-            or cfg.model.api_key
-        )
-        cfg.model.thinking = os.getenv("MODEL_THINKING") or cfg.model.thinking
-        model_max_tokens = os.getenv("MODEL_MAX_TOKENS")
-        if model_max_tokens:
-            cfg.model.max_tokens = int(model_max_tokens)
-
-        if not cfg.model.api_key:
-            for env_name in _model_api_key_env_names(cfg.model.base_url):
-                cfg.model.api_key = os.getenv(env_name) or ""
-                if cfg.model.api_key:
-                    break
+        cfg = cls._from_yaml(override_path)
 
         apply_mcp_env_overrides(cfg.mcp)
 
@@ -150,7 +109,7 @@ class Config(BaseModel):
         return cfg
 
 
-def load_config(path: str = "config.yaml") -> Config:
+def load_config(path: str | None = None) -> Config:
     """Convenience wrapper used by graph.py and tools.py."""
     return Config.load(path)
 
@@ -175,19 +134,3 @@ def _resolve_project_path(path: str) -> Path:
     if candidate.is_absolute() or candidate.exists():
         return candidate
     return PROJECT_ROOT / candidate
-
-
-def _model_api_key_env_names(base_url: str) -> list[str]:
-    """Return env vars for the configured approved model gateway."""
-    host = urlparse(base_url).netloc.lower()
-    if host.endswith("babelark.com"):
-        return ["BABELARK_API_KEY"]
-    if host.endswith("minimaxi.com") or host.endswith("minimax.io"):
-        return ["MINIMAX_API_KEY"]
-    if host.endswith("deepseek.com"):
-        return ["DEEPSEEK_API_KEY"]
-    if host.endswith("volces.com") or host.endswith("volcengineapi.com"):
-        return ["ARK_API_KEY", "VOLCENGINE_API_KEY", "VOLCENGINE_ARK_API_KEY"]
-    if host.endswith("dashscope.aliyuncs.com"):
-        return ["DASHSCOPE_API_KEY", "ALIBABA_API_KEY"]
-    return []

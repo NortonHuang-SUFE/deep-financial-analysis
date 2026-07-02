@@ -19,7 +19,6 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -28,8 +27,8 @@ load_dotenv()
 from langchain_core.messages import SystemMessage, ToolMessage
 
 from financial_agent_runtime import (
+    build_chat_model_for_agent,
     ensure_general_purpose_subagent_disabled,
-    normalize_openai_compatible_base_url,
 )
 
 
@@ -42,7 +41,6 @@ from deep_orchestrator.config import (  # noqa: E402
     WORKSPACE_ROOT,
     build_backend,
     file_storage_root,
-    load_config,
 )
 
 
@@ -103,6 +101,8 @@ _SUBAGENTS: dict[str, tuple[str, str, str]] = {
         "csv/json/xlsx outputs. Pass artifact file paths, not pasted contents.",
     ),
 }
+
+AGENT_NAME = "deep_orchestrator"
 
 
 # ── Tool error middleware (identical pattern to all sibling agents) ────────────
@@ -170,64 +170,6 @@ def _tool_error_message(request, exc: Exception) -> ToolMessage:
     )
 
 
-# ── Model builder (identical pattern to all sibling agents) ───────────────────
-
-
-def _build_model(cfg):
-    model_id = cfg.model.default
-    if cfg.model.base_url:
-        from langchain_openai import ChatOpenAI
-        import httpx
-
-        base_url = normalize_openai_compatible_base_url(cfg.model.base_url)
-        parsed_base_url = urlparse(base_url)
-        if not _is_allowed_model_gateway(parsed_base_url):
-            raise ValueError(
-                "model.base_url must be an HTTPS OpenAI-compatible gateway, "
-                "or a local HTTP gateway on localhost/127.0.0.1."
-            )
-        if not cfg.model.api_key:
-            raise ValueError(
-                "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
-                "a provider-specific key such as DASHSCOPE_API_KEY or ARK_API_KEY, "
-                "or model.api_key."
-            )
-        model_kwargs = dict(
-            model=model_id,
-            base_url=base_url,
-            api_key=cfg.model.api_key,
-            max_tokens=cfg.model.max_tokens,
-            streaming=False,
-            max_retries=3,
-            timeout=300,  # orchestrator calls can take longer
-        )
-
-        proxy_url = (
-            os.environ.get("https_proxy")
-            or os.environ.get("HTTPS_PROXY")
-            or os.environ.get("http_proxy")
-            or os.environ.get("HTTP_PROXY")
-        )
-        if proxy_url:
-            model_kwargs["http_async_client"] = httpx.AsyncClient(
-                proxy=proxy_url, verify=False
-            )
-            model_kwargs["http_client"] = httpx.Client(
-                proxy=proxy_url, verify=False
-            )
-
-        return ChatOpenAI(**model_kwargs)
-
-    model_kwargs: dict = {"max_tokens": cfg.model.max_tokens}
-    if cfg.model.api_key:
-        model_kwargs["api_key"] = cfg.model.api_key
-    if ":" not in model_id:
-        model_id = f"openai:{model_id}"
-    from langchain.chat_models import init_chat_model
-
-    return init_chat_model(model_id, **model_kwargs)
-
-
 def _runtime_context_prompt() -> str:
     now = datetime.now(ZoneInfo("Asia/Shanghai"))
     artifact_base = file_storage_root() / "out"
@@ -248,17 +190,6 @@ def _runtime_context_prompt() -> str:
         "subagents must not create their own new top-level out/<timestamp>/ folder. "
         "Write your own orchestration summary into the same mother folder.\n"
     )
-
-
-def _is_allowed_model_gateway(parsed_base_url) -> bool:
-    host = parsed_base_url.hostname or ""
-    if parsed_base_url.scheme == "https" and parsed_base_url.netloc:
-        return True
-    return parsed_base_url.scheme == "http" and host in {
-        "localhost",
-        "127.0.0.1",
-        "::1",
-    }
 
 
 # ── Native subagent loading ───────────────────────────────────────────────────
@@ -309,7 +240,7 @@ def _build_subagent_specs() -> list[dict]:
 def _create_agent():
     if os.getenv("ORCHESTRATOR_TEST_MODE") == "1":
         return {
-            "name": "deep_orchestrator",
+            "name": AGENT_NAME,
             "test_mode": True,
             "backend_type": "localshell",
         }
@@ -321,8 +252,6 @@ def _create_agent():
             "deepagents is not installed. Run: pip install deepagents"
         ) from exc
 
-    cfg = load_config()
-
     prompt_path = PROJECT_ROOT / "agents" / "orchestrator.md"
     if not prompt_path.exists():
         raise FileNotFoundError(
@@ -330,7 +259,7 @@ def _create_agent():
         )
     system_prompt = prompt_path.read_text(encoding="utf-8")
 
-    model = _build_model(cfg)
+    model = build_chat_model_for_agent(WORKSPACE_ROOT, AGENT_NAME, timeout=300)
     subagents = _build_subagent_specs()
     backend = build_backend(prefer_shell=True)
 
@@ -352,7 +281,7 @@ def _create_agent():
             _make_tool_error_middleware(),
         ],
         backend=backend,
-        name="deep_orchestrator",
+        name=AGENT_NAME,
     )
 
 
@@ -365,5 +294,5 @@ try:
 except Exception as exc:
     raise RuntimeError(
         f"Failed to initialise deep_orchestrator agent: {exc}\n"
-        "Check orchestrator/config.yaml, workspace .env, and installed packages."
+        "Check root tool-concurrency.yaml, model-routing.yaml, .env, and installed packages."
     ) from exc

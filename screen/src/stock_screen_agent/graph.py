@@ -8,7 +8,6 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -23,10 +22,14 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from financial_agent_runtime import (  # noqa: E402
+    build_chat_model_for_agent,
+    build_tool_catalog,
     load_and_register_mcp_tools,
+    load_tool_access_config,
     make_concurrency_limit_middleware,
-    mcp_tool_group_server_names,
-    normalize_openai_compatible_base_url,
+    mcp_server_names_for_tool_group,
+    mcp_tool_group_names_for_agent,
+    resolve_agent_tools,
 )
 
 from stock_screen_agent.config import (  # noqa: E402
@@ -41,6 +44,9 @@ from stock_screen_agent.tools import (  # noqa: E402
     write_json_artifact,
     write_markdown_report,
 )
+
+
+AGENT_NAME = "stock_screen"
 
 
 def _make_tool_error_middleware():
@@ -86,10 +92,11 @@ async def _load_mcp_tools_from_config(server_configs: dict) -> list:
     )
 
 
-async def _get_mcp_tools(cfg) -> list:
-    server_names = mcp_tool_group_server_names(
-        cfg.mcp_tool_groups,
-        "default",
+async def _get_mcp_tools(cfg, *, group_name: str) -> list:
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
+    server_names = mcp_server_names_for_tool_group(
+        access_config,
+        group_name,
         list(cfg.mcp),
     )
     server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
@@ -99,74 +106,26 @@ async def _get_mcp_tools(cfg) -> list:
     return tools
 
 
-def _build_model(cfg):
-    model_id = cfg.model.default
-    if cfg.model.base_url:
-        from langchain_openai import ChatOpenAI
-        import httpx
-
-        base_url = normalize_openai_compatible_base_url(cfg.model.base_url)
-        parsed_base_url = urlparse(base_url)
-        if not _is_allowed_model_gateway(parsed_base_url):
-            raise ValueError(
-                "model.base_url must be an HTTPS OpenAI-compatible gateway, "
-                "or a local HTTP gateway on localhost/127.0.0.1."
-            )
-        if not cfg.model.api_key:
-            raise ValueError(
-                "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
-                "a provider-specific key such as DASHSCOPE_API_KEY or ARK_API_KEY, "
-                "or model.api_key."
-            )
-        model_kwargs = dict(
-            model=model_id,
-            base_url=base_url,
-            api_key=cfg.model.api_key,
-            max_tokens=cfg.model.max_tokens,
-            streaming=False,
-            max_retries=3,
-            timeout=120,
-        )
-        if parsed_base_url.netloc.lower() == "api.deepseek.com":
-            thinking = cfg.model.thinking
-            if thinking == "auto" and model_id.startswith("deepseek-v4"):
-                thinking = "disabled"
-            if thinking in {"enabled", "disabled"}:
-                model_kwargs["extra_body"] = {"thinking": {"type": thinking}}
-
-        proxy_url = (
-            os.environ.get("https_proxy")
-            or os.environ.get("HTTPS_PROXY")
-            or os.environ.get("http_proxy")
-            or os.environ.get("HTTP_PROXY")
-        )
-        if proxy_url:
-            model_kwargs["http_async_client"] = httpx.AsyncClient(proxy=proxy_url, verify=False)
-            model_kwargs["http_client"] = httpx.Client(proxy=proxy_url, verify=False)
-
-        return ChatOpenAI(**model_kwargs)
-
-    model_kwargs: dict = {"max_tokens": cfg.model.max_tokens}
-    if cfg.model.api_key:
-        model_kwargs["api_key"] = cfg.model.api_key
-    if ":" not in model_id:
-        model_id = f"openai:{model_id}"
-    from langchain.chat_models import init_chat_model
-
-    return init_chat_model(model_id, **model_kwargs)
+async def _get_mcp_tool_groups(cfg, agent_name: str) -> dict[str, list]:
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
+    return {
+        group_name: await _get_mcp_tools(cfg, group_name=group_name)
+        for group_name in mcp_tool_group_names_for_agent(access_config, agent_name)
+    }
 
 
-def _is_allowed_model_gateway(parsed_base_url) -> bool:
-    host = parsed_base_url.hostname or ""
-    if parsed_base_url.scheme == "https" and parsed_base_url.netloc:
-        return True
-    return parsed_base_url.scheme == "http" and host in {"localhost", "127.0.0.1", "::1"}
+def _local_tools() -> list:
+    return [
+        create_task_output_dir,
+        write_markdown_report,
+        write_json_artifact,
+    ]
 
 
 async def _create_agent():
     if os.getenv("STOCK_SCREEN_TEST_MODE") == "1":
         return {
-            "name": "stock_screen",
+            "name": AGENT_NAME,
             "test_mode": True,
             "backend_type": "filesystem",
         }
@@ -185,15 +144,19 @@ async def _create_agent():
         )
     system_prompt = prompt_path.read_text(encoding="utf-8")
 
-    model = _build_model(cfg)
-    mcp_tools = await _get_mcp_tools(cfg)
-    local_tools = [
-        create_task_output_dir,
-        write_markdown_report,
-        write_json_artifact,
-    ]
-    all_tools = mcp_tools + local_tools
-    print(f"INFO: Agent tools - MCP: {len(mcp_tools)}, Local: {len(local_tools)}")
+    model = build_chat_model_for_agent(WORKSPACE_ROOT, AGENT_NAME, timeout=120)
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
+    mcp_tool_groups = await _get_mcp_tool_groups(cfg, AGENT_NAME)
+    all_tools = resolve_agent_tools(
+        AGENT_NAME,
+        access_config=access_config,
+        local_tools=build_tool_catalog(_local_tools()),
+        mcp_tool_groups=mcp_tool_groups,
+    )
+    print(
+        f"INFO: Agent tools - Total: {len(all_tools)}, "
+        f"MCP groups: {_mcp_group_counts(mcp_tool_groups)}"
+    )
 
     backend = build_backend(prefer_shell=False)
     return create_deep_agent(
@@ -206,8 +169,15 @@ async def _create_agent():
             _make_tool_error_middleware(),
         ],
         backend=backend,
-        name="stock_screen",
+        name=AGENT_NAME,
     )
+
+
+def _mcp_group_counts(mcp_tool_groups: dict[str, list]) -> dict[str, int]:
+    return {
+        group_name: len(tools)
+        for group_name, tools in sorted(mcp_tool_groups.items())
+    }
 
 
 try:
@@ -215,5 +185,5 @@ try:
 except Exception as exc:
     raise RuntimeError(
         f"Failed to initialise stock_screen agent: {exc}\n"
-        "Check config.yaml, workspace .env, and installed packages."
+        "Check root tool-concurrency.yaml, model-routing.yaml, .env, and installed packages."
     ) from exc

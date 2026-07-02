@@ -4,17 +4,14 @@
 
 ## 配置
 
-`config.yaml` 只保存模型默认值和 iFind MCP URL，不保存 token。
-
-默认模型配置：
-
-- `MODEL_NAME`: `qwen-3.7-max`
-- `MODEL_GATEWAY_BASE_URL`: `https://dashscope.aliyuncs.com/compatible-mode`
+模型 profile 与 agent 绑定统一在 workspace 根目录 `model-routing.yaml` 配置；MCP URL、工具授权和输出配置统一在根目录 `tool-concurrency.yaml` 配置。
 
 请在工作区根目录 `.env` 配置密钥，也就是 `screen/../.env`：
 
 ```bash
-MODEL_GATEWAY_API_KEY=
+DASHSCOPE_API_KEY=
+MINIMAX_API_KEY=
+ARK_API_KEY=
 IFIND_MCP_TOKEN=
 # 或者直接传 Authorization 原文
 IFIND_MCP_AUTHORIZATION=
@@ -30,7 +27,7 @@ MX_DS_MCP_URL=https://mxapi.eastmoney.com/mxds/mcp
 MX_DS_MCP_TRANSPORT=streamable-http
 ```
 
-已配置的 MCP server 包括 `ifind-stock`、`ifind-fund`、`ifind-edb`、`ifind-news`、`ifind-bond`、`ifind-global-stock`、`ifind-index`、`mx-ds-mcp`。可用 `config.yaml` 的 `mcp_tool_groups.default.servers` 收窄本 agent 可用的 MCP server。
+已配置的 MCP server 包括 `ifind-stock`、`ifind-fund`、`ifind-edb`、`ifind-news`、`ifind-bond`、`ifind-global-stock`、`ifind-index`、`mx-ds-mcp`。可用根目录 `tool-concurrency.yaml` 的 `tool_groups` / `agent_tools` 收窄本 agent 可用的 MCP server。
 
 ## 运行
 

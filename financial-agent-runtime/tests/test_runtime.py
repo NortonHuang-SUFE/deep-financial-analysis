@@ -139,6 +139,7 @@ def test_general_purpose_disable_registration_is_idempotent(monkeypatch):
 
     assert [key for key, _ in calls] == ["anthropic", "openai"]
     assert calls[0][1].general_purpose_subagent.enabled is False
+    runtime._GENERAL_PURPOSE_SUBAGENT_DISABLED_KEYS.clear()
 
 
 def test_artifact_exists_uses_test_command(monkeypatch):

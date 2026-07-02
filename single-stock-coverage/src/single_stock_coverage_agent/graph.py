@@ -7,7 +7,6 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -17,9 +16,9 @@ from langchain.agents.middleware.types import AgentMiddleware
 from langchain_core.messages import ToolMessage
 
 from financial_agent_runtime import (
+    build_chat_model_for_agent,
     load_and_register_mcp_tools,
     make_concurrency_limit_middleware,
-    normalize_openai_compatible_base_url,
 )
 
 
@@ -133,66 +132,6 @@ async def _get_mcp_tool_groups(cfg, registry, agent_name: str) -> dict[str, list
     return tool_groups
 
 
-def _build_model(cfg):
-    model_id = cfg.model.default
-    if cfg.model.base_url:
-        from langchain_openai import ChatOpenAI
-        import httpx
-
-        base_url = normalize_openai_compatible_base_url(cfg.model.base_url)
-        parsed_base_url = urlparse(base_url)
-        if not _is_allowed_model_gateway(parsed_base_url):
-            raise ValueError(
-                "model.base_url must be an HTTPS OpenAI-compatible gateway, "
-                "or a local HTTP gateway on localhost/127.0.0.1."
-            )
-        if not cfg.model.api_key:
-            raise ValueError(
-                "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
-                "a provider-specific key such as DASHSCOPE_API_KEY or ARK_API_KEY, "
-                "or model.api_key in the workspace .env."
-            )
-        model_kwargs = dict(
-            model=model_id,
-            base_url=base_url,
-            api_key=cfg.model.api_key,
-            max_tokens=cfg.model.max_tokens,
-            streaming=False,
-            max_retries=3,
-            timeout=300,
-        )
-        proxy_url = (
-            os.environ.get("https_proxy")
-            or os.environ.get("HTTPS_PROXY")
-            or os.environ.get("http_proxy")
-            or os.environ.get("HTTP_PROXY")
-        )
-        if proxy_url:
-            model_kwargs["http_async_client"] = httpx.AsyncClient(
-                proxy=proxy_url,
-                verify=False,
-            )
-            model_kwargs["http_client"] = httpx.Client(proxy=proxy_url, verify=False)
-
-        return ChatOpenAI(**model_kwargs)
-
-    model_kwargs: dict = {"max_tokens": cfg.model.max_tokens}
-    if cfg.model.api_key:
-        model_kwargs["api_key"] = cfg.model.api_key
-    if ":" not in model_id:
-        model_id = f"openai:{model_id}"
-    from langchain.chat_models import init_chat_model
-
-    return init_chat_model(model_id, **model_kwargs)
-
-
-def _is_allowed_model_gateway(parsed_base_url) -> bool:
-    host = parsed_base_url.hostname or ""
-    if parsed_base_url.scheme == "https" and parsed_base_url.netloc:
-        return True
-    return parsed_base_url.scheme == "http" and host in {"localhost", "127.0.0.1", "::1"}
-
-
 async def _create_agent(agent_name: str):
     registry = load_agent_registry()
     if os.getenv("SINGLE_STOCK_COVERAGE_TEST_MODE") == "1":
@@ -205,15 +144,21 @@ async def _create_agent(agent_name: str):
         }
 
     cfg = load_config()
-    model = _build_model(cfg)
     mcp_group_names = mcp_tool_group_names(registry)
     needs_mcp = any(
         agent_uses_tool_group(registry, agent_name, group_name)
         for group_name in mcp_group_names
     )
     mcp_tool_groups: dict[str, list] = {}
-    if needs_mcp and os.getenv("SINGLE_STOCK_COVERAGE_DISABLE_MCP") != "1":
-        mcp_tool_groups = await _get_mcp_tool_groups(cfg, registry, agent_name)
+    if needs_mcp:
+        if os.getenv("SINGLE_STOCK_COVERAGE_DISABLE_MCP") == "1":
+            mcp_tool_groups = {
+                group_name: []
+                for group_name in mcp_group_names
+                if agent_uses_tool_group(registry, agent_name, group_name)
+            }
+        else:
+            mcp_tool_groups = await _get_mcp_tool_groups(cfg, registry, agent_name)
 
     backend_cache: dict[str, object] = {}
 
@@ -224,6 +169,9 @@ async def _create_agent(agent_name: str):
             )
         return backend_cache[name]
 
+    def model_resolver(name: str):
+        return build_chat_model_for_agent(WORKSPACE_ROOT, name, timeout=300)
+
     tool_resolver = ToolGroupResolver(mcp_tool_groups=mcp_tool_groups)
     middleware = [
         make_concurrency_limit_middleware(WORKSPACE_ROOT),
@@ -232,7 +180,7 @@ async def _create_agent(agent_name: str):
     runnable = create_registered_agent(
         agent_name,
         registry=registry,
-        model=model,
+        model_resolver=model_resolver,
         tool_resolver=tool_resolver,
         backend_resolver=backend_resolver,
         middleware=middleware,

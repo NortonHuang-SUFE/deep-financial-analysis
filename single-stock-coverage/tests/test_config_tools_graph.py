@@ -3,12 +3,15 @@ import importlib
 import json
 import sys
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import single_stock_coverage_agent.config as config_module
 from single_stock_coverage_agent.agent_registry import (
+    AgentRegistry,
+    AgentSpec,
     ToolGroupResolver,
     agent_uses_tool_group,
+    create_registered_agent,
     describe_agent,
     load_agent_registry,
     mcp_tool_group_names,
@@ -546,17 +549,9 @@ def _skill_text(name: str) -> str:
 
 def _clear_env(monkeypatch):
     for env_name in [
-        "MODEL_NAME",
-        "MODEL_GATEWAY_BASE_URL",
-        "MODEL_GATEWAY_API_KEY",
-        "MODEL_RELAY_BASE_URL",
-        "MODEL_RELAY_API_KEY",
-        "MODEL_BASE_URL",
-        "MODEL_API_KEY",
-        "MODEL_THINKING",
-        "MODEL_MAX_TOKENS",
         "DASHSCOPE_API_KEY",
-        "ALIBABA_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "ARK_API_KEY",
         "IFIND_MCP_AUTHORIZATION",
         "IFIND_MCP_TOKEN",
         "MX_DS_MCP_API_KEY",
@@ -583,10 +578,91 @@ def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
 
     assert PROJECT_ROOT.name == "single-stock-coverage"
     assert WORKSPACE_ROOT.name == "financialServicesModified"
-    assert cfg.model.default == "qwen-3.7-max"
     assert cfg.output.dir == "./out/coverage"
     assert "ifind-stock" in cfg.mcp
     assert "mx-ds-mcp" in cfg.mcp
+
+
+def test_registered_agent_uses_model_resolver_for_each_subagent(monkeypatch):
+    import single_stock_coverage_agent.agent_registry as registry_module
+
+    created: list[tuple[str, str, list[str]]] = []
+    fake_deepagents = ModuleType("deepagents")
+
+    class FakeGeneralPurposeSubagentProfile:
+        def __init__(self, *, enabled):
+            self.enabled = enabled
+
+    class FakeHarnessProfile:
+        def __init__(self, *, general_purpose_subagent):
+            self.general_purpose_subagent = general_purpose_subagent
+
+    def fake_create_deep_agent(**kwargs):
+        created.append(
+            (
+                kwargs["name"],
+                kwargs["model"],
+                [spec["name"] for spec in kwargs["subagents"]],
+            )
+        )
+        return {"name": kwargs["name"], "model": kwargs["model"]}
+
+    fake_deepagents.create_deep_agent = fake_create_deep_agent
+    fake_deepagents.GeneralPurposeSubagentProfile = FakeGeneralPurposeSubagentProfile
+    fake_deepagents.HarnessProfile = FakeHarnessProfile
+    fake_deepagents.register_harness_profile = lambda _name, _profile: None
+    monkeypatch.setitem(sys.modules, "deepagents", fake_deepagents)
+    monkeypatch.setattr(registry_module, "_DEEPAGENTS_HARNESS_PROFILE_REGISTERED", False)
+    monkeypatch.setattr(
+        registry_module,
+        "_read_prompt",
+        lambda _registry, prompt: f"prompt:{prompt}",
+    )
+
+    registry = AgentRegistry(
+        skill_sources={},
+        agents={
+            "parent": AgentSpec(
+                name="parent",
+                prompt="parent.md",
+                description="parent",
+                parent=None,
+                level=0,
+                role="parent",
+                inputs=(),
+                outputs=(),
+                excluded_builtin_tools=(),
+                skills={},
+                subagents=("child",),
+            ),
+            "child": AgentSpec(
+                name="child",
+                prompt="child.md",
+                description="child",
+                parent="parent",
+                level=1,
+                role="child",
+                inputs=(),
+                outputs=(),
+                excluded_builtin_tools=(),
+                skills={},
+                subagents=(),
+            ),
+        },
+    )
+    tool_resolver = SimpleNamespace(resolve_agent=lambda _agent_name: [])
+
+    create_registered_agent(
+        "parent",
+        registry=registry,
+        model_resolver=lambda agent_name: f"model:{agent_name}",
+        tool_resolver=tool_resolver,
+        backend=object(),
+        middleware=[],
+    )
+
+    assert ("child", "model:child", []) in created
+    assert ("parent", "model:parent", ["child"]) in created
 
 
 def test_workspace_env_and_process_env_override_ifind_auth(monkeypatch, tmp_path):
@@ -2348,6 +2424,8 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
         "mcp_tools",
         "ifind_mcp_tools",
         "mx_ds_mcp_tools",
+        "dcf_builder_mcp_tools",
+        "dcf_assumption_mcp_tools",
     )
     all_server_names = ["ifind-stock", "ifind-news", "mx-ds-mcp"]
     assert mcp_tool_group_server_names(
@@ -2594,16 +2672,19 @@ def test_agent_registry_exposes_task2_parallel_statement_context():
 
 
 def test_statement_json_tool_groups_resolve_runtime_tools():
-    resolver = ToolGroupResolver(mcp_tools=[])
+    resolver = ToolGroupResolver(
+        mcp_tool_groups={
+            "ifind_mcp_tools": [],
+            "mx_ds_mcp_tools": [],
+        }
+    )
 
-    assert [
-        tool.name for tool in resolver.resolve(("coverage_orchestration_tools",))
-    ] == [
+    assert [tool.name for tool in resolver.resolve_agent("single_stock_coverage")] == [
         "create_coverage_run_dir",
         "update_run_manifest",
         "write_coverage_state",
     ]
-    assert [tool.name for tool in resolver.resolve(("statement_modeling_tools",))] == [
+    assert [tool.name for tool in resolver.resolve_agent("is_modeler")] == [
         "read_statement_context",
         "validate_income_statement_json",
         "write_income_statement_json",
@@ -2612,42 +2693,30 @@ def test_statement_json_tool_groups_resolve_runtime_tools():
         "validate_cash_flow_json",
         "write_cash_flow_json",
     ]
-    assert [tool.name for tool in resolver.resolve(("task2_check_tools",))] == [
+    assert [tool.name for tool in resolver.resolve_agent("task2_financial_modeler")] == [
         "resolve_task2_handoff",
         "verify_task2_artifacts",
         "reconcile_statement_specs",
         "write_task2_model_audit",
-    ]
-    assert [tool.name for tool in resolver.resolve(("run_manifest_tools",))] == [
         "update_run_manifest",
     ]
-    assert [
-        tool.name for tool in resolver.resolve(("task2_financial_fact_artifact_tools",))
-    ] == [
+    assert [tool.name for tool in resolver.resolve_agent("financial_facts_modeler")] == [
         "write_json_artifact",
     ]
-    assert [
-        tool.name for tool in resolver.resolve(("task2_audit_artifact_tools",))
-    ] == [
-        "write_markdown_artifact",
-    ]
-    assert [tool.name for tool in resolver.resolve(("workbook_authoring_tools",))] == [
+    assert [tool.name for tool in resolver.resolve_agent("workbook_builder")] == [
         "build_integrated_three_statement_model",
         "validate_integrated_three_statement_model",
+        "write_markdown_artifact",
     ]
-    assert [tool.name for tool in resolver.resolve(("workbook_update_tools",))] == [
+    assert [tool.name for tool in resolver.resolve_agent("model_update_executor")] == [
         "update_integrated_three_statement_model",
         "validate_integrated_three_statement_model",
+        "write_markdown_artifact",
     ]
     resolved_tools = {
         tool.name: tool
-        for tool in resolver.resolve(
-            (
-                "statement_modeling_tools",
-                "workbook_authoring_tools",
-                "workbook_update_tools",
-            )
-        )
+        for agent_name in ("is_modeler", "workbook_builder", "model_update_executor")
+        for tool in resolver.resolve_agent(agent_name)
     }
     for name in (
         "validate_income_statement_json",
@@ -2682,9 +2751,9 @@ def test_mcp_tool_groups_resolve_runtime_tools_by_provider():
         }
     )
 
-    assert resolver.resolve(("ifind_mcp_tools",)) == [ifind_tool]
-    assert resolver.resolve(("mx_ds_mcp_tools",)) == [mx_tool]
-    assert resolver.resolve(("mcp_tools",)) == [ifind_tool, mx_tool]
+    task1_tools = resolver.resolve_agent("task1_company_researcher")
+    assert ifind_tool in task1_tools
+    assert mx_tool in task1_tools
 
 
 def test_root_coverage_prompt_nests_under_artifact_root():

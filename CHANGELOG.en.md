@@ -2,6 +2,15 @@
 
 Version history for `Deep Financial Analysis`. 中文版本：[CHANGELOG.md](CHANGELOG.md)。Project overview: [README.en.md](README.en.md).
 
+## v0.4.0 - 2026-07-02
+
+- Added root-level model routing: `model-routing.yaml` now centralizes model profiles, `api_key_env` names, the default model, and every agent/subagent model binding; live keys remain only in `.env` or process environment variables.
+- Added a local model configuration UI: run `.venv/bin/python -m financial_agent_runtime.model_admin`, open `http://127.0.0.1:8765`, edit model profiles, key env-var names, and agent/subagent bindings, then save back to the root `model-routing.yaml`.
+- Added root-level tool access configuration: `tool-concurrency.yaml` now owns MCP endpoints, agent runtime defaults, tool groups, agent/subagent tool grants, and external-tool concurrency limits, replacing scattered per-subproject `config.yaml` entry points.
+- Added shared `financial_agent_runtime.model_routing` and `financial_agent_runtime.tool_access` modules for ChatOpenAI construction, OpenAI-compatible gateway validation, tool catalog building, tool-group resolution, and agent/subagent tool visibility.
+- Updated all top-level agents, the DCF child agent, and the nested single-stock coverage subagents to resolve models, MCP tools, local tools, search tools, and output directories from the root routing/access config.
+- Added regression tests for model routing, tool access, and graph configuration, covering migration compatibility, agent/subagent model resolution, tool grants, MCP access, and test-mode config exposure.
+
 ## v0.3.2 - 2026-07-01
 
 - Tightened the `single-stock-coverage` root orchestrator permissions: added `coverage_orchestration_tools`, leaving the root agent with only coverage-run creation, manifest updates, and coverage-state writes instead of direct business-artifact writers.

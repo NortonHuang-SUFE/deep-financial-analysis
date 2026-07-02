@@ -5,11 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from dcf_builder.config import (
-    DEFAULT_ASSUMPTION_MCP_SERVER_NAMES,
-    PROJECT_ROOT,
-    file_storage_root,
-)
+from dcf_builder.config import PROJECT_ROOT, file_storage_root
 
 
 ASSUMPTION_SUBAGENT_NAME = "dcf-assumption-researcher"
@@ -17,8 +13,6 @@ ASSUMPTION_SKILLS_ROOT = (
     PROJECT_ROOT / "subagents" / ASSUMPTION_SUBAGENT_NAME / "skills"
 )
 ASSUMPTION_PROMPT_PATH = PROJECT_ROOT / "agents" / f"{ASSUMPTION_SUBAGENT_NAME}.md"
-
-ASSUMPTION_MCP_SERVER_NAMES = DEFAULT_ASSUMPTION_MCP_SERVER_NAMES
 
 ASSUMPTION_SCENARIO_NAMES = ("Bear", "Base", "Bull")
 ASSUMPTION_REQUIRED_FIELDS = (

@@ -4,18 +4,14 @@
 
 ## 配置
 
-配置文件位于 `sector/config.yaml`，只包含模型默认值和 iFind MCP URL，不包含任何 token。
-
-默认模型：
-
-- `MODEL_NAME`: `qwen-3.7-max`
-- `MODEL_GATEWAY_BASE_URL`: `https://dashscope.aliyuncs.com/compatible-mode`
+模型 profile 与 agent 绑定统一在 workspace 根目录 `model-routing.yaml` 配置；MCP URL、工具授权和输出配置统一在根目录 `tool-concurrency.yaml` 配置。
 
 认证从 workspace 根目录 `.env` 读取，也就是 `financialServicesModified/.env`，不是 `sector/.env`。常用环境变量：
 
 ```bash
-MODEL_GATEWAY_API_KEY=...
 DASHSCOPE_API_KEY=...
+MINIMAX_API_KEY=...
+ARK_API_KEY=...
 IFIND_MCP_TOKEN=...
 IFIND_MCP_AUTHORIZATION=...
 MX_DS_MCP_API_KEY=...
@@ -43,8 +39,8 @@ MX_DS_MCP_TRANSPORT=streamable-http
 - `ifind-index`
 - `mx-ds-mcp`
 
-可用 `config.yaml` 的 `mcp_tool_groups.default.servers` 收窄本 agent 可用的
-MCP server。
+可用根目录 `tool-concurrency.yaml` 的 `tool_groups` / `agent_tools` 收窄本
+agent 可用的 MCP server。
 
 如需本地导入或测试时禁用 MCP：
 

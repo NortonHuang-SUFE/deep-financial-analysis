@@ -2,6 +2,15 @@
 
 本文件记录 `Deep Financial Analysis` 的版本历史。English version: [CHANGELOG.en.md](CHANGELOG.en.md)。项目说明见 [README.md](README.md)。
 
+## v0.4.0 - 2026-07-02
+
+- 新增根级模型路由配置：`model-routing.yaml` 统一保存模型 profile、`api_key_env` 变量名、默认模型和每个 agent/subagent 的模型绑定；真实密钥仍只放在 `.env` 或进程环境变量中。
+- 新增本地模型配置管理页：通过 `.venv/bin/python -m financial_agent_runtime.model_admin` 打开 `http://127.0.0.1:8765`，可编辑模型 profile、密钥环境变量名和 agent/subagent 绑定，并写回根目录 `model-routing.yaml`。
+- 新增根级工具授权配置：`tool-concurrency.yaml` 现在同时承载 MCP endpoint、agent runtime 默认值、工具组、agent/subagent 工具授权和外部工具并发限制，移除各子项目分散的 `config.yaml` 配置入口。
+- 新增 `financial_agent_runtime.model_routing` 与 `financial_agent_runtime.tool_access` 共享模块，统一 ChatOpenAI 模型构建、OpenAI-compatible gateway 校验、工具目录构建、工具组解析和 agent/subagent 工具可见性控制。
+- 更新所有顶层 agent、DCF 子 agent 和 single-stock coverage 内部 subagent 的图构建逻辑，统一从根级模型路由与工具授权配置解析模型、MCP、本地工具、搜索工具和输出目录。
+- 新增模型路由、工具授权和 graph 配置回归测试，覆盖旧配置迁移、agent/subagent 模型解析、工具组授权、MCP 访问和测试模式下的配置暴露。
+
 ## v0.3.2 - 2026-07-01
 
 - 收紧 `single-stock-coverage` 根 orchestrator 权限：新增 `coverage_orchestration_tools`，根 agent 仅保留创建 coverage run、更新 manifest 和写 coverage state 的编排工具，不再直接持有业务 artifact 写入工具。

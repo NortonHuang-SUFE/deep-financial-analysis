@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import fnmatch
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +9,13 @@ from typing import Any
 
 import yaml
 
+from financial_agent_runtime import (
+    build_tool_catalog,
+    describe_agent_tool_access,
+    load_tool_access_config,
+    mcp_server_names_for_tool_group,
+    resolve_agent_tools,
+)
 from single_stock_coverage_agent.tools import (
     build_integrated_three_statement_model,
     create_coverage_run_dir,
@@ -50,7 +56,6 @@ class AgentSpec:
     role: str
     inputs: tuple[str, ...]
     outputs: tuple[str, ...]
-    tool_groups: tuple[str, ...]
     excluded_builtin_tools: tuple[str, ...]
     skills: dict[str, tuple[str, ...]]
     subagents: tuple[str, ...]
@@ -58,7 +63,6 @@ class AgentSpec:
 
 @dataclass(frozen=True)
 class AgentRegistry:
-    tool_groups: dict[str, dict[str, Any]]
     skill_sources: dict[str, dict[str, Any]]
     agents: dict[str, AgentSpec]
 
@@ -78,62 +82,27 @@ class AgentRegistry:
 
 
 class ToolGroupResolver:
-    """Resolves configured tool groups to runtime tool objects."""
+    """Resolves root-configured agent tool access to runtime tool objects."""
 
     def __init__(
         self,
         *,
-        mcp_tools: list[Any] | None = None,
         mcp_tool_groups: dict[str, list[Any]] | None = None,
+        dynamic_tool_groups: dict[str, list[Any]] | None = None,
     ) -> None:
-        self._mcp_tool_groups = {
-            group_name: list(tools)
-            for group_name, tools in (mcp_tool_groups or {}).items()
-        }
-        if mcp_tools is not None:
-            self._mcp_tool_groups["mcp_tools"] = list(mcp_tools)
-        elif "mcp_tools" not in self._mcp_tool_groups:
-            self._mcp_tool_groups["mcp_tools"] = _dedupe_tools(
-                tool
-                for group_name, tools in self._mcp_tool_groups.items()
-                if group_name != "mcp_tools"
-                for tool in tools
-            )
-        self._cache: dict[str, list[Any]] = {}
+        self._access_config = load_tool_access_config(WORKSPACE_ROOT)
+        self._local_tools = build_tool_catalog(_local_tools())
+        self._mcp_tool_groups = dict(mcp_tool_groups or {})
+        self._dynamic_tool_groups = dict(dynamic_tool_groups or {})
 
-    def resolve(self, group_names: tuple[str, ...]) -> list[Any]:
-        tools: list[Any] = []
-        for group_name in group_names:
-            tools.extend(self._resolve_group(group_name))
-        return tools
-
-    def _resolve_group(self, group_name: str) -> list[Any]:
-        if group_name not in self._cache:
-            if group_name == "coverage_orchestration_tools":
-                self._cache[group_name] = _coverage_orchestration_tools()
-            elif group_name == "coverage_artifact_tools":
-                self._cache[group_name] = _coverage_artifact_tools()
-            elif group_name in self._mcp_tool_groups:
-                self._cache[group_name] = self._mcp_tool_groups[group_name]
-            elif group_name == "dcf_execution_tools":
-                self._cache[group_name] = _dcf_execution_tools()
-            elif group_name == "task2_check_tools":
-                self._cache[group_name] = _task2_check_tools()
-            elif group_name == "run_manifest_tools":
-                self._cache[group_name] = _run_manifest_tools()
-            elif group_name == "task2_financial_fact_artifact_tools":
-                self._cache[group_name] = _task2_financial_fact_artifact_tools()
-            elif group_name == "task2_audit_artifact_tools":
-                self._cache[group_name] = _task2_audit_artifact_tools()
-            elif group_name == "statement_modeling_tools":
-                self._cache[group_name] = _statement_modeling_tools()
-            elif group_name == "workbook_authoring_tools":
-                self._cache[group_name] = _workbook_authoring_tools()
-            elif group_name == "workbook_update_tools":
-                self._cache[group_name] = _workbook_update_tools()
-            else:
-                raise KeyError(f"Unknown tool group: {group_name}")
-        return list(self._cache[group_name])
+    def resolve_agent(self, agent_name: str) -> list[Any]:
+        return resolve_agent_tools(
+            agent_name,
+            access_config=self._access_config,
+            local_tools=self._local_tools,
+            dynamic_tool_groups=self._dynamic_tool_groups,
+            mcp_tool_groups=self._mcp_tool_groups,
+        )
 
 
 class SelectedSkillsMiddleware:
@@ -183,12 +152,16 @@ class SelectedSkillsMiddleware:
 
 def load_agent_registry(path: Path = REGISTRY_PATH) -> AgentRegistry:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if data.get("tool_groups"):
+        raise ValueError(
+            "single-stock-coverage tool_groups must be configured in the "
+            "workspace root tool-concurrency.yaml, not agents/registry.yaml"
+        )
     agents = {
         name: _parse_agent_spec(name, value or {})
         for name, value in (data.get("agents") or {}).items()
     }
     registry = AgentRegistry(
-        tool_groups=data.get("tool_groups") or {},
         skill_sources=data.get("skill_sources") or {},
         agents=agents,
     )
@@ -198,17 +171,20 @@ def load_agent_registry(path: Path = REGISTRY_PATH) -> AgentRegistry:
 
 def validate_agent_registry(registry: AgentRegistry) -> None:
     errors: list[str] = []
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
     for agent_name, spec in registry.agents.items():
         prompt_path = registry.prompt_path(spec.prompt)
         if not prompt_path.exists():
             errors.append(f"{agent_name}: prompt not found: {prompt_path}")
 
+        if agent_name not in access_config.agent_tools:
+            errors.append(
+                f"{agent_name}: missing root tool access config in "
+                "tool-concurrency.yaml"
+            )
+
         if spec.parent and spec.parent not in registry.agents:
             errors.append(f"{agent_name}: unknown parent: {spec.parent}")
-
-        for group_name in spec.tool_groups:
-            if group_name not in registry.tool_groups:
-                errors.append(f"{agent_name}: unknown tool group: {group_name}")
 
         for source_name, skill_names in spec.skills.items():
             if source_name not in registry.skill_sources:
@@ -235,6 +211,10 @@ def validate_agent_registry(registry: AgentRegistry) -> None:
 
 def describe_agent(registry: AgentRegistry, agent_name: str) -> dict[str, Any]:
     spec = registry.agent(agent_name)
+    tool_access = describe_agent_tool_access(
+        load_tool_access_config(WORKSPACE_ROOT),
+        agent_name,
+    )
     return {
         "name": spec.name,
         "prompt": str(registry.prompt_path(spec.prompt)),
@@ -244,12 +224,10 @@ def describe_agent(registry: AgentRegistry, agent_name: str) -> dict[str, Any]:
         "role": spec.role,
         "inputs": list(spec.inputs),
         "outputs": list(spec.outputs),
-        "tool_groups": list(spec.tool_groups),
+        "tool_groups": tool_access["tool_groups"],
+        "direct_tools": tool_access["direct_tools"],
         "excluded_builtin_tools": list(spec.excluded_builtin_tools),
-        "tools": {
-            group_name: _configured_tool_names(registry, group_name)
-            for group_name in spec.tool_groups
-        },
+        "tools": tool_access["tools"],
         "skills": {
             source_name: list(skill_names)
             for source_name, skill_names in spec.skills.items()
@@ -265,11 +243,13 @@ def agent_uses_tool_group(
     *,
     recursive: bool = True,
 ) -> bool:
-    spec = registry.agent(agent_name)
-    if group_name in spec.tool_groups:
+    registry.agent(agent_name)
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
+    if group_name in access_config.agent_tools[agent_name].tool_groups:
         return True
     if not recursive:
         return False
+    spec = registry.agent(agent_name)
     return any(
         agent_uses_tool_group(registry, child_name, group_name, recursive=True)
         for child_name in spec.subagents
@@ -277,10 +257,13 @@ def agent_uses_tool_group(
 
 
 def mcp_tool_group_names(registry: AgentRegistry) -> tuple[str, ...]:
+    if not registry.agents:
+        return ()
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
     return tuple(
         group_name
-        for group_name, group in registry.tool_groups.items()
-        if group.get("source") == "config.yaml:mcp"
+        for group_name, group in access_config.tool_groups.items()
+        if group.source == "mcp"
     )
 
 
@@ -289,26 +272,19 @@ def mcp_tool_group_server_names(
     group_name: str,
     all_server_names: list[str],
 ) -> set[str]:
-    group = registry.tool_groups[group_name]
-    servers = group.get("servers")
-    if servers in (None, "enabled"):
-        return set(all_server_names)
-    if isinstance(servers, str):
-        patterns = [servers]
-    else:
-        patterns = [str(pattern) for pattern in (servers or [])]
-    return {
-        server_name
-        for server_name in all_server_names
-        if any(fnmatch.fnmatch(server_name, pattern) for pattern in patterns)
-    }
+    return mcp_server_names_for_tool_group(
+        load_tool_access_config(WORKSPACE_ROOT),
+        group_name,
+        all_server_names,
+    )
 
 
 def create_registered_agent(
     agent_name: str,
     *,
     registry: AgentRegistry,
-    model: Any,
+    model: Any | None = None,
+    model_resolver: Callable[[str], Any] | None = None,
     tool_resolver: ToolGroupResolver,
     backend: Any | None = None,
     backend_resolver: Callable[[str], Any] | None = None,
@@ -318,6 +294,9 @@ def create_registered_agent(
 
     _ensure_deepagents_harness_profile()
     spec = registry.agent(agent_name)
+    agent_model = model_resolver(agent_name) if model_resolver else model
+    if agent_model is None:
+        raise ValueError(f"No model configured for agent: {agent_name}")
     agent_backend = backend_resolver(agent_name) if backend_resolver else backend
     if agent_backend is None:
         raise ValueError(f"No backend configured for agent: {agent_name}")
@@ -325,7 +304,8 @@ def create_registered_agent(
         create_registered_subagent_spec(
             child_name,
             registry=registry,
-            model=model,
+            model=agent_model,
+            model_resolver=model_resolver,
             tool_resolver=tool_resolver,
             backend=agent_backend,
             backend_resolver=backend_resolver,
@@ -334,9 +314,9 @@ def create_registered_agent(
         for child_name in spec.subagents
     ]
     return create_deep_agent(
-        model=model,
+        model=agent_model,
         system_prompt=_read_prompt(registry, spec.prompt),
-        tools=tool_resolver.resolve(spec.tool_groups),
+        tools=tool_resolver.resolve_agent(spec.name),
         subagents=subagents,
         skills=None,
         middleware=(
@@ -372,7 +352,8 @@ def create_registered_subagent_spec(
     agent_name: str,
     *,
     registry: AgentRegistry,
-    model: Any,
+    model: Any | None = None,
+    model_resolver: Callable[[str], Any] | None = None,
     tool_resolver: ToolGroupResolver,
     backend: Any | None = None,
     backend_resolver: Callable[[str], Any] | None = None,
@@ -386,6 +367,7 @@ def create_registered_subagent_spec(
             agent_name,
             registry=registry,
             model=model,
+            model_resolver=model_resolver,
             tool_resolver=tool_resolver,
             backend=backend,
             backend_resolver=backend_resolver,
@@ -395,6 +377,11 @@ def create_registered_subagent_spec(
 
 
 def _parse_agent_spec(name: str, data: dict[str, Any]) -> AgentSpec:
+    if "tool_groups" in data:
+        raise ValueError(
+            f"{name}: tool_groups must be configured in the workspace root "
+            "tool-concurrency.yaml"
+        )
     skills = {
         source_name: tuple(skill_names or ())
         for source_name, skill_names in (data.get("skills") or {}).items()
@@ -408,7 +395,6 @@ def _parse_agent_spec(name: str, data: dict[str, Any]) -> AgentSpec:
         role=str(data.get("role", "")),
         inputs=tuple(str(item) for item in (data.get("inputs") or ())),
         outputs=tuple(str(item) for item in (data.get("outputs") or ())),
-        tool_groups=tuple(data.get("tool_groups") or ()),
         excluded_builtin_tools=tuple(
             str(item) for item in (data.get("excluded_builtin_tools") or ())
         ),
@@ -470,104 +456,32 @@ def _builtin_tool_exclusion_middleware(spec: AgentSpec) -> list[Any]:
     ]
 
 
-def _configured_tool_names(registry: AgentRegistry, group_name: str) -> list[str]:
-    group = registry.tool_groups[group_name]
-    if "tools" in group:
-        return list(group["tools"])
-    if group.get("source") == "config.yaml:mcp":
-        servers = group.get("servers", "enabled")
-        if servers == "enabled":
-            return ["<runtime MCP tools from all enabled config.yaml servers>"]
-        if isinstance(servers, str):
-            servers = [servers]
-        return [f"<runtime MCP tools from {', '.join(str(s) for s in servers)}>"]
-    return [f"<{group.get('description', 'runtime tools')}>"]
-
-
-def _dedupe_tools(tools) -> list[Any]:
-    seen: set[tuple[str | None, int]] = set()
-    deduped: list[Any] = []
-    for tool in tools:
-        key = (getattr(tool, "name", None), id(tool))
-        if key in seen:
-            continue
-        seen.add(key)
-        deduped.append(tool)
-    return deduped
-
-
-def _coverage_orchestration_tools() -> list[Any]:
-    return [
+def _local_tools() -> list[Any]:
+    tools = [
+        build_integrated_three_statement_model,
         create_coverage_run_dir,
-        update_run_manifest,
-        write_coverage_state,
-    ]
-
-
-def _coverage_artifact_tools() -> list[Any]:
-    return [
-        create_coverage_run_dir,
-        write_markdown_artifact,
-        write_json_artifact,
-        update_run_manifest,
-        write_coverage_state,
-    ]
-
-
-def _task2_check_tools() -> list[Any]:
-    return [
-        resolve_task2_handoff,
-        verify_task2_artifacts,
+        read_statement_context,
         reconcile_statement_specs,
+        resolve_task2_handoff,
+        update_integrated_three_statement_model,
+        update_run_manifest,
+        validate_balance_sheet_json,
+        validate_cash_flow_json,
+        validate_integrated_three_statement_model,
+        validate_income_statement_json,
+        verify_task2_artifacts,
+        write_coverage_state,
+        write_balance_sheet_json,
+        write_cash_flow_json,
+        write_income_statement_json,
+        write_json_artifact,
+        write_markdown_artifact,
         write_task2_model_audit,
     ]
+    return tools + _dcf_builder_tools()
 
 
-def _run_manifest_tools() -> list[Any]:
-    return [
-        update_run_manifest,
-    ]
-
-
-def _task2_financial_fact_artifact_tools() -> list[Any]:
-    return [
-        write_json_artifact,
-    ]
-
-
-def _task2_audit_artifact_tools() -> list[Any]:
-    return [
-        write_markdown_artifact,
-    ]
-
-
-def _statement_modeling_tools() -> list[Any]:
-    return [
-        read_statement_context,
-        validate_income_statement_json,
-        write_income_statement_json,
-        validate_balance_sheet_json,
-        write_balance_sheet_json,
-        validate_cash_flow_json,
-        write_cash_flow_json,
-    ]
-
-
-def _workbook_authoring_tools() -> list[Any]:
-    return [
-        build_integrated_three_statement_model,
-        validate_integrated_three_statement_model,
-    ]
-
-
-def _workbook_update_tools() -> list[Any]:
-    return [
-        update_integrated_three_statement_model,
-        validate_integrated_three_statement_model,
-    ]
-
-
-def _dcf_execution_tools() -> list[Any]:
+def _dcf_builder_tools() -> list[Any]:
     try:
         from dcf_builder.tools import (
             build_comps_excel,
