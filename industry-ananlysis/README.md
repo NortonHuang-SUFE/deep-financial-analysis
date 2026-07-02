@@ -5,35 +5,37 @@ LangGraph Deep Agents 行业研究项目，入口是 `langgraph.json` 中的
 
 ## 配置从哪里来
 
-项目默认从本目录读取非敏感配置，并从 workspace 根目录读取密钥：
+项目默认从 workspace 根目录读取配置和密钥：
 
-- `config.yaml`：模型、MCP、搜索、输出目录的默认配置。
-- `../.env`：本机密钥和临时覆盖项，优先级高于 `config.yaml`。
-- 进程环境变量：如果启动命令里已经设置，同样优先级高于 `config.yaml`。
+- `../model-routing.yaml`：模型 profile 与 agent/subagent 绑定。
+- `../tool-concurrency.yaml`：MCP endpoint、工具授权、搜索默认值和输出目录。
+- `../.env`：本机密钥和临时覆盖项。
 
-代码会锚定到项目根目录解析 `config.yaml`，并统一读取父级 workspace 的
-`.env`。不要把真实 key 放进 `config.yaml`。
+不要把真实 key 放进任何 YAML；真实 key 只放进 workspace 根目录 `.env`。
 
 ## 大模型调用
 
-模型配置在 `config.yaml` 的 `model` 节，也可以用 `.env` 覆盖：
+模型 profile 与 agent/subagent 绑定统一在 workspace 根目录
+`model-routing.yaml` 配置；`.env` 只保存 `api_key_env` 指向的真实密钥：
 
 ```bash
-MODEL_GATEWAY_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode
-MODEL_NAME=qwen-3.7-max
-MODEL_GATEWAY_API_KEY=...
-MODEL_MAX_TOKENS=16000
-MODEL_THINKING=auto
+DASHSCOPE_API_KEY=...
+MINIMAX_API_KEY=...
+ARK_API_KEY=...
 ```
 
-如果 `MODEL_GATEWAY_API_KEY` 为空，代码会按 `MODEL_GATEWAY_BASE_URL` 自动查找
-`DASHSCOPE_API_KEY` 或 `ALIBABA_API_KEY`。
+可用本地配置页编辑模型 profile 与 agent/subagent 绑定：
+
+```bash
+.venv/bin/python -m financial_agent_runtime.model_admin
+```
+
+打开 `http://127.0.0.1:8765`，保存后会更新根目录 `model-routing.yaml`。
 
 ## MCP 调用
 
-MCP 服务器配置在 `config.yaml` 的 `mcp` 节。启动 agent 时，
-`src/market_researcher/graph.py` 会读取所有非空 URL 的服务器，并通过
-`langchain-mcp-adapters` 加载工具。
+MCP 服务器配置在根目录 `tool-concurrency.yaml` 的 `mcp_servers` 节。启动
+agent 时，代码会按 `tool_groups` / `agent_tools` 加载本 agent 可见的工具。
 
 iFind 使用一套共享 key，放在 workspace 根目录 `.env`：
 
@@ -43,7 +45,14 @@ IFIND_MCP_TOKEN=...
 IFIND_MCP_AUTHORIZATION=...
 ```
 
-`config.yaml` 只保留 MCP URL 和 transport，不保存 token/header。
+东方财富妙想 MX DS MCP 配置为 `mx-ds-mcp`，同样只从 `.env` 读取凭证：
+
+```bash
+MX_DS_MCP_API_KEY=...
+```
+
+`tool-concurrency.yaml` 只保存 MCP URL、transport、非敏感 header 占位、
+tool group allowlist、搜索默认值和输出目录，不保存真实 token/header。
 
 ## 输出目录
 

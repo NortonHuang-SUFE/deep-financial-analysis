@@ -7,9 +7,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-from collections.abc import Sequence
 from pathlib import Path
-from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -25,13 +23,19 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from dcf_builder.assumption_research import (
-    ASSUMPTION_MCP_SERVER_NAMES,
+    ASSUMPTION_SUBAGENT_NAME,
     create_assumption_research_subagent_spec,
 )
 from financial_agent_runtime import (
+    build_chat_model_for_agent,
+    build_tool_catalog,
+    describe_agent_tool_access,
     load_and_register_mcp_tools,
+    load_tool_access_config,
     make_concurrency_limit_middleware,
-    normalize_openai_compatible_base_url,
+    mcp_server_names_for_tool_group,
+    mcp_tool_group_names_for_agent,
+    resolve_agent_tools,
 )
 
 from dcf_builder.config import (
@@ -48,6 +52,9 @@ from dcf_builder.tools import (
     write_assumption_analysis,
     write_valuation_summary,
 )
+
+
+DCF_BUILDER_AGENT_NAME = "dcf_builder"
 
 
 def _make_tool_error_middleware():
@@ -143,91 +150,66 @@ def _get_search_tools(cfg):
     return []
 
 
-async def _get_mcp_tools(cfg, server_names: Sequence[str] | None = None) -> list:
-    server_configs = enabled_mcp_server_configs(cfg)
-    if server_names is not None:
-        allowed = set(server_names)
-        server_configs = {
-            name: server_config
-            for name, server_config in server_configs.items()
-            if name in allowed
-        }
+async def _get_mcp_tools(
+    cfg,
+    *,
+    group_name: str,
+) -> list:
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
+    server_names = mcp_server_names_for_tool_group(
+        access_config,
+        group_name,
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
     tools = await _load_mcp_tools_from_config(server_configs)
     if tools:
-        print(f"INFO: Loaded {len(tools)} MCP tool(s) from: {list(server_configs)}")
+        print(
+            f"INFO: Loaded {len(tools)} MCP tool(s) for group '{group_name}' "
+            f"from: {list(server_configs)}"
+        )
     return tools
 
 
-def _build_model(cfg):
-    model_id = cfg.model.default
-    if cfg.model.base_url:
-        from langchain_openai import ChatOpenAI
-        import httpx
+async def _get_mcp_tool_groups(cfg, agent_names: list[str]) -> dict[str, list]:
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
+    group_names: list[str] = []
+    for agent_name in agent_names:
+        for group_name in mcp_tool_group_names_for_agent(access_config, agent_name):
+            if group_name not in group_names:
+                group_names.append(group_name)
 
-        base_url = normalize_openai_compatible_base_url(cfg.model.base_url)
-        parsed_base_url = urlparse(base_url)
-        if not _is_allowed_model_gateway(parsed_base_url):
-            raise ValueError(
-                "model.base_url must be an HTTPS OpenAI-compatible gateway, "
-                "or a local HTTP gateway on localhost/127.0.0.1."
-            )
-        if not cfg.model.api_key:
-            raise ValueError(
-                "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
-                "a provider-specific key such as DASHSCOPE_API_KEY or ARK_API_KEY, "
-                "or model.api_key."
-            )
-        model_kwargs = dict(
-            model=model_id,
-            base_url=base_url,
-            api_key=cfg.model.api_key,
-            max_tokens=cfg.model.max_tokens,
-            streaming=False,
-            max_retries=3,
-            timeout=120,
-        )
-        if parsed_base_url.netloc.lower() == "api.deepseek.com":
-            thinking = cfg.model.thinking
-            if thinking == "auto" and model_id.startswith("deepseek-v4"):
-                thinking = "disabled"
-            if thinking in {"enabled", "disabled"}:
-                model_kwargs["extra_body"] = {"thinking": {"type": thinking}}
-
-        proxy_url = (
-            os.environ.get("https_proxy")
-            or os.environ.get("HTTPS_PROXY")
-            or os.environ.get("http_proxy")
-            or os.environ.get("HTTP_PROXY")
-        )
-        if proxy_url:
-            model_kwargs["http_async_client"] = httpx.AsyncClient(proxy=proxy_url, verify=False)
-            model_kwargs["http_client"] = httpx.Client(proxy=proxy_url, verify=False)
-
-        return ChatOpenAI(**model_kwargs)
-
-    model_kwargs: dict = {"max_tokens": cfg.model.max_tokens}
-    if cfg.model.api_key:
-        model_kwargs["api_key"] = cfg.model.api_key
-    if ":" not in model_id:
-        model_id = f"openai:{model_id}"
-    from langchain.chat_models import init_chat_model
-
-    return init_chat_model(model_id, **model_kwargs)
+    return {
+        group_name: await _get_mcp_tools(cfg, group_name=group_name)
+        for group_name in group_names
+    }
 
 
-def _is_allowed_model_gateway(parsed_base_url) -> bool:
-    host = parsed_base_url.hostname or ""
-    if parsed_base_url.scheme == "https" and parsed_base_url.netloc:
-        return True
-    return parsed_base_url.scheme == "http" and host in {"localhost", "127.0.0.1", "::1"}
+def _local_tools() -> list:
+    return [
+        build_comps_excel,
+        build_dcf_model,
+        validate_dcf_model,
+        write_assumption_analysis,
+        write_valuation_summary,
+    ]
 
 
 async def _create_agent():
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
     if os.getenv("DCF_BUILDER_TEST_MODE") == "1":
         return {
-            "name": "dcf_builder",
+            "name": DCF_BUILDER_AGENT_NAME,
             "test_mode": True,
             "backend_type": "localshell",
+            "agent_config": describe_agent_tool_access(
+                access_config,
+                DCF_BUILDER_AGENT_NAME,
+            ),
+            "assumption_agent_config": describe_agent_tool_access(
+                access_config,
+                ASSUMPTION_SUBAGENT_NAME,
+            ),
         }
 
     try:
@@ -244,20 +226,39 @@ async def _create_agent():
         )
     system_prompt = prompt_path.read_text(encoding="utf-8")
 
-    model = _build_model(cfg)
-    mcp_tools = await _get_mcp_tools(cfg)
-    assumption_mcp_tools = await _get_mcp_tools(cfg, ASSUMPTION_MCP_SERVER_NAMES)
+    model = build_chat_model_for_agent(
+        WORKSPACE_ROOT,
+        DCF_BUILDER_AGENT_NAME,
+        timeout=120,
+    )
+    mcp_tool_groups = await _get_mcp_tool_groups(
+        cfg,
+        [DCF_BUILDER_AGENT_NAME, ASSUMPTION_SUBAGENT_NAME],
+    )
     search_tools = _get_search_tools(cfg)
-    local_tools = [
-        build_comps_excel,
-        build_dcf_model,
-        validate_dcf_model,
-        write_valuation_summary,
-    ]
+    local_tools = build_tool_catalog(_local_tools())
+    dynamic_tool_groups = {"search_tools": search_tools}
+    all_tools = resolve_agent_tools(
+        DCF_BUILDER_AGENT_NAME,
+        access_config=access_config,
+        local_tools=local_tools,
+        dynamic_tool_groups=dynamic_tool_groups,
+        mcp_tool_groups=mcp_tool_groups,
+    )
+    assumption_tools = resolve_agent_tools(
+        ASSUMPTION_SUBAGENT_NAME,
+        access_config=access_config,
+        local_tools=local_tools,
+        dynamic_tool_groups=dynamic_tool_groups,
+        mcp_tool_groups=mcp_tool_groups,
+    )
     backend = build_backend(prefer_shell=True)
-    assumption_tools = assumption_mcp_tools + search_tools + [write_assumption_analysis]
     assumption_subagent = create_assumption_research_subagent_spec(
-        model=model,
+        model=build_chat_model_for_agent(
+            WORKSPACE_ROOT,
+            ASSUMPTION_SUBAGENT_NAME,
+            timeout=120,
+        ),
         tools=assumption_tools,
         middleware=[
             make_concurrency_limit_middleware(WORKSPACE_ROOT),
@@ -266,11 +267,11 @@ async def _create_agent():
         backend=backend,
     )
 
-    all_tools = mcp_tools + search_tools + local_tools
     print(
-        f"INFO: Agent tools - MCP: {len(mcp_tools)}, "
-        f"Search: {len(search_tools)}, Local: {len(local_tools)}, "
-        f"Assumption subagent MCP: {len(assumption_mcp_tools)}"
+        f"INFO: Agent tools - Parent: {len(all_tools)}, "
+        f"Assumption subagent: {len(assumption_tools)}, "
+        f"MCP groups: {_mcp_group_counts(mcp_tool_groups)}, "
+        f"Search: {len(search_tools)}"
     )
 
     return create_deep_agent(
@@ -284,8 +285,15 @@ async def _create_agent():
             _make_tool_error_middleware(),
         ],
         backend=backend,
-        name="dcf_builder",
+        name=DCF_BUILDER_AGENT_NAME,
     )
+
+
+def _mcp_group_counts(mcp_tool_groups: dict[str, list]) -> dict[str, int]:
+    return {
+        group_name: len(tools)
+        for group_name, tools in sorted(mcp_tool_groups.items())
+    }
 
 
 try:
@@ -293,5 +301,5 @@ try:
 except Exception as exc:
     raise RuntimeError(
         f"Failed to initialise dcf_builder agent: {exc}\n"
-        "Check config.yaml, .env, and installed packages."
+        "Check root tool-concurrency.yaml, model-routing.yaml, .env, and installed packages."
     ) from exc

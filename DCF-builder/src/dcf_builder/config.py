@@ -1,11 +1,10 @@
 """Configuration loader for DCF Builder.
 
 Merge order:
-  config.yaml < workspace .env / process environment
+  root tool-concurrency.yaml < workspace .env / process environment
 
-Default config paths are resolved from the DCF-builder project root, so graph
-loading works the same from this directory or from a parent workspace.
-Secrets are read from the parent workspace `.env`, not from project config.
+Runtime defaults are read from the workspace root. Secrets are read from the
+parent workspace `.env`, not from project config.
 """
 
 from __future__ import annotations
@@ -13,14 +12,19 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Dict, Literal
-from urllib.parse import urlparse
 
 import yaml
 from pydantic import BaseModel, Field
 
 from financial_agent_runtime import (
+    MCPServerConfig,
+    apply_mcp_env_overrides,
     build_backend as _shared_build_backend,
+    enabled_mcp_server_configs as _shared_enabled_mcp_server_configs,
     file_storage_root as _shared_file_storage_root,
+    ifind_auth_headers as _shared_ifind_auth_headers,
+    load_workspace_agent_config,
+    mcp_servers_from_yaml_data,
     mirror_skills_into_backend as _shared_mirror_skills_into_backend,
 )
 
@@ -28,6 +32,7 @@ from financial_agent_runtime import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
 WORKSPACE_ENV_PATH = WORKSPACE_ROOT / ".env"
+AGENT_NAME = "dcf_builder"
 
 
 def file_storage_root() -> Path:
@@ -40,27 +45,6 @@ def build_backend(*, prefer_shell: bool = True):
 
 def mirror_skills_into_backend(backend, local_dir) -> str:
     return _shared_mirror_skills_into_backend(backend, local_dir, file_storage_root())
-
-
-class ModelProfile(BaseModel):
-    name: str
-    max_tokens: int | None = None
-    thinking: Literal["auto", "enabled", "disabled"] | None = None
-
-
-class ModelConfig(BaseModel):
-    active: str = "qwen"
-    default: str = "qwen-3.7-max"
-    max_tokens: int = 16000
-    base_url: str = "https://dashscope.aliyuncs.com/compatible-mode"
-    api_key: str = ""
-    thinking: Literal["auto", "enabled", "disabled"] = "auto"
-    profiles: Dict[str, ModelProfile] = Field(default_factory=dict)
-
-
-class MCPServerConfig(BaseModel):
-    url: str = ""
-    transport: Literal["streamable_http", "sse", "stdio"] = "streamable_http"
 
 
 class SearchConfig(BaseModel):
@@ -76,29 +60,29 @@ class OutputConfig(BaseModel):
 
 
 class Config(BaseModel):
-    model: ModelConfig = Field(default_factory=ModelConfig)
     mcp: Dict[str, MCPServerConfig] = Field(default_factory=dict)
     search: SearchConfig = Field(default_factory=SearchConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
     @classmethod
-    def _from_yaml(cls, path: str = "config.yaml") -> "Config":
-        config_path = _resolve_project_path(path)
-        if not config_path.exists():
-            return cls()
+    def _from_yaml(cls, path: str | None = None) -> "Config":
+        if path:
+            config_path = _resolve_project_path(path)
+            with open(config_path, encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+        else:
+            data = load_workspace_agent_config(WORKSPACE_ROOT, AGENT_NAME)
 
-        with open(config_path, encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
-
-        if "mcp" in data and isinstance(data["mcp"], dict):
+        mcp_servers = mcp_servers_from_yaml_data(data)
+        if mcp_servers is not None:
             data["mcp"] = {
                 name: MCPServerConfig(**value) if isinstance(value, dict) else value
-                for name, value in data["mcp"].items()
+                for name, value in mcp_servers.items()
             }
         return cls(**data)
 
     @classmethod
-    def load(cls, config_yaml_path: str = "config.yaml") -> "Config":
+    def load(cls, override_path: str | None = None) -> "Config":
         try:
             from dotenv import load_dotenv
 
@@ -106,49 +90,12 @@ class Config(BaseModel):
         except ImportError:
             pass
 
-        cfg = cls._from_yaml(config_yaml_path)
+        cfg = cls._from_yaml(override_path)
 
-        cfg.model.active = os.getenv("MODEL_PROFILE") or cfg.model.active
-        _apply_model_profile(cfg.model)
-
-        cfg.model.default = os.getenv("MODEL_NAME") or cfg.model.default
-        cfg.model.base_url = (
-            os.getenv("MODEL_GATEWAY_BASE_URL")
-            or os.getenv("MODEL_RELAY_BASE_URL")
-            or os.getenv("MODEL_BASE_URL")
-            or cfg.model.base_url
+        apply_mcp_env_overrides(
+            cfg.mcp,
+            disable_env_var="DCF_BUILDER_DISABLE_MCP",
         )
-        cfg.model.api_key = (
-            os.getenv("MODEL_GATEWAY_API_KEY")
-            or os.getenv("MODEL_RELAY_API_KEY")
-            or os.getenv("MODEL_API_KEY")
-            or cfg.model.api_key
-        )
-        cfg.model.thinking = os.getenv("MODEL_THINKING") or cfg.model.thinking
-        model_max_tokens = os.getenv("MODEL_MAX_TOKENS")
-        if model_max_tokens:
-            cfg.model.max_tokens = int(model_max_tokens)
-
-        if not cfg.model.api_key:
-            for env_name in _model_api_key_env_names(cfg.model.base_url):
-                cfg.model.api_key = os.getenv(env_name) or ""
-                if cfg.model.api_key:
-                    break
-
-        if os.getenv("DCF_BUILDER_DISABLE_MCP") == "1":
-            for server in cfg.mcp.values():
-                server.url = ""
-
-        for server_name in list(cfg.mcp.keys()):
-            server_cfg = cfg.mcp[server_name]
-            prefix = _env_slug(server_name)
-            url_val = os.getenv(f"{prefix}_MCP_URL")
-            if url_val:
-                server_cfg.url = url_val
-
-            transport_val = os.getenv(f"{prefix}_MCP_TRANSPORT")
-            if transport_val:
-                server_cfg.transport = transport_val
 
         if not cfg.search.api_key:
             if cfg.search.provider == "tavily":
@@ -159,7 +106,7 @@ class Config(BaseModel):
         return cfg
 
 
-def load_config(path: str = "config.yaml") -> Config:
+def load_config(path: str | None = None) -> Config:
     return Config.load(path)
 
 
@@ -170,67 +117,15 @@ def _resolve_project_path(path: str) -> Path:
     return PROJECT_ROOT / candidate
 
 
-def _apply_model_profile(model: ModelConfig) -> None:
-    profile_name = (model.active or "").strip()
-    if not profile_name:
-        return
-
-    profile = model.profiles.get(profile_name)
-    if profile is None:
-        if profile_name != "default":
-            model.default = profile_name
-        return
-
-    model.default = profile.name
-    if profile.max_tokens is not None:
-        model.max_tokens = profile.max_tokens
-    if profile.thinking is not None:
-        model.thinking = profile.thinking
-
-
-def enabled_mcp_server_configs(cfg: Config) -> dict[str, dict]:
+def enabled_mcp_server_configs(
+    cfg: Config,
+    *,
+    server_names: set[str] | None = None,
+) -> dict[str, dict]:
     """Return MultiServerMCPClient-ready server configs."""
-    server_configs: dict[str, dict] = {}
-    for name, srv in cfg.mcp.items():
-        if not srv.url:
-            continue
-        entry: dict = {
-            "url": srv.url.rstrip("/"),
-            "transport": srv.transport,
-        }
-        if name.startswith("ifind-"):
-            headers = ifind_auth_headers()
-            if headers:
-                entry["headers"] = headers
-        server_configs[name] = entry
-    return server_configs
+    return _shared_enabled_mcp_server_configs(cfg, server_names=server_names)
 
 
 def ifind_auth_headers() -> dict[str, str]:
     """Return the shared iFind MCP Authorization header from environment."""
-    shared_auth = os.getenv("IFIND_MCP_AUTHORIZATION")
-    if shared_auth:
-        return {"Authorization": shared_auth}
-    shared_token = os.getenv("IFIND_MCP_TOKEN")
-    if shared_token:
-        return {"Authorization": f"Bearer {shared_token}"}
-    return {}
-
-
-def _env_slug(server_name: str) -> str:
-    return server_name.upper().replace("-", "_")
-
-
-def _model_api_key_env_names(base_url: str) -> list[str]:
-    host = urlparse(base_url).netloc.lower()
-    if host.endswith("babelark.com"):
-        return ["BABELARK_API_KEY"]
-    if host.endswith("minimaxi.com") or host.endswith("minimax.io"):
-        return ["MINIMAX_API_KEY"]
-    if host.endswith("deepseek.com"):
-        return ["DEEPSEEK_API_KEY"]
-    if host.endswith("volces.com") or host.endswith("volcengineapi.com"):
-        return ["ARK_API_KEY", "VOLCENGINE_API_KEY", "VOLCENGINE_ARK_API_KEY"]
-    if host.endswith("dashscope.aliyuncs.com"):
-        return ["DASHSCOPE_API_KEY", "ALIBABA_API_KEY"]
-    return []
+    return _shared_ifind_auth_headers()

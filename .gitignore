@@ -9,7 +9,9 @@
 !/README.en.md
 !/CHANGELOG.md
 !/CHANGELOG.en.md
+!/AGENTS.md
 !/langgraph.json
+!/model-routing.yaml
 !/single-stock-coverage-plan.md
 !/tool-concurrency.yaml
 !/docs/

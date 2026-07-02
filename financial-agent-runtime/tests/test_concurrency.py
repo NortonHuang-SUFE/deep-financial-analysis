@@ -36,10 +36,7 @@ def test_config_parsing_reads_groups(tmp_path):
     _reset()
     _write_config(
         tmp_path,
-        "groups:\n"
-        "  ifind:\n"
-        "    max_concurrency: 5\n"
-        "    mcp_servers: ['ifind-*']\n",
+        "groups:\n  ifind:\n    max_concurrency: 5\n    mcp_servers: ['ifind-*']\n",
     )
     groups = runtime.load_tool_concurrency_config(tmp_path)
     assert groups["ifind"]["limit"] == 5
@@ -203,3 +200,44 @@ def test_unregistered_tool_is_not_throttled(tmp_path):
     mw = runtime.make_concurrency_limit_middleware(tmp_path)
     peak = _run_concurrency_probe(mw, ["free_tool"], total=6)
     assert peak >= 4  # runs unwrapped — well above the limited group's cap of 2
+
+
+def test_mcp_loader_prefixes_tool_names_by_server(monkeypatch, tmp_path):
+    _reset()
+    _write_config(
+        tmp_path,
+        "groups:\n  mx-ds:\n    max_concurrency: 2\n    mcp_servers: ['mx-ds-mcp']\n",
+    )
+    captured = {}
+
+    class FakeMCPClient:
+        def __init__(self, connections, *, tool_name_prefix=False, **_kwargs):
+            self.connections = connections
+            self.tool_name_prefix = tool_name_prefix
+            captured["tool_name_prefix"] = tool_name_prefix
+
+        async def get_tools(self, *, server_name=None):
+            base_name = "query"
+            if self.tool_name_prefix and server_name:
+                return [_tool(f"{server_name}_{base_name}")]
+            return [_tool(base_name)]
+
+    import langchain_mcp_adapters.client as client_module
+
+    monkeypatch.setattr(client_module, "MultiServerMCPClient", FakeMCPClient)
+
+    tools = asyncio.run(
+        runtime.load_and_register_mcp_tools(
+            {
+                "mx-ds-mcp": {
+                    "url": "https://example.test/mcp",
+                    "transport": "streamable_http",
+                }
+            },
+            workspace_root=tmp_path,
+        )
+    )
+
+    assert captured["tool_name_prefix"] is True
+    assert [tool.name for tool in tools] == ["mx-ds-mcp_query"]
+    assert runtime.resolve_tool_group("mx-ds-mcp_query", tmp_path) == ("mx-ds", 2)

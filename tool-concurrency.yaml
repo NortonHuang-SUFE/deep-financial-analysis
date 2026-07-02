@@ -1,37 +1,361 @@
-# Concurrency limits for external tools / services.
+# Unified tool/runtime configuration for the workspace.
 #
-# Each GROUP is one shared concurrency budget: when the number of in-flight
-# calls for a group reaches `max_concurrency`, additional calls (across ALL
-# tools in that group, across all agents/subagents in the same process) queue
-# and run serially until a slot frees.
+# `mcp_servers` is the shared catalog of MCP endpoints.
+# `agent_configs` stores non-secret per-agent runtime defaults such as output
+# directories and search providers.
+# `groups` are process-wide concurrency budgets for external services.
+# `tool_groups` define reusable tool sets.
+# `agent_tools` defines which tool groups and exact local tools each agent or
+# subagent can see.
 #
-# A tool joins a group by matching either:
-#   - an `mcp_servers` glob  -> matched against the MCP server name (e.g. ifind-stock)
-#   - a `tools` glob         -> matched against the tool's .name (e.g. web_search)
-#
-# Add as many groups as needed; several distinct tools/servers can share ONE
-# budget simply by living under the same group. If a tool matches more than one
-# group, the most restrictive (smallest max_concurrency) wins.
-#
-# Edit freely — changes take effect on the next graph load (restart `langgraph dev`).
 # Override the path to this file with the TOOL_CONCURRENCY_CONFIG env var.
-# If this file is absent, nothing is limited (the feature is a no-op).
+
+mcp_servers:
+  ifind-stock:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-stock-mcp"
+    transport: "streamable_http"
+  ifind-fund:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-fund-mcp"
+    transport: "streamable_http"
+  ifind-edb:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-edb-mcp"
+    transport: "streamable_http"
+  ifind-news:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-news-mcp"
+    transport: "streamable_http"
+  ifind-bond:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-bond-mcp"
+    transport: "streamable_http"
+  ifind-global-stock:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-global-stock-mcp"
+    transport: "streamable_http"
+  ifind-index:
+    url: "https://api-mcp.51ifind.com:8643/ds-mcp-servers/hexin-ifind-ds-index-mcp"
+    transport: "streamable_http"
+  mx-ds-mcp:
+    url: "https://mxapi.eastmoney.com/mxds/mcp"
+    transport: "streamable-http"
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+
+agent_configs:
+  dcf_builder:
+    search:
+      provider: "none"
+      api_key: ""
+      max_results: 5
+    output:
+      dir: "./out"
+
+  market_researcher:
+    search:
+      provider: "none"
+      api_key: ""
+      max_results: 5
+    output:
+      dir: "./out"
+      pptx_template: "./templates/firm-template.pptx"
+
+  morning_note:
+    output:
+      dir: "./out"
+
+  stock_screen:
+    output:
+      dir: "./out"
+
+  sector_research:
+    output:
+      dir: "./out"
+
+  thesis_tracker:
+    output:
+      dir: "./out"
+
+  single_stock_coverage:
+    output:
+      dir: "./out/coverage"
+
+  html_image_renderer:
+    output:
+      dir: "./out"
 
 groups:
   # Whole 同花顺 / iFinD service treated as one shared budget.
   ifind:
-    max_concurrency: 2        # 1 = fully serial; >1 = bounded parallel
-    mcp_servers:              # globs matched against the MCP server name
+    max_concurrency: 5
+    mcp_servers:
       - "ifind-*"
 
-  # --- examples of future groups (commented out) ---------------------------
-  # A different provider — independent budget, just another group:
-  # wind:
-  #   max_concurrency: 3
-  #   mcp_servers: ["wind-*"]
-  #
-  # Several DISTINCT tools sharing ONE budget (mix MCP servers + named tools):
-  # external-web:
-  #   max_concurrency: 2
-  #   mcp_servers: ["news-*"]
-  #   tools: ["web_search", "tavily*"]
+  # Eastmoney 妙想 MX data service. Keep it separate from iFind so each
+  # provider has its own independent back-pressure budget.
+  mx-ds:
+    max_concurrency: 2
+    mcp_servers:
+      - "mx-ds-mcp"
+
+tool_groups:
+  # Shared MCP groups -------------------------------------------------------
+  mcp_tools:
+    source: mcp
+    description: All enabled runtime MCP tools.
+    servers: enabled
+
+  ifind_mcp_tools:
+    source: mcp
+    description: Runtime iFind MCP tools loaded from ifind-* servers.
+    servers:
+      - "ifind-*"
+
+  mx_ds_mcp_tools:
+    source: mcp
+    description: Runtime Eastmoney MX DS MCP tools.
+    servers:
+      - "mx-ds-mcp"
+
+  dcf_builder_mcp_tools:
+    source: mcp
+    description: Runtime MCP tools used by standalone DCF Builder parent.
+    servers:
+      - ifind-stock
+      - ifind-bond
+      - ifind-edb
+      - ifind-news
+      - ifind-index
+      - ifind-global-stock
+      - mx-ds-mcp
+
+  dcf_assumption_mcp_tools:
+    source: mcp
+    description: MCP tools used by the standalone DCF assumption researcher.
+    servers:
+      - ifind-stock
+      - ifind-edb
+      - ifind-news
+      - ifind-index
+      - mx-ds-mcp
+
+  search_tools:
+    source: dynamic
+    description: Search tools selected from each agent's search provider config.
+
+  # Single-stock coverage local groups -------------------------------------
+  coverage_orchestration_tools:
+    source: local
+    description: Root coverage orchestration tools for run creation and state.
+    tools:
+      - create_coverage_run_dir
+      - update_run_manifest
+      - write_coverage_state
+
+  coverage_artifact_tools:
+    source: local
+    description: Coverage run directory, artifact writers, manifest, and state tools.
+    tools:
+      - create_coverage_run_dir
+      - write_markdown_artifact
+      - write_json_artifact
+      - update_run_manifest
+      - write_coverage_state
+
+  task2_check_tools:
+    source: local
+    description: Task 2 handoff, verification, reconciliation, and audit tools.
+    tools:
+      - resolve_task2_handoff
+      - verify_task2_artifacts
+      - reconcile_statement_specs
+      - write_task2_model_audit
+
+  run_manifest_tools:
+    source: local
+    description: Run manifest update tool.
+    tools:
+      - update_run_manifest
+
+  task2_financial_fact_artifact_tools:
+    source: local
+    description: Task 2 financial facts JSON writer.
+    tools:
+      - write_json_artifact
+
+  task2_audit_artifact_tools:
+    source: local
+    description: Task 2 model audit Markdown writer.
+    tools:
+      - write_markdown_artifact
+
+  statement_modeling_tools:
+    source: local
+    description: Task 2 statement JSON context, validation, and write tools.
+    tools:
+      - read_statement_context
+      - validate_income_statement_json
+      - write_income_statement_json
+      - validate_balance_sheet_json
+      - write_balance_sheet_json
+      - validate_cash_flow_json
+      - write_cash_flow_json
+
+  workbook_authoring_tools:
+    source: local
+    description: Task 2 workbook build and validation tools.
+    tools:
+      - build_integrated_three_statement_model
+      - validate_integrated_three_statement_model
+
+  workbook_update_tools:
+    source: local
+    description: Task 2 workbook update and validation tools.
+    tools:
+      - update_integrated_three_statement_model
+      - validate_integrated_three_statement_model
+
+  dcf_execution_tools:
+    source: local
+    description: Local deterministic DCF-builder tools imported from ../DCF-builder.
+    tools:
+      - build_comps_excel
+      - build_dcf_model
+      - validate_dcf_model
+      - write_assumption_analysis
+      - write_valuation_summary
+
+  # Standalone DCF Builder local groups ------------------------------------
+  dcf_builder_model_tools:
+    source: local
+    description: Standalone DCF Builder parent local tools.
+    tools:
+      - build_comps_excel
+      - build_dcf_model
+      - validate_dcf_model
+      - write_valuation_summary
+
+  # Standalone research/report agent local groups --------------------------
+  artifact_report_tools:
+    source: local
+    description: Standard report artifact tools used by screen, morning note, sector, and thesis agents.
+    tools:
+      - create_task_output_dir
+      - write_markdown_report
+      - write_json_artifact
+
+  market_research_authoring_tools:
+    source: local
+    description: Market researcher local artifact builders.
+    tools:
+      - build_comps_excel
+      - build_pptx
+
+agent_tools:
+  # Single-stock coverage stack --------------------------------------------
+  single_stock_coverage:
+    tool_groups:
+      - coverage_orchestration_tools
+
+  task1_company_researcher:
+    tool_groups:
+      - ifind_mcp_tools
+      - mx_ds_mcp_tools
+      - coverage_artifact_tools
+
+  task2_financial_modeler:
+    tool_groups:
+      - task2_check_tools
+      - run_manifest_tools
+
+  financial_facts_modeler:
+    tool_groups:
+      - ifind_mcp_tools
+      - mx_ds_mcp_tools
+      - task2_financial_fact_artifact_tools
+
+  is_modeler:
+    tool_groups:
+      - statement_modeling_tools
+
+  bs_modeler:
+    tool_groups:
+      - statement_modeling_tools
+
+  cf_modeler:
+    tool_groups:
+      - statement_modeling_tools
+
+  model_update_executor:
+    tool_groups:
+      - workbook_update_tools
+      - task2_audit_artifact_tools
+
+  workbook_builder:
+    tool_groups:
+      - workbook_authoring_tools
+      - task2_audit_artifact_tools
+
+  task3_valuation_analyst:
+    tool_groups:
+      - ifind_mcp_tools
+      - mx_ds_mcp_tools
+      - coverage_artifact_tools
+
+  assumption_generator:
+    tool_groups:
+      - ifind_mcp_tools
+      - mx_ds_mcp_tools
+      - coverage_artifact_tools
+
+  dcf_execution:
+    tool_groups:
+      - dcf_execution_tools
+      - coverage_artifact_tools
+
+  task4_chart_pack_generator:
+    tool_groups:
+      - coverage_artifact_tools
+
+  task5_report_assembler:
+    tool_groups:
+      - coverage_artifact_tools
+
+  # Standalone DCF Builder stack -------------------------------------------
+  dcf_builder:
+    tool_groups:
+      - dcf_builder_mcp_tools
+      - search_tools
+      - dcf_builder_model_tools
+
+  dcf-assumption-researcher:
+    tool_groups:
+      - dcf_assumption_mcp_tools
+      - search_tools
+    tools:
+      - write_assumption_analysis
+
+  # Standalone agents -------------------------------------------------------
+  stock_screen:
+    tool_groups:
+      - mcp_tools
+      - artifact_report_tools
+
+  morning_note:
+    tool_groups:
+      - mcp_tools
+      - artifact_report_tools
+
+  market_researcher:
+    tool_groups:
+      - mcp_tools
+      - search_tools
+      - market_research_authoring_tools
+
+  sector_research:
+    tool_groups:
+      - mcp_tools
+      - artifact_report_tools
+
+  thesis_tracker:
+    tool_groups:
+      - mcp_tools
+      - artifact_report_tools

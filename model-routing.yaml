@@ -1,0 +1,56 @@
+default_model: volcengine-glm-5.2
+models:
+  minimax-m3:
+    model: MiniMax-M3
+    base_url: https://api.minimaxi.com/v1
+    api_key_env: MINIMAX_API_KEY
+    max_tokens: 16000
+    thinking: auto
+  aliyun-ds:
+    model: deepseek-v3
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key_env: DASHSCOPE_API_KEY
+    max_tokens: 16000
+    thinking: auto  
+  aliyun-minimax-m3:
+    model: MiniMax/MiniMax-M3
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key_env: DASHSCOPE_API_KEY
+    max_tokens: 16000
+    thinking: auto
+  aliyun-qwen-max:
+    model: qwen-max
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key_env: DASHSCOPE_API_KEY
+    max_tokens: 16000
+    thinking: auto
+  volcengine-glm-5.2:
+    model: glm-5-2-260617
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    api_key_env: ARK_API_KEY
+    max_tokens: 16000
+    thinking: auto
+agent_models:
+  deep_orchestrator: volcengine-glm-5.2
+  morning_note: volcengine-glm-5.2
+  stock_screen: volcengine-glm-5.2
+  sector_research: volcengine-glm-5.2
+  thesis_tracker: volcengine-glm-5.2
+  market_researcher: volcengine-glm-5.2
+  html_image_renderer: aliyun-minimax-m3
+  dcf_builder: volcengine-glm-5.2
+  dcf-assumption-researcher: volcengine-glm-5.2
+  single_stock_coverage: volcengine-glm-5.2
+  task1_company_researcher: volcengine-glm-5.2
+  task2_financial_modeler: volcengine-glm-5.2
+  financial_facts_modeler: volcengine-glm-5.2
+  is_modeler: volcengine-glm-5.2
+  bs_modeler: volcengine-glm-5.2
+  cf_modeler: volcengine-glm-5.2
+  model_update_executor: volcengine-glm-5.2
+  workbook_builder: volcengine-glm-5.2
+  task3_valuation_analyst: volcengine-glm-5.2
+  assumption_generator: volcengine-glm-5.2
+  dcf_execution: volcengine-glm-5.2
+  task4_chart_pack_generator: volcengine-glm-5.2
+  task5_report_assembler: volcengine-glm-5.2

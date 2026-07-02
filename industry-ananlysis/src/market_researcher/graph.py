@@ -4,7 +4,7 @@ This module builds the agent using deepagents.create_deep_agent() and
 exposes a `graph` object that langgraph.json points to.
 
 Skills in ./skills/ are auto-discovered by deepagents.
-MCP tools are loaded from config.yaml at startup.
+MCP tools are loaded from the workspace root tool-concurrency.yaml at startup.
 Search tools are selected by the configured provider.
 Local tools (build_comps_excel, build_pptx) are always available.
 """
@@ -17,13 +17,11 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import ToolMessage
 
 # LangGraph loads this file by path, so make the src-layout package importable
@@ -34,9 +32,14 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from financial_agent_runtime import (
+    build_chat_model_for_agent,
+    build_tool_catalog,
     load_and_register_mcp_tools,
+    load_tool_access_config,
     make_concurrency_limit_middleware,
-    normalize_openai_compatible_base_url,
+    mcp_server_names_for_tool_group,
+    mcp_tool_group_names_for_agent,
+    resolve_agent_tools,
 )
 
 from market_researcher.config import (
@@ -48,6 +51,8 @@ from market_researcher.config import (
     load_config,
 )
 from market_researcher.tools import build_comps_excel, build_pptx
+
+AGENT_NAME = "market_researcher"
 
 
 # ── Tool error handling middleware ────────────────────────────────────────────
@@ -199,7 +204,13 @@ def _get_search_tools(cfg):
 
 async def _get_mcp_tools(cfg) -> list:
     """Load MCP tools from all configured servers that have a non-empty URL."""
-    server_configs = enabled_mcp_server_configs(cfg)
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
+    server_names = mcp_server_names_for_tool_group(
+        access_config,
+        "mcp_tools",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
     if not server_configs:
         return []
     tools = await _load_mcp_tools_from_config(server_configs)
@@ -208,18 +219,42 @@ async def _get_mcp_tools(cfg) -> list:
     return tools
 
 
-def _is_allowed_model_gateway(parsed_base_url) -> bool:
-    host = parsed_base_url.hostname or ""
-    if parsed_base_url.scheme == "https" and parsed_base_url.netloc:
-        return True
-    return parsed_base_url.scheme == "http" and host in {"localhost", "127.0.0.1", "::1"}
+async def _get_mcp_tool_groups(cfg, agent_name: str) -> dict[str, list]:
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
+    return {
+        group_name: await _get_mcp_tools_for_group(cfg, group_name)
+        for group_name in mcp_tool_group_names_for_agent(access_config, agent_name)
+    }
+
+
+async def _get_mcp_tools_for_group(cfg, group_name: str) -> list:
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
+    server_names = mcp_server_names_for_tool_group(
+        access_config,
+        group_name,
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
+    if not server_configs:
+        return []
+    tools = await _load_mcp_tools_from_config(server_configs)
+    if tools:
+        print(
+            f"INFO: Loaded {len(tools)} MCP tool(s) for group '{group_name}' "
+            f"from: {list(server_configs.keys())}"
+        )
+    return tools
+
+
+def _local_tools() -> list:
+    return [build_comps_excel, build_pptx]
 
 
 async def _create_agent():
     """Build and return the deep agent."""
     if os.getenv("MARKET_RESEARCHER_TEST_MODE") == "1":
         return {
-            "name": "market_researcher",
+            "name": AGENT_NAME,
             "test_mode": True,
             "backend_type": "localshell",
         }
@@ -242,68 +277,23 @@ async def _create_agent():
         )
     system_prompt = prompt_path.read_text(encoding="utf-8")
 
-    # Initialise model
-    model_id = cfg.model.default
-
-    if cfg.model.base_url:
-        # Custom OpenAI-compatible endpoint — use ChatOpenAI directly
-        from langchain_openai import ChatOpenAI
-        import httpx
-
-        base_url = normalize_openai_compatible_base_url(cfg.model.base_url)
-        parsed_base_url = urlparse(base_url)
-        if not _is_allowed_model_gateway(parsed_base_url):
-            raise ValueError(
-                "model.base_url must be an HTTPS OpenAI-compatible gateway, "
-                "or a local HTTP gateway on localhost/127.0.0.1."
-            )
-        if not cfg.model.api_key:
-            raise ValueError(
-                "Missing model API key. Set MODEL_GATEWAY_API_KEY, MODEL_API_KEY, "
-                "a provider-specific key such as DASHSCOPE_API_KEY or ARK_API_KEY, "
-                "or model.api_key in config.yaml."
-            )
-        # Detect proxy from env for async httpx client
-        proxy_url = os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY") or os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY")
-
-        model_kwargs = dict(
-            model=model_id,
-            base_url=base_url,
-            api_key=cfg.model.api_key,
-            max_tokens=cfg.model.max_tokens,
-            streaming=False,
-            max_retries=3,
-            timeout=120,
-        )
-        if parsed_base_url.netloc.lower() == "api.deepseek.com":
-            thinking = cfg.model.thinking
-            if thinking == "auto" and model_id.startswith("deepseek-v4"):
-                thinking = "disabled"
-            if thinking in {"enabled", "disabled"}:
-                model_kwargs["extra_body"] = {"thinking": {"type": thinking}}
-        if proxy_url:
-            model_kwargs["http_async_client"] = httpx.AsyncClient(proxy=proxy_url, verify=False)
-            model_kwargs["http_client"] = httpx.Client(proxy=proxy_url, verify=False)
-
-        model = ChatOpenAI(**model_kwargs)
-    else:
-        # Standard provider — use init_chat_model with provider prefix
-        model_kwargs: dict = {"max_tokens": cfg.model.max_tokens}
-        if cfg.model.api_key:
-            model_kwargs["api_key"] = cfg.model.api_key
-        if ":" not in model_id:
-            model_id = f"openai:{model_id}"
-        model = init_chat_model(model_id, **model_kwargs)
+    model = build_chat_model_for_agent(WORKSPACE_ROOT, AGENT_NAME, timeout=120)
 
     # Gather tools
-    mcp_tools = await _get_mcp_tools(cfg)
+    access_config = load_tool_access_config(WORKSPACE_ROOT)
+    mcp_tool_groups = await _get_mcp_tool_groups(cfg, AGENT_NAME)
     search_tools = _get_search_tools(cfg)
-    local_tools = [build_comps_excel, build_pptx]
-
-    all_tools = mcp_tools + search_tools + local_tools
+    all_tools = resolve_agent_tools(
+        AGENT_NAME,
+        access_config=access_config,
+        local_tools=build_tool_catalog(_local_tools()),
+        dynamic_tool_groups={"search_tools": search_tools},
+        mcp_tool_groups=mcp_tool_groups,
+    )
     print(
-        f"INFO: Agent tools — MCP: {len(mcp_tools)}, "
-        f"Search: {len(search_tools)}, Local: {len(local_tools)}"
+        f"INFO: Agent tools — Total: {len(all_tools)}, "
+        f"MCP groups: {_mcp_group_counts(mcp_tool_groups)}, "
+        f"Search: {len(search_tools)}"
     )
 
     backend = build_backend(prefer_shell=True)
@@ -317,9 +307,16 @@ async def _create_agent():
             _make_tool_error_middleware(),
         ],
         backend=backend,
-        name="market_researcher",
+        name=AGENT_NAME,
     )
     return agent
+
+
+def _mcp_group_counts(mcp_tool_groups: dict[str, list]) -> dict[str, int]:
+    return {
+        group_name: len(tools)
+        for group_name, tools in sorted(mcp_tool_groups.items())
+    }
 
 
 # Build synchronously so that langgraph.json can import `graph` at module level.
@@ -329,5 +326,5 @@ try:
 except Exception as exc:
     raise RuntimeError(
         f"Failed to initialise market_researcher agent: {exc}\n"
-        "Check config.yaml and ensure required packages are installed."
+        "Check root tool-concurrency.yaml, model-routing.yaml, .env, and installed packages."
     ) from exc

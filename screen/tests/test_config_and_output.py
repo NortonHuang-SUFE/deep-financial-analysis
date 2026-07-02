@@ -1,5 +1,7 @@
 import importlib
 
+import financial_agent_runtime as runtime
+from financial_agent_runtime import tool_access
 import stock_screen_agent.config as config_module
 from stock_screen_agent.config import (
     PROJECT_ROOT,
@@ -9,6 +11,13 @@ from stock_screen_agent.config import (
     load_config,
 )
 from stock_screen_agent import tools
+
+
+def _write_tool_access_config(path, text: str):
+    cfg = path / "tool-concurrency.yaml"
+    cfg.write_text(text, encoding="utf-8")
+    tool_access._ACCESS_CONFIG_CACHE.clear()
+    return cfg
 
 
 def test_screen_prompt_defines_artifact_root():
@@ -24,17 +33,9 @@ def test_screen_prompt_defines_artifact_root():
 
 def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
     for env_name in [
-        "MODEL_NAME",
-        "MODEL_GATEWAY_BASE_URL",
-        "MODEL_GATEWAY_API_KEY",
-        "MODEL_RELAY_BASE_URL",
-        "MODEL_RELAY_API_KEY",
-        "MODEL_BASE_URL",
-        "MODEL_API_KEY",
-        "MODEL_THINKING",
-        "MODEL_MAX_TOKENS",
         "DASHSCOPE_API_KEY",
-        "ALIBABA_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "ARK_API_KEY",
     ]:
         monkeypatch.delenv(env_name, raising=False)
     monkeypatch.setattr(config_module, "WORKSPACE_ENV_PATH", tmp_path / "missing.env")
@@ -44,8 +45,6 @@ def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
 
     assert PROJECT_ROOT.name == "screen"
     assert WORKSPACE_ROOT == PROJECT_ROOT.parent
-    assert cfg.model.default == "qwen-3.7-max"
-    assert cfg.model.base_url == "https://dashscope.aliyuncs.com/compatible-mode"
     assert cfg.output.dir == "./out"
     assert "ifind-stock" in cfg.mcp
     assert "ifind-fund" in cfg.mcp
@@ -54,6 +53,7 @@ def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
     assert "ifind-bond" in cfg.mcp
     assert "ifind-global-stock" in cfg.mcp
     assert "ifind-index" in cfg.mcp
+    assert "mx-ds-mcp" in cfg.mcp
 
 
 def test_shared_ifind_credential_applies_to_all_ifind_servers(monkeypatch, tmp_path):
@@ -75,29 +75,103 @@ mcp:
     cfg = load_config(str(config_path))
     server_configs = enabled_mcp_server_configs(cfg)
 
-    assert server_configs["ifind-stock"]["headers"]["Authorization"] == "Bearer shared-token"
-    assert server_configs["ifind-news"]["headers"]["Authorization"] == "Bearer shared-token"
+    assert (
+        server_configs["ifind-stock"]["headers"]["Authorization"]
+        == "Bearer shared-token"
+    )
+    assert (
+        server_configs["ifind-news"]["headers"]["Authorization"]
+        == "Bearer shared-token"
+    )
+
+
+def test_mx_ds_credential_and_tool_group_allowlist(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  ifind-stock:
+    url: https://stock.example/mcp
+    transport: streamable_http
+  ifind-news:
+    url: https://news.example/mcp
+    transport: streamable_http
+  mx-ds-mcp:
+    url: https://mxapi.eastmoney.com/mxds/mcp
+    transport: streamable-http
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+""",
+        encoding="utf-8",
+    )
+    tool_config_path = _write_tool_access_config(
+        tmp_path,
+        """
+tool_groups:
+  test_mcp:
+    source: mcp
+    servers:
+      - ifind-news
+      - mx-ds-mcp
+agent_tools:
+  stock_screen:
+    tool_groups:
+      - test_mcp
+""",
+    )
+    monkeypatch.setenv("TOOL_CONCURRENCY_CONFIG", str(tool_config_path))
+    monkeypatch.setenv("IFIND_MCP_TOKEN", "shared-token")
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
+
+    cfg = load_config(str(config_path))
+    access_config = runtime.load_tool_access_config(None)
+    server_names = runtime.mcp_server_names_for_tool_group(
+        access_config,
+        "test_mcp",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
+
+    assert set(server_configs) == {"ifind-news", "mx-ds-mcp"}
+    assert (
+        server_configs["ifind-news"]["headers"]["Authorization"]
+        == "Bearer shared-token"
+    )
+    assert server_configs["mx-ds-mcp"] == {
+        "url": "https://mxapi.eastmoney.com/mxds/mcp",
+        "transport": "streamable_http",
+        "headers": {"em_api_key": "mx-key"},
+        "timeout": 120,
+    }
+    assert cfg.mcp["mx-ds-mcp"].connect_timeout == 10
 
 
 def test_workspace_root_env_file_is_loaded(monkeypatch, tmp_path):
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         """
-model:
-  default: yaml-model
-  base_url: https://dashscope.aliyuncs.com/compatible-mode
-mcp: {}
+mcp:
+  ifind-stock:
+    url: https://stock.example/mcp
+    transport: streamable_http
 """,
         encoding="utf-8",
     )
     env_path = tmp_path / ".env"
-    env_path.write_text("MODEL_NAME=workspace-env-model\n", encoding="utf-8")
+    env_path.write_text("IFIND_MCP_TOKEN=workspace-token\n", encoding="utf-8")
     monkeypatch.setattr(config_module, "WORKSPACE_ENV_PATH", env_path)
-    monkeypatch.delenv("MODEL_NAME", raising=False)
+    monkeypatch.delenv("IFIND_MCP_AUTHORIZATION", raising=False)
+    monkeypatch.delenv("IFIND_MCP_TOKEN", raising=False)
 
     cfg = load_config(str(config_path))
+    server_configs = enabled_mcp_server_configs(cfg)
 
-    assert cfg.model.default == "workspace-env-model"
+    assert (
+        server_configs["ifind-stock"]["headers"]["Authorization"]
+        == "Bearer workspace-token"
+    )
 
 
 def test_timestamped_output_dir_is_workspace_relative(monkeypatch):
@@ -165,7 +239,11 @@ def test_orchestrator_output_dir_is_used_exactly(monkeypatch, tmp_path):
     output_dir = storage_root / "out" / "20260625-101500" / "screen"
     out_path = tools.create_task_output_dir.invoke({"output_dir": str(output_dir)})
     markdown_path = tools.write_markdown_report.invoke(
-        {"markdown": "# Screen\n", "filename": "screen.md", "output_dir": str(output_dir)}
+        {
+            "markdown": "# Screen\n",
+            "filename": "screen.md",
+            "output_dir": str(output_dir),
+        }
     )
     json_path = tools.write_json_artifact.invoke(
         {

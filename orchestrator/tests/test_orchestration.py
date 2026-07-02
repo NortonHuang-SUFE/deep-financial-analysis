@@ -306,7 +306,11 @@ def test_orchestrator_task_tool_excludes_general_purpose(monkeypatch, tmp_path):
         captured={},
     )
 
-    monkeypatch.setattr(orch, "_build_model", lambda cfg: model)
+    monkeypatch.setattr(
+        orch,
+        "build_chat_model_for_agent",
+        lambda _workspace_root, _agent_name, timeout=300: model,
+    )
     monkeypatch.setattr(
         orch,
         "_build_subagent_specs",

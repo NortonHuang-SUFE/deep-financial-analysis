@@ -1,3 +1,5 @@
+import financial_agent_runtime as runtime
+from financial_agent_runtime import tool_access
 import sector_research_agent.config as config_module
 from sector_research_agent.config import (
     PROJECT_ROOT,
@@ -21,24 +23,21 @@ def test_sector_prompt_defines_artifact_root():
 
 def _clear_env(monkeypatch):
     for env_name in [
-        "MODEL_NAME",
-        "MODEL_GATEWAY_BASE_URL",
-        "MODEL_GATEWAY_API_KEY",
-        "MODEL_RELAY_BASE_URL",
-        "MODEL_RELAY_API_KEY",
-        "MODEL_BASE_URL",
-        "MODEL_API_KEY",
-        "MODEL_THINKING",
-        "MODEL_MAX_TOKENS",
         "DASHSCOPE_API_KEY",
-        "ALIBABA_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "ARK_API_KEY",
         "IFIND_MCP_AUTHORIZATION",
         "IFIND_MCP_TOKEN",
+        "MX_DS_MCP_API_KEY",
+        "MX_DS_MCP_URL",
+        "MX_DS_MCP_TRANSPORT",
         "AGENT_FILE_STORAGE_ROOT",
         "SECTOR_RESEARCH_DISABLE_MCP",
         "SECTOR_RESEARCH_OUTPUT_TIMESTAMP",
+        "TOOL_CONCURRENCY_CONFIG",
     ]:
         monkeypatch.delenv(env_name, raising=False)
+    tool_access._ACCESS_CONFIG_CACHE.clear()
 
 
 def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
@@ -50,10 +49,9 @@ def test_default_config_resolves_from_project_root(monkeypatch, tmp_path):
 
     assert PROJECT_ROOT.name == "sector"
     assert WORKSPACE_ROOT.name == "financialServicesModified"
-    assert cfg.model.default == "qwen-3.7-max"
-    assert cfg.model.base_url == "https://dashscope.aliyuncs.com/compatible-mode"
     assert cfg.output.dir == "./out"
     assert "ifind-stock" in cfg.mcp
+    assert "mx-ds-mcp" in cfg.mcp
     assert cfg.mcp["ifind-stock"].url
 
 
@@ -94,6 +92,58 @@ mcp:
     assert server_configs["ifind-news"]["headers"] == {
         "Authorization": "from-process-env"
     }
+
+
+def test_mx_ds_auth_and_group_allowlist(monkeypatch, tmp_path):
+    _clear_env(monkeypatch)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  ifind-stock:
+    url: "https://example.test/stock"
+    transport: "streamable_http"
+  mx-ds-mcp:
+    url: "https://mxapi.eastmoney.com/mxds/mcp"
+    transport: "streamable-http"
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+""",
+        encoding="utf-8",
+    )
+    tool_config_path = tmp_path / "tool-concurrency.yaml"
+    tool_config_path.write_text(
+        """
+tool_groups:
+  test_mcp:
+    source: mcp
+    servers:
+      - mx-ds-mcp
+agent_tools:
+  sector_research:
+    tool_groups:
+      - test_mcp
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("TOOL_CONCURRENCY_CONFIG", str(tool_config_path))
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
+
+    cfg = load_config(str(config_path))
+    access_config = runtime.load_tool_access_config(None)
+    server_names = runtime.mcp_server_names_for_tool_group(
+        access_config,
+        "test_mcp",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
+
+    assert set(server_configs) == {"mx-ds-mcp"}
+    assert server_configs["mx-ds-mcp"]["headers"] == {"em_api_key": "mx-key"}
+    assert server_configs["mx-ds-mcp"]["timeout"] == 120
+    assert cfg.mcp["mx-ds-mcp"].connect_timeout == 10
 
 
 def test_timestamped_output_dir_is_workspace_relative(monkeypatch):

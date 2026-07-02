@@ -4,18 +4,19 @@
 
 ## 配置
 
-模型和 iFind MCP URL 在 `config.yaml` 中配置。密钥从 workspace 根目录 `.env` 读取，也就是 `financialServicesModified/.env`，不需要在 `thesis/` 内放 `.env`。
+模型 profile 与 agent 绑定统一在 workspace 根目录 `model-routing.yaml` 配置；MCP URL、工具授权和输出配置统一在根目录 `tool-concurrency.yaml` 配置。密钥从 workspace 根目录 `.env` 读取，也就是 `financialServicesModified/.env`，不需要在 `thesis/` 内放 `.env`。
 
 常用环境变量：
 
 ```bash
-MODEL_NAME=qwen-3.7-max
-MODEL_GATEWAY_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode
-MODEL_GATEWAY_API_KEY=...
+DASHSCOPE_API_KEY=...
+MINIMAX_API_KEY=...
+ARK_API_KEY=...
 
 IFIND_MCP_TOKEN=...
 # 或
 IFIND_MCP_AUTHORIZATION="Bearer ..."
+MX_DS_MCP_API_KEY=...
 ```
 
 iFind 鉴权只支持全局共享 key；单 server 可覆盖 URL/transport，例如：
@@ -23,7 +24,13 @@ iFind 鉴权只支持全局共享 key；单 server 可覆盖 URL/transport，例
 ```bash
 IFIND_STOCK_MCP_URL=https://example.test/mcp
 IFIND_STOCK_MCP_TRANSPORT=streamable_http
+MX_DS_MCP_URL=https://mxapi.eastmoney.com/mxds/mcp
+MX_DS_MCP_TRANSPORT=streamable-http
 ```
+
+`mx-ds-mcp` 随已有 iFind MCP 配置一起启用。可用根目录
+`tool-concurrency.yaml` 的 `tool_groups` / `agent_tools` 收窄本 agent 可用的
+MCP server。
 
 调试开关：
 

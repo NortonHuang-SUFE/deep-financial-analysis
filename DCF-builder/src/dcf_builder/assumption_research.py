@@ -14,13 +14,6 @@ ASSUMPTION_SKILLS_ROOT = (
 )
 ASSUMPTION_PROMPT_PATH = PROJECT_ROOT / "agents" / f"{ASSUMPTION_SUBAGENT_NAME}.md"
 
-ASSUMPTION_MCP_SERVER_NAMES = (
-    "ifind-stock",
-    "ifind-edb",
-    "ifind-news",
-    "ifind-index",
-)
-
 ASSUMPTION_SCENARIO_NAMES = ("Bear", "Base", "Bull")
 ASSUMPTION_REQUIRED_FIELDS = (
     "revenue_growth",

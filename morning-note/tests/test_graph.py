@@ -60,12 +60,16 @@ def test_morning_note_disables_general_purpose_task_tool(monkeypatch, tmp_path):
     model = _CaptureToolsModel(captured={})
     cfg = SimpleNamespace(output=SimpleNamespace(dir="./out"))
 
-    async def _no_mcp_tools(_cfg):
-        return []
+    async def _no_mcp_tool_groups(_cfg, _agent_name):
+        return {"mcp_tools": []}
 
     monkeypatch.setattr(morning_graph, "load_config", lambda: cfg)
-    monkeypatch.setattr(morning_graph, "_build_model", lambda _cfg: model)
-    monkeypatch.setattr(morning_graph, "_get_mcp_tools", _no_mcp_tools)
+    monkeypatch.setattr(
+        morning_graph,
+        "build_chat_model_for_agent",
+        lambda _workspace_root, _agent_name, timeout=120: model,
+    )
+    monkeypatch.setattr(morning_graph, "_get_mcp_tool_groups", _no_mcp_tool_groups)
     monkeypatch.setattr(morning_graph, "file_storage_root", lambda: tmp_path)
 
     agent = asyncio.run(morning_graph._create_agent())
@@ -75,15 +79,16 @@ def test_morning_note_disables_general_purpose_task_tool(monkeypatch, tmp_path):
 
 
 def test_morning_note_prompt_forbids_general_purpose_subagent():
-    prompt = (PROJECT_ROOT / "agents" / "morning-note.md").read_text(
-        encoding="utf-8"
-    )
+    prompt = (PROJECT_ROOT / "agents" / "morning-note.md").read_text(encoding="utf-8")
     skill = (PROJECT_ROOT / "skills" / "morning-note" / "SKILL.md").read_text(
         encoding="utf-8"
     )
 
     assert "禁止调用或请求 `general-purpose` subagent" in prompt
     assert "禁止调用或请求 `general-purpose` subagent" in skill
+    assert "妙想 MX DS" in prompt
+    assert "至少使用一次妙想" in prompt
+    assert "妙想 MX DS" in skill
 
 
 def test_morning_note_graph_uses_shared_general_purpose_disable_helper(monkeypatch):
@@ -99,9 +104,7 @@ def test_morning_note_graph_uses_shared_general_purpose_disable_helper(monkeypat
 
 
 def test_morning_note_prompt_and_runtime_define_artifact_root():
-    prompt = (PROJECT_ROOT / "agents" / "morning-note.md").read_text(
-        encoding="utf-8"
-    )
+    prompt = (PROJECT_ROOT / "agents" / "morning-note.md").read_text(encoding="utf-8")
     skill = (PROJECT_ROOT / "skills" / "morning-note" / "SKILL.md").read_text(
         encoding="utf-8"
     )
@@ -114,7 +117,71 @@ def test_morning_note_prompt_and_runtime_define_artifact_root():
     cfg = morning_graph.load_config()
     context = morning_graph._runtime_context_prompt(cfg)
     assert (
-        "Artifact root: if the task description provides an output directory"
-        in context
+        "Artifact root: if the task description provides an output directory" in context
     )
     assert "do not create your own new top-level out/<timestamp>/ folder" in context
+
+
+def test_morning_note_config_includes_mx_ds_mcp(monkeypatch, tmp_path):
+    import financial_agent_runtime as runtime
+    from financial_agent_runtime import tool_access
+    from morning_note_agent.config import enabled_mcp_server_configs, load_config
+
+    for env_name in [
+        "IFIND_MCP_TOKEN",
+        "MX_DS_MCP_API_KEY",
+        "MX_DS_MCP_URL",
+        "MX_DS_MCP_TRANSPORT",
+        "TOOL_CONCURRENCY_CONFIG",
+    ]:
+        monkeypatch.delenv(env_name, raising=False)
+    tool_access._ACCESS_CONFIG_CACHE.clear()
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  ifind-news:
+    url: https://news.example/mcp
+    transport: streamable_http
+  mx-ds-mcp:
+    url: https://mxapi.eastmoney.com/mxds/mcp
+    transport: streamable-http
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+""",
+        encoding="utf-8",
+    )
+    tool_config_path = tmp_path / "tool-concurrency.yaml"
+    tool_config_path.write_text(
+        """
+tool_groups:
+  test_mcp:
+    source: mcp
+    servers:
+      - mx-ds-mcp
+agent_tools:
+  morning_note:
+    tool_groups:
+      - test_mcp
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("TOOL_CONCURRENCY_CONFIG", str(tool_config_path))
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
+
+    cfg = load_config(str(config_path))
+    access_config = runtime.load_tool_access_config(None)
+    server_names = runtime.mcp_server_names_for_tool_group(
+        access_config,
+        "test_mcp",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
+
+    assert set(server_configs) == {"mx-ds-mcp"}
+    assert server_configs["mx-ds-mcp"]["transport"] == "streamable_http"
+    assert server_configs["mx-ds-mcp"]["headers"] == {"em_api_key": "mx-key"}
+    assert cfg.mcp["mx-ds-mcp"].connect_timeout == 10

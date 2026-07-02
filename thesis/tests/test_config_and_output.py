@@ -1,5 +1,5 @@
-from pathlib import Path
-
+import financial_agent_runtime as runtime
+from financial_agent_runtime import tool_access
 import thesis_tracker_agent.config as config_module
 from thesis_tracker_agent import tools
 from thesis_tracker_agent.config import (
@@ -18,17 +18,9 @@ def test_thesis_prompt_defines_artifact_root():
 
 def test_default_config_resolves_from_outside_project(monkeypatch, tmp_path):
     for env_name in [
-        "MODEL_NAME",
-        "MODEL_GATEWAY_BASE_URL",
-        "MODEL_GATEWAY_API_KEY",
-        "MODEL_RELAY_BASE_URL",
-        "MODEL_RELAY_API_KEY",
-        "MODEL_BASE_URL",
-        "MODEL_API_KEY",
-        "MODEL_THINKING",
-        "MODEL_MAX_TOKENS",
         "DASHSCOPE_API_KEY",
-        "ALIBABA_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "ARK_API_KEY",
     ]:
         monkeypatch.delenv(env_name, raising=False)
     monkeypatch.setattr(config_module, "WORKSPACE_ENV_PATH", tmp_path / "missing.env")
@@ -38,8 +30,6 @@ def test_default_config_resolves_from_outside_project(monkeypatch, tmp_path):
 
     assert PROJECT_ROOT.name == "thesis"
     assert WORKSPACE_ROOT == PROJECT_ROOT.parent
-    assert cfg.model.default == "qwen-3.7-max"
-    assert cfg.model.base_url == "https://dashscope.aliyuncs.com/compatible-mode"
     assert cfg.output.dir == "./out"
     assert "ifind-stock" in cfg.mcp
     assert "ifind-fund" in cfg.mcp
@@ -48,6 +38,7 @@ def test_default_config_resolves_from_outside_project(monkeypatch, tmp_path):
     assert "ifind-bond" in cfg.mcp
     assert "ifind-global-stock" in cfg.mcp
     assert "ifind-index" in cfg.mcp
+    assert "mx-ds-mcp" in cfg.mcp
 
 
 def test_shared_ifind_auth_applies_to_all_ifind_servers(monkeypatch, tmp_path):
@@ -69,8 +60,68 @@ mcp:
     cfg = load_config(str(config_path))
     server_configs = enabled_mcp_server_configs(cfg)
 
-    assert server_configs["ifind-stock"]["headers"]["Authorization"] == "Bearer shared-token"
-    assert server_configs["ifind-news"]["headers"]["Authorization"] == "Bearer shared-token"
+    assert (
+        server_configs["ifind-stock"]["headers"]["Authorization"]
+        == "Bearer shared-token"
+    )
+    assert (
+        server_configs["ifind-news"]["headers"]["Authorization"]
+        == "Bearer shared-token"
+    )
+
+
+def test_mx_ds_auth_and_default_group_allowlist(monkeypatch, tmp_path):
+    monkeypatch.delenv("TOOL_CONCURRENCY_CONFIG", raising=False)
+    tool_access._ACCESS_CONFIG_CACHE.clear()
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+mcp:
+  ifind-stock:
+    url: https://example.test/stock
+    transport: streamable_http
+  mx-ds-mcp:
+    url: https://mxapi.eastmoney.com/mxds/mcp
+    transport: streamable-http
+    connectTimeout: 10
+    timeout: 120
+    headers:
+      em_api_key: "${MX_DS_MCP_API_KEY}"
+""",
+        encoding="utf-8",
+    )
+    tool_config_path = tmp_path / "tool-concurrency.yaml"
+    tool_config_path.write_text(
+        """
+tool_groups:
+  test_mcp:
+    source: mcp
+    servers:
+      - mx-ds-mcp
+agent_tools:
+  thesis_tracker:
+    tool_groups:
+      - test_mcp
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("TOOL_CONCURRENCY_CONFIG", str(tool_config_path))
+    monkeypatch.setenv("MX_DS_MCP_API_KEY", "mx-key")
+
+    cfg = load_config(str(config_path))
+    access_config = runtime.load_tool_access_config(None)
+    server_names = runtime.mcp_server_names_for_tool_group(
+        access_config,
+        "test_mcp",
+        list(cfg.mcp),
+    )
+    server_configs = enabled_mcp_server_configs(cfg, server_names=server_names)
+
+    assert set(server_configs) == {"mx-ds-mcp"}
+    assert server_configs["mx-ds-mcp"]["transport"] == "streamable_http"
+    assert server_configs["mx-ds-mcp"]["headers"] == {"em_api_key": "mx-key"}
+    assert server_configs["mx-ds-mcp"]["timeout"] == 120
+    assert cfg.mcp["mx-ds-mcp"].connect_timeout == 10
 
 
 def test_timestamped_output_dir_is_workspace_relative(monkeypatch):
