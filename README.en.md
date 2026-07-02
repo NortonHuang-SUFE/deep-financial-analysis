@@ -139,6 +139,10 @@ Then open `http://127.0.0.1:8765`; saving writes the workspace
 `model-routing.yaml`.
 `model-routing.yaml` is tracked and stores only model profiles, agent bindings,
 and `api_key_env` variable names, never live keys.
+In `model-routing.yaml`, `default_model` sets the primary default model and
+`default_multimodal_model` sets the default multimodal fallback. Individual
+agents/subagents can override both with `agent_models.<name>.model` and
+`agent_models.<name>.multimodal_fallback_model`.
 
 iFind MCP URLs are stored in the root `tool-concurrency.yaml` under `mcp_servers`:
 
@@ -192,7 +196,7 @@ Both modes share the same agent code and skills; switching the backend requires 
 
 ## 6. Version, Roadmap, and Contact
 
-Current version: `v0.4.0 research-preview`, as of 2026-07-02.
+Current version: `v0.4.1 research-preview`, as of 2026-07-02.
 
 The full version history lives in [CHANGELOG.en.md](CHANGELOG.en.md) (中文版: [CHANGELOG.md](CHANGELOG.md)).
 
@@ -200,7 +204,7 @@ Implemented:
 
 - Top-level orchestrator and core research agents
 - Local and cloud (Daytona sandbox) run backends, switchable via `AGENT_BACKEND`
-- Root-level `model-routing.yaml` model routing and a local model configuration UI
+- Root-level `model-routing.yaml` model routing, a local model configuration UI, and multimodal fallback model settings
 - Root-level `tool-concurrency.yaml` tool grants, MCP configuration, and external-tool concurrency limits
 - Unified Tonghuashun iFind MCP data access
 - Morning notes, sector research, capital-flow scans, announcement scans, single-stock research, three-statement models, DCF, and chart packs

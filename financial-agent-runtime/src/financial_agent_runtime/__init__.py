@@ -38,6 +38,7 @@ from .mcp_config import (
     root_tool_config_path,
 )
 from .model_routing import (
+    AgentModelRoute,
     DEFAULT_AGENT_NAMES,
     MODEL_ROUTING_FILENAME,
     ModelProfile,
@@ -87,6 +88,7 @@ __all__ = [
     "DEFAULT_AGENT_NAMES",
     "MODEL_ROUTING_FILENAME",
     "AgentToolAccessConfig",
+    "AgentModelRoute",
     "ModelProfile",
     "ModelRoutingConfig",
     "ResolvedModelRoute",

@@ -142,7 +142,8 @@ INDEX_HTML = """<!doctype html>
     h2 { margin: 0 0 12px; font-size: 15px; }
     label { display: block; font-size: 12px; color: #52616f; margin-bottom: 4px; }
     input, select { width: 100%; box-sizing: border-box; border: 1px solid #c8d1da; border-radius: 6px; padding: 8px; font-size: 13px; background: white; }
-    .row { display: grid; grid-template-columns: 1fr 180px; gap: 10px; align-items: end; margin-bottom: 10px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr 180px; gap: 10px; align-items: end; margin-bottom: 10px; }
+    .agent-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(160px, 220px) minmax(160px, 220px); gap: 10px; align-items: end; margin-bottom: 10px; }
     .profile { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; border-top: 1px solid #e7edf2; padding-top: 12px; margin-top: 12px; }
     button { border: 0; border-radius: 6px; padding: 8px 12px; background: #1769aa; color: white; font-weight: 600; cursor: pointer; }
     button.secondary { background: #5b6770; }
@@ -172,6 +173,10 @@ INDEX_HTML = """<!doctype html>
           <label>Default model</label>
           <select id="defaultModel"></select>
         </div>
+        <div>
+          <label>Default multimodal fallback</label>
+          <select id="defaultMultimodalModel"></select>
+        </div>
         <button id="addProfile" class="secondary">Add profile</button>
       </div>
       <div id="profiles"></div>
@@ -197,14 +202,28 @@ INDEX_HTML = """<!doctype html>
       const defaultModel = document.getElementById('defaultModel');
       defaultModel.innerHTML = profileNames().map(name => option(name, state.config.default_model)).join('');
       defaultModel.onchange = () => state.config.default_model = defaultModel.value;
+      const defaultMultimodalModel = document.getElementById('defaultMultimodalModel');
+      defaultMultimodalModel.innerHTML = emptyOption('None') + profileNames().map(name => option(name, state.config.default_multimodal_model || '')).join('');
+      defaultMultimodalModel.onchange = () => state.config.default_multimodal_model = defaultMultimodalModel.value || null;
 
       const agents = document.getElementById('agents');
       agents.innerHTML = state.agent_names.map(agent => {
-        const selected = state.config.agent_models[agent] || state.config.default_model;
-        return `<div class="row"><div><label class="key">${agent}</label></div><select data-agent="${agent}">${profileNames().map(name => option(name, selected)).join('')}</select></div>`;
+        const route = agentRoute(agent);
+        const selected = route.model || state.config.default_model;
+        const fallback = route.multimodal_fallback_model || '';
+        return `<div class="agent-row">
+          <div><label class="key">${agent}</label></div>
+          <div><label>Main</label><select data-agent="${agent}" data-agent-field="model">${profileNames().map(name => option(name, selected)).join('')}</select></div>
+          <div><label>Multimodal fallback</label><select data-agent="${agent}" data-agent-field="multimodal_fallback_model">${emptyOption('Use default')}${profileNames().map(name => option(name, fallback)).join('')}</select></div>
+        </div>`;
       }).join('');
       agents.querySelectorAll('select[data-agent]').forEach(select => {
-        select.onchange = () => state.config.agent_models[select.dataset.agent] = select.value;
+        select.onchange = () => {
+          const agent = select.dataset.agent;
+          const route = agentRoute(agent);
+          route[select.dataset.agentField] = select.value || null;
+          state.config.agent_models[agent] = compactRoute(route);
+        };
       });
 
       const profiles = document.getElementById('profiles');
@@ -221,12 +240,33 @@ INDEX_HTML = """<!doctype html>
           const name = button.dataset.deleteProfile;
           delete state.config.models[name];
           for (const agent of Object.keys(state.config.agent_models)) {
-            if (state.config.agent_models[agent] === name) state.config.agent_models[agent] = state.config.default_model;
+            const route = agentRoute(agent);
+            if (route.model === name) route.model = state.config.default_model;
+            if (route.multimodal_fallback_model === name) route.multimodal_fallback_model = null;
+            state.config.agent_models[agent] = compactRoute(route);
           }
           if (state.config.default_model === name) state.config.default_model = profileNames()[0] || '';
+          if (state.config.default_multimodal_model === name) state.config.default_multimodal_model = null;
           render();
         };
       });
+    }
+
+    function agentRoute(agent) {
+      const raw = state.config.agent_models[agent];
+      if (!raw) return {};
+      if (typeof raw === 'string') return {model: raw};
+      return {...raw};
+    }
+
+    function compactRoute(route) {
+      if (!route.multimodal_fallback_model) delete route.multimodal_fallback_model;
+      if (!route.model) delete route.model;
+      return route;
+    }
+
+    function emptyOption(label) {
+      return `<option value="">${escapeHtml(label)}</option>`;
     }
 
     function option(name, selected) {

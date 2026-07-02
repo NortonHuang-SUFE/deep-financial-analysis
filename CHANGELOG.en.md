@@ -2,6 +2,13 @@
 
 Version history for `Deep Financial Analysis`. 中文版本：[CHANGELOG.md](CHANGELOG.md)。Project overview: [README.en.md](README.en.md).
 
+## v0.4.1 - 2026-07-02
+
+- Added multimodal fallback routing: `model-routing.yaml` now supports a root-level `default_multimodal_model` and per-agent/subagent overrides via `agent_models.<name>.multimodal_fallback_model`.
+- Updated `financial_agent_runtime.build_chat_model_for_agent` so configured fallback profiles return a ChatModel wrapper with fallback behavior, including after tool binding.
+- Updated the local model configuration UI to edit the default multimodal fallback model and each agent/subagent fallback binding.
+- Expanded the default `model-routing.yaml` and model-routing regression coverage for legacy string routes, structured agent routes, default fallbacks, agent-level overrides, unknown-profile errors, and omitting empty fields on save.
+
 ## v0.4.0 - 2026-07-02
 
 - Added root-level model routing: `model-routing.yaml` now centralizes model profiles, `api_key_env` names, the default model, and every agent/subagent model binding; live keys remain only in `.env` or process environment variables.
