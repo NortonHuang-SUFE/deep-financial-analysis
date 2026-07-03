@@ -18,7 +18,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · flowchart"
 ---
 
-【模板: 便利贴流程图帧 (Sticky Flowchart)】
+# 便利贴流程图帧 (Sticky Flowchart)
 【意图】把一个流程 / 系统 / 工作流画成"白板 + 便利贴"的样子, 适合 onboarding 视频、运营流程说明、系统架构讲解。Inspired by hyperframes flowchart。
 
 【画布】1920×1080。背景: 米黄白板纸 `#f4ede1` 或冷灰白板 `#f0f2f4`; 加非常浅的 hex grid `rgba(0,0,0,0.04)` 让它有白板感。
@@ -46,3 +46,8 @@ example_source_label: "hyperframes · flowchart"
 - 字体不能用 Inter / 衬线, 必须手写感。
 - 单文件 HTML, 不要外部图标库 (用 inline SVG)。
 - 必须用用户的真实流程内容; 节点文字直接来自用户输入。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

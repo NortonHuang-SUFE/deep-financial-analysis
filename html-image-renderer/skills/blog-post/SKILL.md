@@ -10,7 +10,7 @@ aspect_hint: "长页面"
 tags: ["blog", "essay", "case study", "长文"]
 ---
 
-【模板: 博客长文 / Blog Post】
+# 博客长文 / Blog Post
 【意图】≥ 600 字的真正的长文章, 排版以 typography 为主, 70% 文字 20% 图 10% chrome。
 【布局】
 - Masthead (publication name + date)
@@ -22,3 +22,8 @@ tags: ["blog", "essay", "case study", "长文"]
 - Pull quote 用大号 serif 斜体 + 左侧色条
 - Figures 自带 caption (italic, smaller)
 - 代码块: 圆角 + 深色 + 语言标签
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

@@ -11,7 +11,7 @@ recommended: 11
 tags: ["wireframe", "lo-fi", "sketch", "草稿", "手绘"]
 ---
 
-【模板: 手绘 Wireframe】
+# 手绘 Wireframe
 【意图】白板 / 草稿前阶段的 wireframe 探索。
 【布局】
 - Graph-paper 背景
@@ -20,3 +20,8 @@ tags: ["wireframe", "lo-fi", "sketch", "草稿", "手绘"]
 - Sticky-note annotations (黄色, 旋转一点点)
 【设计细节】
 - 字体: Caveat / Architects Daughter; 不要规规矩矩的对齐
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

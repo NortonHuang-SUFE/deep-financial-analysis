@@ -11,7 +11,7 @@ featured: 23
 tags: ["weekly", "周报", "status"]
 ---
 
-【模板: 团队周报 Deck】
+# 团队周报 Deck
 【意图】6-8 页 horizontal-swipe slides, 周报固定结构。
 【布局】
 - Cover (周次 + 团队 + 一句话主题)
@@ -23,3 +23,8 @@ tags: ["weekly", "周报", "status"]
 - Thanks 收尾
 【设计细节】
 - 键盘左右切换, hash 同步
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

@@ -11,7 +11,7 @@ featured: 12
 tags: ["gamified", "habit", "rpg", "quest", "xp"]
 ---
 
-【模板: 游戏化 App / Quest UI】
+# 游戏化 App / Quest UI
 【意图】类 RPG 习惯养成 app, dark showcase stage 上三个 phone frame。
 【布局】
 - Frame 1: Cover / Poster
@@ -19,3 +19,8 @@ tags: ["gamified", "habit", "rpg", "quest", "xp"]
 - Frame 3: Quest detail (子任务 + 奖励)
 【设计细节】
 - 醒目的 quest tile 渐变 + 等级 ribbon + 底部 tab bar
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

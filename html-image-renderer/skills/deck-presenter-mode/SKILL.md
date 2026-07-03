@@ -11,7 +11,7 @@ featured: 26
 tags: ["presenter", "notes", "提词", "teleprompter"]
 ---
 
-【模板: Presenter Mode Deck】
+# Presenter Mode Deck
 【意图】怕忘词的演讲者专用 deck, 含逐字稿 notes 与 popup teleprompter。
 【布局】
 - 每页 + `<aside class="notes">` 150-300 字稿
@@ -19,3 +19,8 @@ tags: ["presenter", "notes", "提词", "teleprompter"]
 - Popup: CURRENT / NEXT / SCRIPT / TIMER 四张磁吸卡
 【设计细节】
 - 默认 tokyo-night; 共 5 套主题 (含 light)
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

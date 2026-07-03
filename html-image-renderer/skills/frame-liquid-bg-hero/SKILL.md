@@ -18,7 +18,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · vfx-liquid-background"
 ---
 
-【模板: 流体背景 Hero】
+# 流体背景 Hero
 【意图】可作为视频片头帧、SaaS landing 顶部 hero、海报底图。WebGL 流体感, 但用 CSS / canvas 退化绘制, 确保单文件可双击打开。Inspired by hyperframes vfx-liquid-background。
 
 【画布】1920×1080 (横) 或 1080×1920 (竖), 二选一。背景占满。
@@ -53,3 +53,8 @@ example_source_label: "hyperframes · vfx-liquid-background"
 - 严禁外链图片; 全部 CSS + SVG + 可选 canvas。
 - 必须用用户提供的金句 / 标题; 如果用户输入是数据 → 提炼一句 ≤ 18 字的金句。
 - 单文件 HTML, 可被 `prefers-reduced-motion` 关动效。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

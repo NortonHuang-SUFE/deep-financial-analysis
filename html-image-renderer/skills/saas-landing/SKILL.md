@@ -10,7 +10,7 @@ aspect_hint: "桌面 1440"
 tags: ["saas", "landing", "marketing"]
 ---
 
-【模板: SaaS Landing】
+# SaaS Landing
 【意图】完整的 SaaS 产品落地页, 把用户内容映射到标准 sections。
 【布局】
 - Top nav (logo + 导航 + sign-in + 主 CTA)
@@ -24,3 +24,8 @@ tags: ["saas", "landing", "marketing"]
 【设计细节】
 - 现代 SaaS 风: 大字号, 柔和渐变, glassmorphism 卡片, 滚动入场动画
 - 至少处理 `md:` 断点, 移动端单栏
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

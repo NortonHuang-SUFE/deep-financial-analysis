@@ -11,7 +11,7 @@ featured: 5
 tags: ["dating", "community", "consumer"]
 ---
 
-【模板: 社区 / 配对 Dashboard】
+# 社区 / 配对 Dashboard
 【意图】消费产品感的数据墙, editorial typography + 克制的高亮色。
 【布局】
 - Left rail 导航
@@ -19,3 +19,8 @@ tags: ["dating", "community", "consumer"]
 - Headline KPIs
 - 30-day mutual-matches 柱状图
 - Match-rate 趋势 block
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

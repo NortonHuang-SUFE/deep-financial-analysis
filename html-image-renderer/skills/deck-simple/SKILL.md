@@ -10,7 +10,7 @@ aspect_hint: "16:9"
 tags: ["deck", "simple", "swipe"]
 ---
 
-【模板: Simple Deck】
+# Simple Deck
 【意图】干净通用的 horizontal-swipe deck (pitch / overview / study)。
 【布局】
 - Cover + N 个 content 页 + 收尾 (N 由【用户内容】长度决定, 完整覆盖每个要点; 短内容 6-10 起步, 长内容应更多)
@@ -18,3 +18,8 @@ tags: ["deck", "simple", "swipe"]
 - 顶部 progress bar
 【设计细节】
 - 键盘 ← / → 切换 + hash 同步
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

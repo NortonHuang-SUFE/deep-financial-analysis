@@ -10,7 +10,7 @@ aspect_hint: "桌面 1440"
 tags: ["dashboard", "admin", "analytics"]
 ---
 
-【模板: 管理后台 Dashboard】
+# 管理后台 Dashboard
 【意图】标准 admin/analytics 仪表板单页。
 【布局】
 - Fixed left sidebar (logo + 导航 + 用户 footer)
@@ -18,3 +18,8 @@ tags: ["dashboard", "admin", "analytics"]
 - Main: KPI cards 网格 (3-5 个)
 - 1-2 张主图表 (折线 / 柱 / 区域)
 - 底部 recent activity 列表
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

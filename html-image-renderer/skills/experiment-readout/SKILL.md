@@ -16,7 +16,7 @@ example_tagline: "不是展示数据, 而是判断上线/停止/继续"
 example_desc: "把实验假设、样本、指标和结果转成产品决策报告。"
 ---
 
-【模板: 实验复盘 / Experiment Readout】
+# 实验复盘 / Experiment Readout
 【意图】这不是普通数据报告、不是 dashboard。目标是回答: "这个实验说明了什么, 我们下一步应该上线、停止、继续跑, 还是重新设计?"
 
 【适合输入】
@@ -51,3 +51,8 @@ example_desc: "把实验假设、样本、指标和结果转成产品决策报�
 【内容真实性】
 - 只使用用户提供的数据。不要捏造 p-value、confidence、样本量。
 - 如果没有统计显著性信息, 用 "directional" / "inconclusive" / "needs more data" 表达。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

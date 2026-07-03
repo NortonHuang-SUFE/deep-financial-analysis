@@ -11,7 +11,7 @@ featured: 9
 tags: ["magazine", "editorial", "e-ink", "horizontal swipe"]
 ---
 
-【模板: 杂志风网页 PPT (magazine-web-ppt)】
+# 杂志风网页 PPT (magazine-web-ppt)
 【意图】horizontal-swipe HTML deck, 杂志 × e-ink 调。
 【布局】
 - Cover (衬线 display + WebGL 流体背景)
@@ -22,3 +22,8 @@ tags: ["magazine", "editorial", "e-ink", "horizontal swipe"]
 【设计细节】
 - 字体: Playfair / Noto Serif SC display + Inter / 思源 sans body
 - 键盘 ← / → 切换; hash 同步
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

@@ -10,7 +10,7 @@ aspect_hint: "桌面 1440"
 tags: ["docs", "api", "tutorial", "guide"]
 ---
 
-【模板: 技术文档页】
+# 技术文档页
 【意图】API / 教程文档单页, 长读体验优先。
 【布局】
 - Inline-start nav (sections + sticky)
@@ -20,3 +20,8 @@ tags: ["docs", "api", "tutorial", "guide"]
 【设计细节】
 - 代码块: 圆角 + dark + 语言标签 + 复制按钮
 - callout: info / warn / danger 三色
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

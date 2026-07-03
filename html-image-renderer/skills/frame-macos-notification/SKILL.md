@@ -18,7 +18,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · macos-notification"
 ---
 
-【模板: macOS 通知横幅】
+# macOS 通知横幅
 【意图】把一段公告 / 消息 / 提示渲染成 macOS Big Sur+ 风格的通知横幅, 适合视频角落叠加、产品发布预告、社媒图。Inspired by hyperframes macos-notification。
 
 【画布】两种用法:
@@ -52,3 +52,8 @@ example_source_label: "hyperframes · macos-notification"
 - icon 不能用外链 emoji 图片, 用 unicode emoji 或 CSS 绘制几何。
 - 必须用用户提供的内容; 标题 + 正文清晰来自用户输入。
 - 单文件 HTML, 注意 `backdrop-filter` Safari 需要 `-webkit-` 前缀。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

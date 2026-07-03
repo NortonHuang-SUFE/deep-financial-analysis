@@ -10,7 +10,7 @@ aspect_hint: "桌面 1440"
 tags: ["flowai", "team", "members"]
 ---
 
-【模板: FlowAI 团队管理 Dashboard】
+# FlowAI 团队管理 Dashboard
 【意图】FlowAI 美学的团队管理 admin 单页。
 【布局】
 - Tabs: Team Members / Team Details / Activity Log
@@ -22,3 +22,8 @@ tags: ["flowai", "team", "members"]
 【设计细节】
 - light/dark 切换, hover tooltip, click-to-zoom panels
 - CSV export 按钮 (前端实现)
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

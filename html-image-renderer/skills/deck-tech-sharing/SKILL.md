@@ -11,7 +11,7 @@ featured: 22
 tags: ["tech talk", "conference", "engineering"]
 ---
 
-【模板: Tech Sharing Deck】
+# Tech Sharing Deck
 【意图】工程内部分享 / 会议 talk 的 deck。
 【布局】
 - Cover (议题 + 讲者 + handle)
@@ -21,3 +21,8 @@ tags: ["tech talk", "conference", "engineering"]
 - Q&A 页
 【设计细节】
 - GitHub-dark 配色 + JetBrains Mono
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

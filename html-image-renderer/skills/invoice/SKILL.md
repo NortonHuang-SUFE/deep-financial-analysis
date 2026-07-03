@@ -11,7 +11,7 @@ recommended: 13
 tags: ["invoice", "bill", "发票"]
 ---
 
-【模板: 可打印发票】
+# 可打印发票
 【意图】A4 可打印的发票单页。
 【布局】
 - Header: 发票号 / 日期 / 截止日
@@ -21,3 +21,8 @@ tags: ["invoice", "bill", "发票"]
 - Payment instructions 区
 【设计细节】
 - @media print 样式; 颜色对比保留
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

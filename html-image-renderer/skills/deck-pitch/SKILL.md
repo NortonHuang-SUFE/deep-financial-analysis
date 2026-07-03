@@ -11,7 +11,7 @@ featured: 20
 tags: ["pitch", "investor", "seed", "vc"]
 ---
 
-【模板: Investor Pitch Deck】
+# Investor Pitch Deck
 【意图】10 页投资人 ready 的 fundraising deck。
 【布局】
 - Cover (Logo + Tagline + Round/$Ask)
@@ -24,3 +24,8 @@ tags: ["pitch", "investor", "seed", "vc"]
 - Team
 - Ask: $4.5M-style page
 - Thanks / Contact
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

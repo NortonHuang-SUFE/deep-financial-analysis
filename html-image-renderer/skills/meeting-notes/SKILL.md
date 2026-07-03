@@ -10,7 +10,7 @@ aspect_hint: "长页面"
 tags: ["minutes", "meeting", "1:1", "纪要"]
 ---
 
-【模板: 会议纪要】
+# 会议纪要
 【意图】现代会议纪要, 强 action items。
 【布局】
 - Title bar (会议名 + 时间 + 出席 avatars)
@@ -18,3 +18,8 @@ tags: ["minutes", "meeting", "1:1", "纪要"]
 - Decisions block (圆角卡片)
 - Action items table (Owner / Due / Status)
 - Next meeting footer
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

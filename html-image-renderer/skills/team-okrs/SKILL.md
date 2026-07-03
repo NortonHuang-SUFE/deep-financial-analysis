@@ -10,10 +10,15 @@ aspect_hint: "桌面 1440"
 tags: ["okr", "objectives", "key results", "目标"]
 ---
 
-【模板: Team OKRs】
+# Team OKRs
 【意图】OKR 追踪页, 一眼看出进度。
 【布局】
 - Quarter banner (Q? + 主题)
 - 3 个 objectives 列, 每个含一组 KR
 - 每个 KR 一条进度条 + 数值 + owner avatar + 状态 pill
 - 右侧 'this quarter at a glance' 摘要
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

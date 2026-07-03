@@ -196,7 +196,7 @@ Both modes share the same agent code and skills; switching the backend requires 
 
 ## 6. Version, Roadmap, and Contact
 
-Current version: `v0.4.1 research-preview`, as of 2026-07-02.
+Current version: `v0.4.2 research-preview`, as of 2026-07-03.
 
 The full version history lives in [CHANGELOG.en.md](CHANGELOG.en.md) (中文版: [CHANGELOG.md](CHANGELOG.md)).
 

@@ -10,7 +10,7 @@ aspect_hint: "长页面"
 tags: ["prd", "spec", "需求", "product"]
 ---
 
-【模板: PRD / Product Spec】
+# PRD / Product Spec
 【意图】产品需求文档单页, 结构清晰。
 【布局】
 - Title bar + 状态 pill (draft/approved/shipped)
@@ -20,3 +20,8 @@ tags: ["prd", "spec", "需求", "product"]
 - User stories (Given/When/Then)
 - Design notes (含占位 mockup)
 - Rollout plan + Open questions
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

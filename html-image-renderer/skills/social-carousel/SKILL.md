@@ -11,7 +11,7 @@ featured: 7
 tags: ["instagram", "linkedin", "thread", "carousel", "三联"]
 ---
 
-【模板: 三联社交轮播 / Social Carousel】
+# 三联社交轮播 / Social Carousel
 【意图】3 张 1080×1080 方形卡片, headline 跨张串联。
 【布局】
 - Card 1: display headline (开头) + 品牌 mark + 1/3
@@ -20,3 +20,8 @@ tags: ["instagram", "linkedin", "thread", "carousel", "三联"]
 【设计细节】
 - 颜色统一一套调色板, 卡片之间渐进切换
 - 三个 headline 拼起来是完整一句话
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

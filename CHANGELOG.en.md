@@ -2,6 +2,13 @@
 
 Version history for `Deep Financial Analysis`. 中文版本：[CHANGELOG.md](CHANGELOG.md)。Project overview: [README.en.md](README.en.md).
 
+## v0.4.2 - 2026-07-03
+
+- Improved the HTML Image Renderer skill asset contract: example HTML now lives under each skill's `assets/example.html`, with the asset location declared in `SKILL.md`.
+- Strengthened renderer guidance so the agent resolves the selected skill directory from `SKILL.md`, reads `assets/example.html` first, and keeps a compatibility fallback for legacy root-level `example.html`.
+- Added rendered-image visual QA guidance for blank output, clipped or overlapping text, wrong aspect ratio, footer collisions, and market color semantics.
+- Updated HTML renderer regression coverage so all HTML Anything skills must declare and include `assets/example.html`.
+
 ## v0.4.1 - 2026-07-02
 
 - Added multimodal fallback routing: `model-routing.yaml` now supports a root-level `default_multimodal_model` and per-agent/subagent overrides via `agent_models.<name>.multimodal_fallback_model`.
