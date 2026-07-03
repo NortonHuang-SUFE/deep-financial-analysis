@@ -16,7 +16,7 @@ example_tagline: "推荐动作 + 权衡 + 风险 + 下一步"
 example_desc: "把产品、销售、财务反馈压缩成一页高管可拍板 memo。"
 ---
 
-【模板: 高管决策简报 / Executive Briefing Memo】
+# 高管决策简报 / Executive Briefing Memo
 【意图】这不是会议纪要、不是周报、不是 PRD。它的唯一目标是帮助决策者在 3 分钟内理解问题并拍板。
 
 【适合输入】
@@ -51,3 +51,8 @@ example_desc: "把产品、销售、财务反馈压缩成一页高管可拍板 m
 【内容真实性】
 - 不要捏造数字、客户、预算、日期。
 - 如果缺少关键信息, 在 Evidence gaps 中列出, 但仍给出基于现有证据的 provisional recommendation。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

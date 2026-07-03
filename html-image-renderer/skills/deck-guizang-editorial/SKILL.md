@@ -19,7 +19,7 @@ example_source_url: "https://github.com/op7418/guizang-ppt-skill"
 example_source_label: "op7418/guizang-ppt-skill"
 ---
 
-【模板: 贵赞编辑墨水 Deck (Editorial × E-Ink)】
+# 贵赞编辑墨水 Deck (Editorial × E-Ink)
 【意图】叙事、观点、分享、个人风格表达。墨纸印刷感, 不要科技感。Inspired by op7418/guizang-ppt-skill Style A。
 
 【调色板 — 5 选 1, 严禁改 hex、严禁混用】
@@ -47,3 +47,8 @@ example_source_label: "op7418/guizang-ppt-skill"
 - **杂志感细节**: kicker 用 11px uppercase letterspacing 0.12em; folio 右下角 `01 / 12`; 顶部细 hairline rule + 期刊 logo / topic。
 - **不许**: 数据捏造、Lorem ipsum、占位图片 URL。所有图请用纯 CSS / SVG 内联描绘 (色块 + 简笔)。
 - 键盘 ← / → 切换; hash 同步; 单文件 HTML。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

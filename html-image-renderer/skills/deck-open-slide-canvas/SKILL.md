@@ -19,7 +19,7 @@ example_source_url: "https://github.com/1weiho/open-slide"
 example_source_label: "1weiho/open-slide"
 ---
 
-【模板: 1920 画布自由 Deck】
+# 1920 画布自由 Deck
 【意图】不想被模板束缚的场景 (个人作品集、奇特演讲、艺术 / 设计课 deck)。给一个固定 1920×1080 画布 + 极强的类型 / 调色约束, 让 agent 像写 React 组件一样按内容自由排布每一页。Inspired by 1weiho/open-slide。
 
 【硬性技术规格】
@@ -51,3 +51,8 @@ example_source_label: "1weiho/open-slide"
 - 加键盘 ← / → 切换 + hash 同步; 角标固定: 右下 `№N/M`, 左下 deck title。
 - 必须用用户的真实内容; 严禁 lorem ipsum。
 - 单文件 HTML; Tailwind CDN; 不要外链图片。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

@@ -18,7 +18,7 @@ example_source_url: "https://x.com/trq212/status/2052809885763747935"
 example_source_label: "@trq212 / x.com"
 ---
 
-【模板: 杂志文章】
+# 杂志文章
 - 顶部 hero: 大标题 (text-5xl/6xl) + 可选副标题 + 作者 / 阅读时间 / 日期元数据。
 - 正文: 单栏, 最大宽度约 700px, 居中。段落 `text-lg leading-relaxed text-neutral-700 dark:text-neutral-300`。
 - H2 / H3 标题用 serif 字体, 让正文与标题有视觉对比。
@@ -27,3 +27,8 @@ example_source_label: "@trq212 / x.com"
 - 列表项使用自定义 bullet（小方块 / accent 圆点）。
 - 章节之间用 `<hr>` 分隔, 但样式做成中央居中的小 ornament。
 - 文末加一个简单的 "如果觉得有用，欢迎转发" 行动卡片。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

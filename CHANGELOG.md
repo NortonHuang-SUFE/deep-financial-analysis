@@ -2,6 +2,13 @@
 
 本文件记录 `Deep Financial Analysis` 的版本历史。English version: [CHANGELOG.en.md](CHANGELOG.en.md)。项目说明见 [README.md](README.md)。
 
+## v0.4.2 - 2026-07-03
+
+- 改进 HTML Image Renderer 的技能示例资产约定：示例 HTML 统一移动到各 skill 的 `assets/example.html`，并在 `SKILL.md` 中声明资产位置。
+- 强化渲染 agent 指导：要求从所选 `SKILL.md` 解析 skill 目录、优先读取 `assets/example.html`，并保留旧版根目录 `example.html` 的兼容 fallback。
+- 新增渲染前后的视觉 QA 要求，覆盖空白输出、文本裁切/重叠、比例错误、footer 碰撞和市场涨跌颜色语义一致性。
+- 更新 HTML renderer 回归测试，校验所有 HTML Anything skills 都声明并包含 `assets/example.html`。
+
 ## v0.4.1 - 2026-07-02
 
 - 新增模型路由的多模态兜底配置：`model-routing.yaml` 支持根级 `default_multimodal_model`，也支持每个 agent/subagent 通过 `agent_models.<name>.multimodal_fallback_model` 单独覆盖。

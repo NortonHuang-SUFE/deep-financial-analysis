@@ -11,7 +11,7 @@ featured: 10
 tags: ["financial", "p&l", "mrr", "财报"]
 ---
 
-【模板: 季度财报 / Finance Report】
+# 季度财报 / Finance Report
 【意图】财务向单页报告, 数字 + 图表 + 文字洞察。
 【布局】
 - Masthead (公司 + Q + 报告标题) + 4 个 hero KPI
@@ -20,3 +20,8 @@ tags: ["financial", "p&l", "mrr", "财报"]
 - Top-line highlights (5 条 bullet)
 - Outlook 段落
 - Methodology 折叠区
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

@@ -10,10 +10,15 @@ aspect_hint: "桌面 1440"
 tags: ["editorial", "minimalist", "serif"]
 ---
 
-【模板: Editorial 网页原型】
+# Editorial 网页原型
 【意图】杂志感 minimalist, 大量留白 + 微动效。
 【布局】
 - Warm monochrome canvas
 - Serif display + grotesque body + mono meta
 - 1px hairline borders, 极柔和 chip
 - Macro-whitespace, ambient micro-motion
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

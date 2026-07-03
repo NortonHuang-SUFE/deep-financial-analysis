@@ -10,7 +10,7 @@ aspect_hint: "长页面"
 tags: ["runbook", "ops", "oncall", "sre"]
 ---
 
-【模板: Engineering Runbook】
+# Engineering Runbook
 【意图】工程 oncall 用的可拷贝命令的 runbook 单页。
 【布局】
 - Service overview (拓扑 + 依赖)
@@ -19,3 +19,8 @@ tags: ["runbook", "ops", "oncall", "sre"]
 - Common procedures (mono 代码块, 一键复制)
 - On-call rotation (本周 + 下周)
 - Incident response checklist
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

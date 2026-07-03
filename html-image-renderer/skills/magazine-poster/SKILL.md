@@ -11,7 +11,7 @@ recommended: 4
 tags: ["magazine", "newsprint", "editorial", "manifesto"]
 ---
 
-【模板: 杂志风海报 / Magazine Poster】
+# 杂志风海报 / Magazine Poster
 【意图】Newsprint editorial 风格的长图海报, 读起来像一篇报纸全版。
 【布局】
 - Dateline 顶栏 (publication / date / issue)
@@ -22,3 +22,8 @@ tags: ["magazine", "newsprint", "editorial", "manifesto"]
 【设计细节】
 - 纸感: 暖灰 cream 背景 + 细 dot pattern, 黑字
 - 字体: Playfair Display + IBM Plex Serif + JetBrains Mono
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

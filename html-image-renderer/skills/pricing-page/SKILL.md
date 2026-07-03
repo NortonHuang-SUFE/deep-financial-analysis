@@ -10,7 +10,7 @@ aspect_hint: "桌面 1440"
 tags: ["pricing", "plans", "定价"]
 ---
 
-【模板: 定价页】
+# 定价页
 【意图】标准 SaaS 三档定价页, 一眼对齐价值与价格。
 【布局】
 - Header + monthly/annual 切换
@@ -18,3 +18,8 @@ tags: ["pricing", "plans", "定价"]
 - 完整特性对比表 (✓ / – / 不同档勾)
 - FAQ (details/summary)
 - 底部 CTA
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

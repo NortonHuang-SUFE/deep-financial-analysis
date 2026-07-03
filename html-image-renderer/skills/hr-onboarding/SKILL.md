@@ -10,7 +10,7 @@ aspect_hint: "长页面"
 tags: ["onboarding", "入职", "first week"]
 ---
 
-【模板: 新员工入职】
+# 新员工入职
 【意图】新员工首周看一眼就知道怎么过的单页。
 【布局】
 - Welcome hero (姓名 + 入职日 + 团队)
@@ -19,3 +19,8 @@ tags: ["onboarding", "入职", "first week"]
 - Learning track 列表
 - Equipment checklist
 - “你设置好了当且仅当…” outcomes 区
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

@@ -10,7 +10,7 @@ aspect_hint: "桌面 1440"
 tags: ["social", "creator", "analytics", "x", "linkedin", "tiktok"]
 ---
 
-【模板: 社媒创作者仪表板】
+# 社媒创作者仪表板
 【意图】面向博主 / 创作者的社媒数据看板。
 【布局】
 - 顶部平台 switcher (X / LinkedIn / YouTube / Instagram / TikTok)
@@ -18,3 +18,8 @@ tags: ["social", "creator", "analytics", "x", "linkedin", "tiktok"]
 - Follower-growth chart
 - Top post this week 预览
 - Side: trending topics / top comments
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

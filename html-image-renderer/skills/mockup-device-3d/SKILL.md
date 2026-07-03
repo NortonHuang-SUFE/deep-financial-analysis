@@ -18,7 +18,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · vfx-iphone-device"
 ---
 
-【模板: 设备 3D 展架 (Device 3D Showcase / HTML-in-Canvas)】
+# 设备 3D 展架 (Device 3D Showcase / HTML-in-Canvas)
 【意图】产品发布、App 演示、设计稿展示。把用户提供的 UI 内容真实渲染到 iPhone / MacBook "屏幕"里, 周围用 CSS 3D transform 模拟 GLTF 模型的玻璃 / 高光 / 折射。Inspired by hyperframes vfx-iphone-device。
 
 【硬性构图】
@@ -44,3 +44,8 @@ example_source_label: "hyperframes · vfx-iphone-device"
 - 背景可选 4 套调色: charcoal / pearl / midnight blue / mocha; 不要彩虹渐变。
 - 单文件 HTML; iframe 不要用 srcdoc 嵌套 (容易出问题), 用 `<div class="screen">` + Tailwind 渲染内容。
 - 必须用用户真实数据填充屏幕内容, 严禁 lorem ipsum 或 "Your text here"。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

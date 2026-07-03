@@ -19,7 +19,7 @@ example_source_url: "https://github.com/op7418/guizang-ppt-skill"
 example_source_label: "op7418/guizang-ppt-skill"
 ---
 
-【模板: 瑞士国际主义 Deck (Swiss International)】
+# 瑞士国际主义 Deck (Swiss International)
 【意图】事实、产品、分析、方法论表达。极度冷静、理性、学院派, 没有任何手绘 / 噪点 / 装饰。Inspired by op7418/guizang-ppt-skill Style B。
 
 【主题】**只能从下面 4 套二选一, 不许混用、不许改 hex**:
@@ -61,3 +61,8 @@ example_source_label: "op7418/guizang-ppt-skill"
 - **键盘 ← / → 切换 + hash 同步**; 角标固定: `№N/N` 右下, topic 标签左下。
 - **不许编造**: 数字必须来自用户输入, 图表柱高 = 真实数据按比例。
 - 输出单文件 HTML, 不用任何外部图片 URL; 装饰几何 (ASCII 矩阵 / 同心圆) 用纯 CSS 或内联 SVG。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

@@ -11,7 +11,7 @@ featured: 32
 tags: ["safety", "security", "policy", "incident"]
 ---
 
-【模板: Safety Alert Deck】
+# Safety Alert Deck
 【意图】安全 / 风险 / 事故复盘 / red team / policy-as-code 用 deck。
 【布局】
 - 顶/底 45° 红黑 hazard 条纹
@@ -20,3 +20,8 @@ tags: ["safety", "security", "policy", "incident"]
 - 圆点状态 alert box
 - policy-yaml 代码块 (红左边框 + bad 关键词高亮)
 - 红绿 checklist + 事故堆叠柱状图
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

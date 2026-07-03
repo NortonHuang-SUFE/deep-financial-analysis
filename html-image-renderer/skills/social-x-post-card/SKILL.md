@@ -18,7 +18,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · x-post"
 ---
 
-【模板: X (Twitter) 帖子卡】
+# X (Twitter) 帖子卡
 【意图】把一段推文内容 (或用户的金句) 渲染成一张拟真度极高的 X 帖子卡片, 用于视频叠加、推特发图、知识沉淀。Inspired by hyperframes x-post。
 
 【画布】1280×720 或 1080×1080, 暗背景 `#0f1419` 或亮背景 `#ffffff` (按 X 主题); 卡片居中, 阴影柔和。
@@ -46,3 +46,8 @@ example_source_label: "hyperframes · x-post"
 - 若用户输入是数据 → 自动总结成一句"金句"推文 (≤ 280 字符)。
 - 单文件 HTML; icon 内联 SVG; 不要任何外部图片 URL。
 - 可选: 卡片背后加微妙径向高光 `radial-gradient(...)` 增加视频叠加的可读性。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

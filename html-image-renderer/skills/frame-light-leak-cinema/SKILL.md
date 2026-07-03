@@ -18,7 +18,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · light-leak"
 ---
 
-【模板: 胶片漏光电影帧】
+# 胶片漏光电影帧
 【意图】纪录片 / 个人短片 / 视频章节卡的开场单帧 —— 暖橙漏光 + 35mm 颗粒 + 衬线大字, 古典胶片质感。Inspired by hyperframes light-leak。
 
 【画布】
@@ -48,3 +48,8 @@ example_source_label: "hyperframes · light-leak"
 - 中文: `Noto Serif SC` italic 不存在 → 用 `Noto Serif SC` regular + 字距加大。
 - 必须用用户提供的标题; 自动估算合理"年份 / 章节 / 地点" 元数据 (但来源用户内容)。
 - 单文件 HTML, 用 `prefers-reduced-motion` 关动效。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

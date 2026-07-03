@@ -16,7 +16,7 @@ example_tagline: "比较矩阵 + 定位象限 + 我们的应对"
 example_desc: "把三家竞品的定位、价格、功能、评价转成产品团队可行动的拆解报告。"
 ---
 
-【模板: 竞品拆解 / Competitive Teardown】
+# 竞品拆解 / Competitive Teardown
 【意图】这不是文章、不是 PRD、不是 pitch deck。目标是把多个竞品的杂乱资料转成一份可决策的产品战略报告, 帮团队回答: "我们和它们到底差在哪里, 下一步该怎么打?"
 
 【适合输入】
@@ -53,3 +53,8 @@ example_desc: "把三家竞品的定位、价格、功能、评价转成产品�
 - 只使用用户提供的竞品、价格、功能、评论。缺失信息用 "not found in source" 或 "unknown" 标注。
 - 不要发明市场份额、ARR、客户名、定价数字。
 - 如果用户资料明显不足, 仍然输出报告, 但在 "Evidence gaps" 中列出缺口。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

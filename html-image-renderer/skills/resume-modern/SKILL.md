@@ -16,7 +16,7 @@ example_tagline: "A4 单页, 可打印 / 导出 PDF"
 example_desc: "高级前端工程师简历, 两栏布局, 数字成就高亮"
 ---
 
-【模板: 现代极简简历】
+# 现代极简简历
 - 容器宽度模拟 A4: `w-[210mm] min-h-[297mm] mx-auto`, 内边距 16-20mm。
 - 顶部姓名巨大 (text-4xl), 底下一行 contact (邮箱 / 电话 / 城市 / GitHub / LinkedIn), 中间用细竖线分隔。
 - 主体两栏可选: 左 60% 主线（经历/项目/教育）, 右 40% 副线（技能/语言/获奖）。
@@ -24,3 +24,8 @@ example_desc: "高级前端工程师简历, 两栏布局, 数字成就高亮"
 - 经历每条: 公司 + 职位 + 时间区间 (右对齐), 下方 1-3 条 bullet 用动词开头。
 - 不使用花哨颜色, 黑白灰 + 1 个 accent (深蓝 / 墨绿)。
 - 添加 @media print 样式, 隐藏不必要的元素, 颜色保留。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

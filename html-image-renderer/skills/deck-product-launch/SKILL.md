@@ -11,7 +11,7 @@ featured: 21
 tags: ["launch", "keynote", "product"]
 ---
 
-【模板: Product Launch Keynote】
+# Product Launch Keynote
 【意图】新产品发布的 Keynote 风 deck。
 【布局】
 - Cover (暗背景 + 大字主题)
@@ -22,3 +22,8 @@ tags: ["launch", "keynote", "product"]
 - CTA / Available now
 【设计细节】
 - accent: 暖橙→桃 渐变
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

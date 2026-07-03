@@ -19,7 +19,7 @@ example_source_url: "https://github.com/tw93/kami"
 example_source_label: "tw93/kami"
 ---
 
-【模板: Kami 羊皮纸文档】
+# Kami 羊皮纸文档
 【意图】严肃排版文档: one-pager / 长报告 / 信函 / 简历 / 财报 / changelog / portfolio。Inspired by tw93/kami。强调"写得像被排过版的纸", 不是 dashboard, 不是网页。
 
 【硬性视觉签名 — 不许改】
@@ -50,3 +50,8 @@ example_source_label: "tw93/kami"
 - "Ring or whisper only, no hard drop shadows." 阴影只能是 `0 0 0 1px #d4d1c5` 这种 hairline 描边。
 - 文字层级靠**衬线对比 + 字号 + 留白**, 不靠颜色。
 - 单文件 HTML, 用 Tailwind CDN; 全文中英混排时加盘古之白; 不要外链图片, 占位用 paper-tint 色块 + 1px ink 描边。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

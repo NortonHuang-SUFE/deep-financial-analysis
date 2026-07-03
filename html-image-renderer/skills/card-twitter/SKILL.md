@@ -15,7 +15,7 @@ example_tagline: "16:9 暗色金句卡, 截图直接配推文"
 example_desc: "高对比金句模板, 含 grid 网格 + 渐变光晕背景"
 ---
 
-【模板: Twitter 分享卡】
+# Twitter 分享卡
 - 容器 `w-[1600px] h-[900px]`, 暗色 / 亮色二选一根据内容情绪。
 - 中央一句 hero 金句 (text-6xl, font-semibold, 限 2-3 行)。
 - 下方作者署名 + 头像占位 + handle。
@@ -23,3 +23,8 @@ example_desc: "高对比金句模板, 含 grid 网格 + 渐变光晕背景"
 - 右下角品牌水印。
 - 整张卡片有微妙的纹理 (grid 网格 / noise / dot pattern)。
 - 截图后可直接配推文发出, 视觉简洁有力。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

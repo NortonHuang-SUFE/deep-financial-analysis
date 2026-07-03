@@ -11,7 +11,7 @@ featured: 25
 tags: ["course", "workshop", "training", "教学"]
 ---
 
-【模板: 课程 / 培训模块 Deck】
+# 课程 / 培训模块 Deck
 【意图】教学 / workshop 用 deck, 持续显示学习目标。
 【布局】
 - Cover (模块名 + 讲师)
@@ -21,3 +21,8 @@ tags: ["course", "workshop", "training", "教学"]
 - Wrap-up + 下一模块预告
 【设计细节】
 - warm paper bg + Playfair serif
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

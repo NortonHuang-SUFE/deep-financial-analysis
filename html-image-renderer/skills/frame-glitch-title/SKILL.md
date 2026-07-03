@@ -19,7 +19,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · glitch"
 ---
 
-【模板: 故障艺术标题帧 (Glitch Title)】
+# 故障艺术标题帧 (Glitch Title)
 【意图】单帧 hero / 视频转场 / cyberpunk 风格标题。Inspired by hyperframes glitch。
 
 【画布】1920×1080, 背景 `#070708` 近黑或 CRT 暗灰 `#0d0e10`; 加 56px 网格 (透明 5%) + scanlines 横线 (透明 8%, 2px 间隔)。
@@ -48,3 +48,8 @@ example_source_label: "hyperframes · glitch"
 - 严禁 lorem ipsum; 必须用用户的标题 + 副标。
 - 动效用 `@keyframes`, 可被 `prefers-reduced-motion` 关闭 (退回静态 chromatic split)。
 - 单文件 HTML。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

@@ -18,7 +18,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · spotify-card"
 ---
 
-【模板: Spotify Now-Playing 卡】
+# Spotify Now-Playing 卡
 【意图】把一首歌、一段播客、或一段个人介绍渲染成 Spotify 正在播放卡, 适合 video overlay / 个人 about page / 创作者 hero。Inspired by hyperframes spotify-card。
 
 【画布】两个尺寸:
@@ -48,3 +48,8 @@ example_source_label: "hyperframes · spotify-card"
 - 严禁外链图片; 封面用 CSS 渐变 + 文字 logo / 几何描绘。
 - 微动效: 音波动效用 `@keyframes`, 可被 `prefers-reduced-motion` 关闭。
 - 单文件 HTML。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

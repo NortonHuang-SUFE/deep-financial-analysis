@@ -11,7 +11,7 @@ featured: 1
 tags: ["waitlist", "launch", "预发布"]
 ---
 
-【模板: 等候名单页 / Waitlist】
+# 等候名单页 / Waitlist
 【意图】为新产品 / 早鸟内测做一张极简等候页。
 【布局】
 - 居中布局: brand logo + 一行 tagline + 大字 hero (说清楚做什么)
@@ -21,3 +21,8 @@ tags: ["waitlist", "launch", "预发布"]
 【设计细节】
 - 装饰: SVG 渐变 mesh / 噪点纹理 / 一颗星轨
 - 成功提交后给一个微动效 (✓ + 文案变化)
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

@@ -11,7 +11,7 @@ featured: 1
 tags: ["matrix", "tracker", "multi-platform"]
 ---
 
-【模板: 社媒矩阵追踪 (Social Matrix Tracker)】
+# 社媒矩阵追踪 (Social Matrix Tracker)
 【意图】电影感、数据密集的多平台社媒看板。
 【布局】
 - Hero header (统一品牌 + 时间窗 + 主题切换)
@@ -21,3 +21,8 @@ tags: ["matrix", "tracker", "multi-platform"]
 - Top posts grid
 【设计细节】
 - dark / light 切换; 数据用 seed 兜底
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

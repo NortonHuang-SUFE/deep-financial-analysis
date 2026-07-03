@@ -197,7 +197,7 @@ DAYTONA_FILE_STORAGE_ROOT=/home/daytona/financial-analysis
 
 ## 6. 当前版本、迭代方向和联系
 
-当前版本：`v0.4.1 research-preview`，截至 2026-07-02。
+当前版本：`v0.4.2 research-preview`，截至 2026-07-03。
 
 完整版本历史见 [CHANGELOG.md](CHANGELOG.md)（English changelog: [CHANGELOG.en.md](CHANGELOG.en.md)）。
 

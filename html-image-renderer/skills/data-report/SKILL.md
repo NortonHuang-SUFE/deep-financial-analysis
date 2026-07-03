@@ -16,7 +16,7 @@ example_tagline: "KPI 卡 + Chart.js 图表 + 表格"
 example_desc: "9 个月增长数据自动渲染成可视化报告, 内联 Chart.js"
 ---
 
-【模板: 数据可视化报告】
+# 数据可视化报告
 - 头部: 报告标题 + 时间区间 + 数据来源说明。
 - KPI 卡片网格: 3-5 个最重要指标, 每个卡片显示数值 + 同比变化 + 微型趋势线。
 - 主图表区: 至少 2 个图表 (柱状 / 折线 / 饼 / 散点), 使用 Chart.js 或 ECharts (jsdelivr CDN 引入), 数据从用户输入解析得到。
@@ -26,3 +26,8 @@ example_desc: "9 个月增长数据自动渲染成可视化报告, 内联 Chart.
 - 底部"方法论"折叠区。
 - 配色克制专业: 主色 1 + 中性色阶, 图表用调色板。
 - **必须解析用户提供的实际数据**, 不要捏造。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

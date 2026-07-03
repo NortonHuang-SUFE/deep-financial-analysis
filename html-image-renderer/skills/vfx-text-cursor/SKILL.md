@@ -19,7 +19,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · vfx-text-cursor"
 ---
 
-【模板: VFX 文字光标 (Text Cursor)】
+# VFX 文字光标 (Text Cursor)
 【意图】视频开场/Hero 帧 —— 光标在画布上"打字", 文字逐字浮现, 后面拖着彩色像散尾迹 + 定向光斑。Inspired by hyperframes vfx-text-cursor。
 
 【画布】1920×1080, 背景 `#06070a` 暗哑黑 或 `#0a0d12` (有暖偏蓝); 加微妙 vignette。
@@ -45,3 +45,8 @@ example_source_label: "hyperframes · vfx-text-cursor"
 - 动效用 `@keyframes` + JS 计时器 (`setTimeout` 逐字), 可被 `prefers-reduced-motion` 关闭 (直接显示所有字)。
 - 必须用用户提供的金句; 不要捏造。
 - 单文件 HTML, 不要外链字体以外的资源。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

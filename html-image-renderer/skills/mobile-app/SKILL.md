@@ -10,7 +10,7 @@ aspect_hint: "iPhone 15 Pro frame"
 tags: ["mobile", "ios", "app", "phone"]
 ---
 
-【模板: iPhone 单屏 App】
+# iPhone 单屏 App
 【意图】一个屏幕的 mobile app 设计, 放在像素级 iPhone 15 Pro frame 里。
 【布局】
 - Status bar (时间 + 电池 + 信号)
@@ -19,3 +19,8 @@ tags: ["mobile", "ios", "app", "phone"]
 - Bottom tab bar (4-5 tab)
 【设计细节】
 - 真实的 dynamic island; safe-area 留白
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

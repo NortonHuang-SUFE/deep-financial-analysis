@@ -19,7 +19,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · logo-outro"
 ---
 
-【模板: Logo 收尾帧 (Logo Outro)】
+# Logo 收尾帧 (Logo Outro)
 【意图】视频结尾的品牌 reveal 帧 —— logo 分块拼装 + glow bloom + tagline 上浮 + CTA。Inspired by hyperframes logo-outro。
 
 【画布】1920×1080, 黑色 `#08090c` 或品牌深色背景; 加微妙 vignette `radial-gradient(...)` 让中心更亮。
@@ -45,3 +45,8 @@ example_source_label: "hyperframes · logo-outro"
 - 必须用用户提供的品牌名 + tagline; 若没有, 跑 fallback "HTML Anything" / "Anything → beautiful HTML"。
 - 单文件 HTML; 整个动画完成后 freeze (不要 loop, 这是视频结尾帧)。
 - 顶部可选 5px ribbon (accent 色) 增加品牌识别。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

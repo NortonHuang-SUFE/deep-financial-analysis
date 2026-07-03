@@ -62,10 +62,28 @@ def test_html_anything_skills_are_mounted():
 
     for skill_id in expected:
         assert (SKILLS_DIR / skill_id / "SKILL.md").exists(), skill_id
-        assert (SKILLS_DIR / skill_id / "example.html").exists(), skill_id
+        assert (SKILLS_DIR / skill_id / "assets" / "example.html").exists(), skill_id
 
     skill_dirs = [p for p in SKILLS_DIR.iterdir() if p.is_dir()]
     assert len(skill_dirs) >= 70
+
+
+def test_html_anything_skills_declare_example_assets():
+    skill_dirs = [p for p in SKILLS_DIR.iterdir() if p.is_dir()]
+    assert skill_dirs
+
+    missing: list[str] = []
+    for skill_dir in skill_dirs:
+        skill_md = skill_dir / "SKILL.md"
+        example_html = skill_dir / "assets" / "example.html"
+        if not skill_md.exists() or not example_html.exists():
+            missing.append(skill_dir.name)
+            continue
+        text = skill_md.read_text(encoding="utf-8")
+        if "## Assets" not in text or "`assets/example.html`" not in text:
+            missing.append(skill_dir.name)
+
+    assert not missing
 
 
 def test_old_single_image_skill_assets_are_removed():
@@ -104,21 +122,26 @@ def test_renderer_prompt_contains_skill_selection_rules():
 
     assert "source_paths" in prompt
     assert "Always read `source_paths` yourself" in prompt
-    assert "finance-report" in prompt
-    assert "data-report" in prompt
-    assert "magazine-poster" in prompt
-    assert "poster-hero" in prompt
-    assert "deck-swiss-international" in prompt
+    assert "hard-coded" in prompt
+    assert "scenario-to-skill list" in prompt
+    assert "user's instruction" in prompt
+    assert "artifacts you have actually read and analyzed" in prompt
+    assert "target format or ratio" in prompt
+    assert "publishing channel" in prompt
     assert "single static image" in prompt
     assert "exactly one element matching" in prompt
     assert "`#image-root`" in prompt
     assert "Never ask the orchestrator to paste full file contents" in prompt
     assert "read the selected skill's full `SKILL.md`" in prompt
-    assert "example.html" in prompt
+    assert "follow its `## Assets` section" in prompt
+    assert "assets/example.html" in prompt
     assert "limit=220" in prompt
     assert "Do not load a large `example.html` wholesale" in prompt
     assert "shared design directives + selected SKILL.md body + user content" in prompt
     assert "data-html-anything-skill" in prompt
+    assert "light, bright, clear visual style" in prompt
+    assert "red usually means up and green means down" in prompt
+    assert "green usually means up and red means down" in prompt
     assert "generic dark financial dashboard" in prompt
     assert "Keep the final response terse" in prompt
     assert "Do not invent calendar fields" in prompt
@@ -128,6 +151,9 @@ def test_renderer_prompt_contains_skill_selection_rules():
     assert "html/002.html` pairs with `png/002.png" in prompt
     assert "treat it as your artifact root" in prompt
     assert "do not create a new top-level" in prompt
+    assert "Visually inspect the actual rendered PNG before finishing" in prompt
+    assert "PNG itself, not only its file metadata" in prompt
+    assert "Only report the final accepted HTML/PNG pair" in prompt
 
 
 def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
@@ -146,8 +172,11 @@ def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
     assert "HTML render helper script:" in context
     assert "#image-root" in context
     assert "read its SKILL.md" in context
-    assert "example.html in bounded structural slices" in context
+    assert "follow its Assets section" in context
+    assert "assets/example.html in bounded structural slices" in context
     assert "data-html-anything-skill" in context
+    assert "visually inspect the actual PNG before finishing" in context
+    assert "accepted PNG passes visual QA" in context
     assert "html/<seq>.html and png/<seq>.png" in context
     assert "html/001.html" in context
     assert "png/001.png" in context

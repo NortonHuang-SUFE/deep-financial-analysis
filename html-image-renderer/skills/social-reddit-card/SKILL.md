@@ -18,7 +18,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · reddit-post"
 ---
 
-【模板: Reddit 帖子卡】
+# Reddit 帖子卡
 【意图】把一段故事 / 提问 / 段子, 渲染成 Reddit 帖子卡片, 用于视频叠加、社媒故事分享。Inspired by hyperframes reddit-post。
 
 【画布】1280×720 (视频叠加) 或 800×600 (单卡分享); 背景透明或暗色 `#0b1416`。
@@ -49,3 +49,8 @@ example_source_label: "hyperframes · reddit-post"
 - 严禁外链图片; 图片占位用 CSS 渐变 + 描述。
 - 必须用用户提供的内容; 自动生成合理的 subreddit / username / 票数。
 - 单文件 HTML; icon 内联 SVG (上下箭头、评论气泡、奖杯)。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

@@ -10,7 +10,7 @@ aspect_hint: "桌面 1440"
 tags: ["kanban", "trello", "sprint", "看板"]
 ---
 
-【模板: Kanban 看板】
+# Kanban 看板
 【意图】类 Trello 的 Kanban 单页。
 【布局】
 - 顶部 filter bar (assignee / label / search)
@@ -19,3 +19,8 @@ tags: ["kanban", "trello", "sprint", "看板"]
 - 可选 swimlanes (按 epic / assignee 分组)
 【设计细节】
 - 不需要真 drag, 但视觉上要像可拖
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

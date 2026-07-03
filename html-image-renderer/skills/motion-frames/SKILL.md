@@ -11,7 +11,7 @@ featured: 6
 tags: ["motion", "title card", "loop", "video poster"]
 ---
 
-【模板: Motion 帧 / Hero Loop】
+# Motion 帧 / Hero Loop
 【意图】一帧带循环动效的 hero, 可作为视频片头或落地页大图。
 【布局】
 - Rotating type ring (SVG + transform)
@@ -21,3 +21,8 @@ tags: ["motion", "title card", "loop", "video poster"]
 【设计细节】
 - 纯 CSS 动效, 流畅可循环
 - 电影感调色 + 1 个霓虹 accent
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

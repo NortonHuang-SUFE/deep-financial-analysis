@@ -18,7 +18,7 @@ example_source_url: "https://hyperframes.heygen.com/catalog"
 example_source_label: "hyperframes · data-chart"
 ---
 
-【模板: NYT 风数据图表帧】
+# NYT 风数据图表帧
 【意图】把一段数据 (CSV / JSON / 一句结论) 做成《纽约时报》专栏感的单帧/动画图表, 适合视频片段或推特卡。Inspired by hyperframes data-chart。
 
 【画布】1920×1080, 暖白底 `#f7f5ee` 或墨黑底 `#0e0e0e` 二选一; 文字色和背景相反。
@@ -41,3 +41,8 @@ example_source_label: "hyperframes · data-chart"
 - 严禁 grid 全屏铺线、阴影、3D 立体柱; 严禁 emoji。
 - 必须用用户提供的数据。如果输入是文本结论, 自动估算合理坐标 (但要标注 "schematic"); 如果是 CSV/JSON, 直接绘制。
 - 单文件 HTML; 数据点旁注释格式: `<text class="annot">2024 · 412M</text>`。
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

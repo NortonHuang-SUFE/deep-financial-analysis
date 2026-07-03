@@ -11,10 +11,15 @@ featured: 27
 tags: ["editorial", "rainbow", "macaron"]
 ---
 
-【模板: 白底杂志风 Deck】
+# 白底杂志风 Deck
 【意图】可同时发小红书图文与横版 PPT 双用的白底杂志风。
 【布局】
 - 纯白背景 + 顶部 10 色彩虹 bar
 - 80-110px display 标题 + 紫→蓝→绿→橙→粉渐变文字
 - 马卡龙软卡片组 (粉 / 紫 / 蓝 / 绿 / 橙)
 - 黑底白字 .focus pill + 引用大块
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

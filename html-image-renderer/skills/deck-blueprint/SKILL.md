@@ -11,7 +11,7 @@ featured: 29
 tags: ["blueprint", "architecture", "engineering"]
 ---
 
-【模板: Knowledge Arch Blueprint Deck】
+# Knowledge Arch Blueprint Deck
 【意图】认真的、印刷友好的架构 / pipeline 讲解 deck。
 【布局】
 - 奶油 #F0EAE0 底 + 蓝图 48px 网格 mask
@@ -20,3 +20,8 @@ tags: ["blueprint", "architecture", "engineering"]
 - Playfair serif 大字 + SVG 虚线反馈环
 【设计细节】
 - 零渐变零软阴影
+
+## Assets
+
+- Example HTML: `assets/example.html`
+- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as the closest visual skeleton for layout rhythm, typography scale, spacing, palette, component structure, and export-ready patterns.

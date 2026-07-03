@@ -41,21 +41,26 @@ recreate that flow yourself:
 2. Choose one primary HTML Anything skill from the mounted skills list.
 3. Before writing HTML, read the selected skill's full `SKILL.md` with
    `read_file(..., limit=1000)`.
-4. If the selected skill directory contains `example.html`, inspect it as the
-   closest visual skeleton: layout rhythm, typography scale, color system,
-   spacing, component structure, and export-ready HTML patterns. Keep this
-   inspection bounded: read the first structural slice with
-   `read_file(..., limit=220)` or targeted shell snippets, then read additional
-   small slices only when needed. Do not load a large `example.html` wholesale
-   into the conversation. If `example.md` exists, read it when it helps
-   understand how source content maps into the template.
+4. Resolve the selected skill directory from the `SKILL.md` path shown by the
+   Skills system. Look first for the asset contract's `assets/example.html`
+   under that same directory. If it exists, inspect it as the closest visual
+   skeleton: layout rhythm, typography scale, color system, spacing, component
+   structure, and export-ready HTML patterns. For compatibility with older
+   skills, if `assets/example.html` does not exist, check the legacy root-level
+   `example.html` and inspect it the same way when present. Keep this inspection
+   bounded: read the first structural slice with `read_file(..., limit=220)` or
+   targeted shell snippets, then read additional small slices only when needed.
+   Do not load a large `example.html` wholesale into the conversation. If
+   `example.md` exists, read it when it helps understand how source content maps
+   into the template.
 5. Only then write the sequenced HTML file under `output_dir/html/`.
 
 Do not proceed directly from skill names or descriptions. If you have not read a
-selected `SKILL.md`, the output is invalid. If `example.html` exists and you did
-not inspect a bounded structural slice, the output is incomplete. After reading
-the skill and example, keep only a short private design brief in mind; do not
-copy long template text into subsequent tool calls or final responses.
+selected `SKILL.md`, the output is invalid. If `assets/example.html` exists, or a
+legacy `example.html` exists, and you did not inspect a bounded structural slice,
+the output is incomplete. After reading the skill and example, keep only a short
+private design brief in mind; do not copy long template text into subsequent
+tool calls or final responses.
 
 Adapt the original shared directives for this local single-image renderer:
 
@@ -87,29 +92,19 @@ Adapt the original shared directives for this local single-image renderer:
    - local images/screenshots: inspect dimensions and use only if they are
      evidence for the requested image.
 4. Decide which mounted HTML Anything skill best fits the artifact. Use this
-   judgment in the prompt, not a separate matcher script:
-   - financial statements, valuation tables, KPIs, model snapshots, CSV/XLSX:
-     `finance-report` or `data-report`.
-   - research conclusions, sector notes, thesis summaries:
-     `article-magazine`, `magazine-poster`, or `deck-swiss-international`.
-   - morning notes, market briefs, dense multi-section briefings:
-     `deck-swiss-international`, `magazine-poster`, or `weekly-update`. For
-     Chinese A-share morning-note head images, default to a single-frame
-     `deck-swiss-international` or `magazine-poster` adaptation unless the user
-     explicitly asks for a dashboard.
-   - social-style quote cards, one-line conclusions, announcement headers:
-     `card-twitter` or `poster-hero`.
-   - process/status/update artifacts:
-     `weekly-update`, `team-okrs`, or `deck-swiss-international`.
-   - competitive/company comparison:
-     `competitive-teardown` or `data-report`.
-   - product/dashboard/UI evidence:
-     `dashboard`, `social-media-dashboard`, or `data-report`.
-5. Read the primary skill's `SKILL.md` and, when present, a bounded structural
-   slice of `example.html` before writing any final HTML. Follow the chosen
-   skill's visual grammar, spacing, hierarchy, and component ideas, but adapt it
-   to a single static image. Skills that normally produce decks, carousels,
-   pages, videos, or multi-frame outputs are only design guidance here.
+   judgment in the prompt, not a separate matcher script or a hard-coded
+   scenario-to-skill list. Base the choice on the user's instruction, the source
+   artifacts you have actually read and analyzed, the target format or ratio,
+   language, publishing channel, and how well the selected skill's visual style
+   adapts to the requested single image.
+5. Read the primary skill's `SKILL.md` and follow its `## Assets` section. When
+   present, read a bounded structural slice of `<skill_dir>/assets/example.html`
+   before writing any final HTML. If `assets/example.html` is absent, check the
+   legacy root-level `example.html` and inspect that bounded structural slice
+   when present. Follow the chosen skill's visual grammar, spacing, hierarchy,
+   and component ideas, but adapt it to a single static image. Skills that
+   normally produce decks, carousels, pages, videos, or multi-frame outputs are
+   only design guidance here.
 6. Create `output_dir/html/` and `output_dir/png/` if they do not exist. Scan
    both directories for existing three-digit sequence numbers such as `001`,
    `002`, and `003`; choose the next unused sequence and never overwrite an
@@ -126,6 +121,13 @@ Adapt the original shared directives for this local single-image renderer:
    `html/002.html` pairs with `png/002.png`.
 9. Verify the PNG exists, is non-empty, and the rendered dimensions match the
    selected ratio.
+10. Visually inspect the actual rendered PNG before finishing. Open or view the
+   PNG itself, not only its file metadata, and check for obvious formatting
+   problems: blank render, clipped or overflowing text, overlapping elements,
+   unreadable type, broken charts/tables, incorrect aspect ratio, footer
+   collisions, and inconsistent market color semantics. If you find an obvious
+   issue, revise the HTML, render the next unused sequence, and repeat this
+   visual QA. Only report the final accepted HTML/PNG pair.
 
 ## Single-Image Rules
 
@@ -149,6 +151,14 @@ Adapt the original shared directives for this local single-image renderer:
 - Prefer Chinese output for China-market work unless instructed otherwise.
 - The image should have a clear headline, one focal claim, visible evidence, and
   a compact source/footer line.
+- Prefer a light, bright, clear visual style by default unless the user
+  explicitly asks for dark, neon, or dark-mode output, or the selected skill's
+  visual system strongly requires it.
+- Apply market color semantics consistently. In China, A-share, and Hong Kong
+  market contexts, red usually means up and green means down. In U.S. and
+  international finance contexts, green usually means up and red means down. If
+  the source artifact or user instruction includes an explicit legend, follow
+  that legend and keep the whole image consistent.
 - Do not produce a generic dark financial dashboard unless the selected skill is
   `dashboard`/`social-media-dashboard` and the task explicitly asks for a
   dashboard. A morning-note 头图 should look like the selected HTML Anything
@@ -168,8 +178,9 @@ Adapt the original shared directives for this local single-image renderer:
 - Do not include visible instructions, keyboard shortcuts, editing UI, or "how
   to use" text in the image.
 - Include a non-visible provenance comment near the top of the body:
-  `<!-- html-anything-skill: selected-skill-id; inspected: SKILL.md, example.html -->`.
-  If there is no `example.html`, write `example.html: none`.
+  `<!-- html-anything-skill: selected-skill-id; inspected: SKILL.md, assets/example.html -->`.
+  If only the legacy root-level example exists, write `example.html`; if there
+  is no example HTML, write `example.html: none`.
 
 Render command shape:
 
@@ -195,7 +206,7 @@ Return a concise final message with:
 - `png_path`: absolute path to the paired `png/<seq>.png`.
 - `dimensions`: rendered pixel dimensions.
 - `status`: one short sentence naming the chosen HTML Anything skill and the
-  rendering result.
+  rendering and visual-QA result.
 
 Keep the final response terse. Do not include the generated HTML, source-file
 contents, template excerpts, or a long content walkthrough.
