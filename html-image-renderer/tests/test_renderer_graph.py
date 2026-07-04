@@ -51,6 +51,22 @@ def test_relative_output_base_uses_shared_storage_root(monkeypatch, tmp_path):
     assert resolve_output_base("./out") == (tmp_path / "out").resolve()
 
 
+def test_renderer_prefers_docker_chromium_env_path(monkeypatch):
+    from html_image_renderer_agent.render_html import find_browser
+
+    monkeypatch.setenv("HTML_IMAGE_RENDERER_BROWSER", "/usr/bin/chromium")
+    monkeypatch.setattr(Path, "exists", lambda self: str(self) == "/usr/bin/chromium")
+
+    assert find_browser() == "/usr/bin/chromium"
+
+
+def test_renderer_launch_args_are_container_friendly():
+    from html_image_renderer_agent.render_html import CHROMIUM_LAUNCH_ARGS
+
+    assert "--no-sandbox" in CHROMIUM_LAUNCH_ARGS
+    assert "--disable-dev-shm-usage" in CHROMIUM_LAUNCH_ARGS
+
+
 def test_html_anything_skills_are_mounted():
     expected = [
         "finance-report",

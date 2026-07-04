@@ -48,7 +48,7 @@ def _routing_payload() -> dict:
                 "model": "qwen",
                 "multimodal_fallback_model": "qwen-vl",
             },
-            "financial_facts_modeler": {
+            "html_image_renderer": {
                 "model": "deepseek",
                 "multimodal_fallback_model": "qwen-vl",
             },
@@ -60,7 +60,7 @@ def test_resolve_model_route_uses_agent_override_and_default(monkeypatch, tmp_pa
     monkeypatch.setenv("TEST_DEEPSEEK_API_KEY", "secret")
     save_model_routing(tmp_path, _routing_payload())
 
-    overridden = resolve_model_route(tmp_path, "financial_facts_modeler")
+    overridden = resolve_model_route(tmp_path, "html_image_renderer")
     fallback = resolve_model_route(tmp_path, "unknown_agent")
 
     assert overridden.profile_name == "deepseek"
@@ -81,9 +81,9 @@ def test_save_and_load_model_routing_round_trips(tmp_path):
     assert cfg.default_model == "qwen"
     assert cfg.default_multimodal_model == "qwen-vl"
     assert set(cfg.models) == {"qwen", "deepseek", "qwen-vl"}
-    assert cfg.agent_models["financial_facts_modeler"].model == "deepseek"
+    assert cfg.agent_models["html_image_renderer"].model == "deepseek"
     assert (
-        cfg.agent_models["financial_facts_modeler"].multimodal_fallback_model
+        cfg.agent_models["html_image_renderer"].multimodal_fallback_model
         == "qwen-vl"
     )
 

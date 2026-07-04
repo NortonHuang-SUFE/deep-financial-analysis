@@ -20,10 +20,18 @@ from typing import Any
 
 
 DEFAULT_BROWSER_PATHS = [
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
     "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+]
+CHROMIUM_LAUNCH_ARGS = [
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--no-sandbox",
 ]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -182,7 +190,10 @@ def render_html_file(
 
     try:
         with sync_playwright() as p:
-            launch_kwargs: dict[str, Any] = {"headless": True}
+            launch_kwargs: dict[str, Any] = {
+                "headless": True,
+                "args": CHROMIUM_LAUNCH_ARGS,
+            }
             browser_path = find_browser()
             if browser_path:
                 launch_kwargs["executable_path"] = browser_path

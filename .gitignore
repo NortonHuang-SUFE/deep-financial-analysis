@@ -12,28 +12,15 @@
 !/AGENTS.md
 !/langgraph.json
 !/model-routing.yaml
-!/single-stock-coverage-plan.md
 !/tool-concurrency.yaml
 !/docs/
 !/docs/**
-!/DCF-builder/
-!/DCF-builder/**
-!/industry-ananlysis/
-!/industry-ananlysis/**
 !/morning-note/
 !/morning-note/**
-!/screen/
-!/screen/**
-!/sector/
-!/sector/**
-!/thesis/
-!/thesis/**
 !/orchestrator/
 !/orchestrator/**
 !/html-image-renderer/
 !/html-image-renderer/**
-!/single-stock-coverage/
-!/single-stock-coverage/**
 !/financial-agent-runtime/
 !/financial-agent-runtime/**
 
@@ -55,22 +42,12 @@
 
 # Tests are intentionally excluded from this first core-code upload.
 **/tests/
-!/industry-ananlysis/tests/
-!/industry-ananlysis/tests/**
 !/morning-note/tests/
 !/morning-note/tests/**
-!/screen/tests/
-!/screen/tests/**
-!/sector/tests/
-!/sector/tests/**
-!/thesis/tests/
-!/thesis/tests/**
 !/orchestrator/tests/
 !/orchestrator/tests/**
 !/html-image-renderer/tests/
 !/html-image-renderer/tests/**
-!/single-stock-coverage/tests/
-!/single-stock-coverage/tests/**
 !/financial-agent-runtime/tests/
 !/financial-agent-runtime/tests/**
 

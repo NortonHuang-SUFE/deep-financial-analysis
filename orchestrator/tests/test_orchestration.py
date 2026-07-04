@@ -1,26 +1,10 @@
-"""Tests for the Deep Orchestrator's native-subagent design.
-
-These tests are hermetic — no model API key, no network, no MCP. They use a
-fake tool-calling model and tiny compiled subagents to prove that:
-
-1. The orchestrator delegates to subagents via the built-in `task` tool, and
-   parallel `task` calls run the subagents *concurrently* (the headline
-   requirement).
-2. The agent is wired with the built-in Deep Agents tools only
-   (`task` + shell-enabled built-in tools + `write_todos`) and none of the old
-   custom tools.
-3. Visual/image requests are routed to the `html_image_renderer` subagent with
-   artifact paths, and the orchestrator no longer mounts its own skills.
-4. The subagent registry is well-formed and matches the on-disk packages.
-
-A separate, opt-in integration test (`ORCHESTRATOR_RUN_INTEGRATION=1`) builds
-the real orchestrator graph end to end.
-"""
+"""Tests for the Daily Report coordinator graph."""
 
 from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import os
 import sys
 import time
@@ -29,6 +13,7 @@ from types import SimpleNamespace
 from typing import Annotated, TypedDict
 
 import pytest
+import yaml
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, SystemMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
@@ -44,7 +29,6 @@ if str(SRC_ROOT) not in sys.path:
 
 from deep_orchestrator.config import file_storage_root  # noqa: E402
 
-# Old custom tools that must no longer be registered on the orchestrator.
 _REMOVED_CUSTOM_TOOLS = {
     "invoke_subagent",
     "collect_subagent_outputs",
@@ -54,7 +38,6 @@ _REMOVED_CUSTOM_TOOLS = {
     "prepare_social_card_content",
 }
 
-# Built-in Deep Agents tools we expect the orchestrator to rely on instead.
 _EXPECTED_BUILTIN_TOOLS = {
     "task",
     "execute",
@@ -64,8 +47,21 @@ _EXPECTED_BUILTIN_TOOLS = {
     "write_todos",
 }
 
-
-# ── Test doubles ──────────────────────────────────────────────────────────────
+_REMOVED_CAPABILITY_TOKENS = {
+    "DCF-builder",
+    "dcf_builder",
+    "dcf-assumption-researcher",
+    "single-stock-coverage",
+    "single_stock_coverage",
+    "stock_screen",
+    "sector_research",
+    "thesis_tracker",
+    "market_researcher",
+    "industry-ananlysis",
+    "screen",
+    "sector",
+    "thesis",
+}
 
 
 class _SubState(TypedDict):
@@ -73,11 +69,6 @@ class _SubState(TypedDict):
 
 
 def _make_marker_subagent(name: str, sleep_s: float = 1.0):
-    """A tiny compiled subagent that records its start time, then sleeps.
-
-    Recording the start time lets the parallel test assert overlap rather than
-    only total wall-clock time.
-    """
     starts: dict[str, float] = {}
 
     async def _node(state: _SubState):
@@ -89,18 +80,10 @@ def _make_marker_subagent(name: str, sleep_s: float = 1.0):
     g.add_node("run", _node)
     g.add_edge(START, "run")
     g.add_edge("run", END)
-    compiled = g.compile()
-    return compiled, starts
+    return g.compile(), starts
 
 
 class _ScriptedToolModel(BaseChatModel):
-    """A fake model: first turn emits a fixed set of tool calls, then stops.
-
-    `tool_calls` is the list of (name, args) the first AI turn should request.
-    On every subsequent turn it returns a plain final message. It also captures
-    the tool names it was bound with and the full text it was shown.
-    """
-
     tool_calls: list = []
     captured: dict = {}
 
@@ -123,7 +106,7 @@ class _ScriptedToolModel(BaseChatModel):
                 ],
             )
         else:
-            msg = AIMessage(content="orchestration complete")
+            msg = AIMessage(content="daily report complete")
         return ChatResult(generations=[ChatGeneration(message=msg)])
 
     def _generate(self, messages, stop=None, run_manager=None, **kw) -> ChatResult:
@@ -161,7 +144,6 @@ def _build_agent(model, subagents):
     from deepagents import create_deep_agent
     from deepagents.backends import LocalShellBackend
 
-    # Root the backend at the shared storage root, exactly like production.
     backend = LocalShellBackend(
         root_dir=str(file_storage_root()),
         virtual_mode=False,
@@ -173,28 +155,17 @@ def _build_agent(model, subagents):
         subagents=subagents,
         skills=None,
         backend=backend,
-        name="orchestrator_under_test",
+        name="daily_report_under_test",
     )
 
 
-# ── Tests ─────────────────────────────────────────────────────────────────────
-
-
-def test_subagent_registry_matches_disk(monkeypatch):
-    """The native registry lists the agents and their packages exist on disk."""
-    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")  # avoid building the heavy graph
+def test_subagent_registry_matches_daily_report_surface(monkeypatch):
+    monkeypatch.setenv("DAILY_REPORT_TEST_MODE", "1")
     from deep_orchestrator import graph as orch
 
-    expected = {
-        "market_researcher",
-        "morning_note",
-        "stock_screen",
-        "sector_research",
-        "thesis_tracker",
-        "single_stock_coverage",
-        "html_image_renderer",
-    }
+    expected = {"morning_note", "html_image_renderer"}
     assert set(orch._SUBAGENTS) == expected
+    assert orch.graph["name"] == "daily_report"
     assert orch.graph["backend_type"] == "localshell"
 
     for name, (folder, package, description) in orch._SUBAGENTS.items():
@@ -204,8 +175,7 @@ def test_subagent_registry_matches_disk(monkeypatch):
 
 
 def test_loader_resolves_async_graph_factory(monkeypatch):
-    """Sibling agents may expose `graph` as an async LangGraph factory."""
-    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")  # avoid building the heavy graph
+    monkeypatch.setenv("DAILY_REPORT_TEST_MODE", "1")
     from deep_orchestrator import graph as orch
 
     class FakeRunnable:
@@ -226,8 +196,8 @@ def test_loader_resolves_async_graph_factory(monkeypatch):
     assert orch._load_subagent_runnable("dummy-folder", "dummy_package") is expected
 
 
-def test_runtime_context_prompt_includes_beijing_time(monkeypatch):
-    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")
+def test_runtime_context_prompt_includes_beijing_date_and_artifact_contract(monkeypatch):
+    monkeypatch.setenv("DAILY_REPORT_TEST_MODE", "1")
     from deep_orchestrator import graph as orch
 
     context = orch._runtime_context_prompt()
@@ -235,22 +205,27 @@ def test_runtime_context_prompt_includes_beijing_time(monkeypatch):
     assert "Current Beijing time:" in context
     assert "Current Beijing date:" in context
     assert "morning_note" in context
-    assert "Do not invent" in context
+    assert "html_image_renderer" in context
+    assert "<mother>/morning-note/" in context
+    assert "<mother>/visual/" in context
+    assert "must not create their own new top-level" in context
 
 
 def test_parallel_subagents_run_concurrently():
-    """Two `task` calls in one turn must run their subagents in parallel."""
     sleep_s = 1.0
-    alpha, alpha_starts = _make_marker_subagent("alpha", sleep_s)
-    beta, beta_starts = _make_marker_subagent("beta", sleep_s)
+    note, note_starts = _make_marker_subagent("morning_note", sleep_s)
+    visual, visual_starts = _make_marker_subagent("html_image_renderer", sleep_s)
     subagents = [
-        {"name": "alpha", "description": "Independent task A", "runnable": alpha},
-        {"name": "beta", "description": "Independent task B", "runnable": beta},
+        {"name": "morning_note", "description": "Daily note", "runnable": note},
+        {"name": "html_image_renderer", "description": "Visual", "runnable": visual},
     ]
     model = _ScriptedToolModel(
         tool_calls=[
-            ("task", {"description": "do A", "subagent_type": "alpha"}),
-            ("task", {"description": "do B", "subagent_type": "beta"}),
+            ("task", {"description": "write note", "subagent_type": "morning_note"}),
+            (
+                "task",
+                {"description": "render visual", "subagent_type": "html_image_renderer"},
+            ),
         ],
         captured={},
     )
@@ -260,39 +235,35 @@ def test_parallel_subagents_run_concurrently():
     result = asyncio.run(agent.ainvoke({"messages": [{"role": "user", "content": "go"}]}))
     wall = time.monotonic() - t0
 
-    # Both subagents actually ran.
-    assert "start" in alpha_starts and "start" in beta_starts
-    # They started within a small window of each other → concurrent, not serial.
-    assert abs(alpha_starts["start"] - beta_starts["start"]) < 0.4
-    # Wall clock is ~one sleep, not two.
+    assert "start" in note_starts and "start" in visual_starts
+    assert abs(note_starts["start"] - visual_starts["start"]) < 0.4
     assert wall < sleep_s * 1.8, f"expected concurrent (~{sleep_s}s), got {wall:.2f}s"
 
     texts = " ".join(str(getattr(m, "content", "")) for m in result["messages"])
-    assert "alpha finished" in texts and "beta finished" in texts
+    assert "morning_note finished" in texts
+    assert "html_image_renderer finished" in texts
 
 
 def test_builtin_tools_present_and_no_custom_tools():
-    """The orchestrator exposes built-in tools and none of the old custom ones."""
-    dummy, _ = _make_marker_subagent("single_stock_coverage", sleep_s=0.0)
+    dummy, _ = _make_marker_subagent("morning_note", sleep_s=0.0)
     model = _ScriptedToolModel(tool_calls=[], captured={})
     agent = _build_agent(
-        model, [{"name": "single_stock_coverage", "description": "d", "runnable": dummy}]
+        model,
+        [{"name": "morning_note", "description": "d", "runnable": dummy}],
     )
     asyncio.run(agent.ainvoke({"messages": [{"role": "user", "content": "hi"}]}))
 
     bound = set(model.captured.get("bound_tools", []))
-    assert _EXPECTED_BUILTIN_TOOLS <= bound, f"missing built-ins: {_EXPECTED_BUILTIN_TOOLS - bound}"
-    leaked = _REMOVED_CUSTOM_TOOLS & bound
-    assert not leaked, f"removed custom tools still present: {leaked}"
+    assert _EXPECTED_BUILTIN_TOOLS <= bound
+    assert not (_REMOVED_CUSTOM_TOOLS & bound)
 
 
-def test_orchestrator_task_tool_excludes_general_purpose(monkeypatch, tmp_path):
-    """The top-level task tool must reject the auto-added GP subagent."""
-    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")
+def test_daily_report_task_tool_excludes_general_purpose(monkeypatch, tmp_path):
+    monkeypatch.setenv("DAILY_REPORT_TEST_MODE", "1")
     from deep_orchestrator import graph as orch
 
-    monkeypatch.delenv("ORCHESTRATOR_TEST_MODE", raising=False)
-    dummy, _ = _make_marker_subagent("market_researcher", sleep_s=0.0)
+    monkeypatch.delenv("DAILY_REPORT_TEST_MODE", raising=False)
+    dummy, _ = _make_marker_subagent("morning_note", sleep_s=0.0)
     model = _ScriptedToolModel(
         tool_calls=[
             (
@@ -314,7 +285,7 @@ def test_orchestrator_task_tool_excludes_general_purpose(monkeypatch, tmp_path):
     monkeypatch.setattr(
         orch,
         "_build_subagent_specs",
-        lambda: [{"name": "market_researcher", "description": "d", "runnable": dummy}],
+        lambda: [{"name": "morning_note", "description": "d", "runnable": dummy}],
     )
     monkeypatch.setattr(orch, "file_storage_root", lambda: tmp_path)
 
@@ -324,15 +295,14 @@ def test_orchestrator_task_tool_excludes_general_purpose(monkeypatch, tmp_path):
     )
 
     task_description = model.captured["tool_descriptions"]["task"]
-    assert "market_researcher" in task_description
+    assert "morning_note" in task_description
     texts = " ".join(str(getattr(m, "content", "")) for m in result["messages"])
     assert "We cannot invoke subagent general-purpose" in texts
-    assert "only allowed types are `market_researcher`" in texts
+    assert "only allowed types are `morning_note`" in texts
 
 
-def test_orchestrator_does_not_mount_skills(monkeypatch):
-    """Production orchestrator delegates visual work instead of loading skills."""
-    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")
+def test_daily_report_does_not_mount_orchestrator_skills(monkeypatch):
+    monkeypatch.setenv("DAILY_REPORT_TEST_MODE", "1")
     from deep_orchestrator import graph as orch
 
     source = inspect.getsource(orch._create_agent)
@@ -351,27 +321,23 @@ def test_orchestrator_does_not_mount_skills(monkeypatch):
     assert "guizang-social-card-skill" not in context
 
 
-def test_orchestrator_prompt_routes_images_by_artifact_paths():
-    """Visual requests must pass artifact file paths to html_image_renderer."""
+def test_prompt_routes_daily_report_and_images_only():
     prompt = (PROJECT_ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
 
+    assert "daily_report" in prompt
+    assert "morning_note" in prompt
     assert "html_image_renderer" in prompt
     assert "source_paths" in prompt
-    assert "file addresses" in prompt
-    assert "not full file contents" in prompt
-    assert "Never paste an entire upstream Markdown/CSV" in prompt
-    assert "guizang-social-card-skill" not in prompt
+    assert "Never paste entire Markdown/CSV/JSON" in prompt
+    assert "must never" not in prompt.lower()
+    assert "general-purpose" in prompt
+
+    for token in _REMOVED_CAPABILITY_TOKENS:
+        assert token not in prompt
 
 
-def test_orchestrator_prompt_forbids_general_purpose_subagent():
-    prompt = (PROJECT_ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
-
-    assert "must never call or request a `general-purpose` subagent" in prompt
-    assert "only valid synchronous `task.subagent_type` values" in prompt
-
-
-def test_orchestrator_graph_uses_shared_general_purpose_disable_helper(monkeypatch):
-    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")
+def test_graph_uses_shared_general_purpose_disable_helper(monkeypatch):
+    monkeypatch.setenv("DAILY_REPORT_TEST_MODE", "1")
     from deep_orchestrator import graph as orch
 
     source = inspect.getsource(orch)
@@ -379,42 +345,62 @@ def test_orchestrator_graph_uses_shared_general_purpose_disable_helper(monkeypat
     assert "ensure_general_purpose_subagent_disabled(model)" in source
     assert "_HARNESS_PROFILES" not in source
     assert "harness_profiles" not in source
-    assert "def _general_purpose_subagent_disabled" not in source
 
 
-def test_orchestrator_prompt_defines_single_artifact_root():
-    prompt = (PROJECT_ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
+def test_root_langgraph_exposes_only_daily_report():
+    config = json.loads((WORKSPACE_ROOT / "langgraph.json").read_text(encoding="utf-8"))
 
-    assert "Artifact root" in prompt
-    assert "single mother folder" in prompt
-    assert "Fix one mother folder at the start of the run" in prompt
-    assert "`<mother>/<subdir>/`" in prompt
-    assert "to create its own new top-level `out/<timestamp>/` folder" in prompt
+    assert set(config["graphs"]) == {"daily_report"}
+    assert config["graphs"]["daily_report"] == (
+        "./orchestrator/src/deep_orchestrator/graph.py:graph"
+    )
+    assert config["dependencies"] == [
+        "./financial-agent-runtime",
+        "./morning-note",
+        "./orchestrator",
+        "./html-image-renderer",
+    ]
+    assert any("chromium" in line for line in config["dockerfile_lines"])
 
 
-def test_runtime_context_prompt_defines_artifact_root(monkeypatch):
-    monkeypatch.setenv("ORCHESTRATOR_TEST_MODE", "1")
-    from deep_orchestrator import graph as orch
+def test_root_configs_remove_deleted_research_capabilities():
+    routing = yaml.safe_load((WORKSPACE_ROOT / "model-routing.yaml").read_text())
+    tools = yaml.safe_load((WORKSPACE_ROOT / "tool-concurrency.yaml").read_text())
+    langgraph = json.loads((WORKSPACE_ROOT / "langgraph.json").read_text())
 
-    context = orch._runtime_context_prompt()
+    config_text = "\n".join(
+        [
+            json.dumps(langgraph, sort_keys=True),
+            yaml.safe_dump(routing, sort_keys=True),
+            yaml.safe_dump(tools, sort_keys=True),
+        ]
+    )
 
-    assert "Artifact base directory:" in context
-    assert "Fix ONE mother folder for this whole run" in context
-    assert "<mother>/<subdir>/" in context
-    assert "must not create their own new top-level" in context
+    assert set(routing["agent_models"]) == {
+        "daily_report",
+        "morning_note",
+        "html_image_renderer",
+    }
+    assert set(tools["agent_configs"]) == {
+        "daily_report",
+        "morning_note",
+        "html_image_renderer",
+    }
+    assert set(tools["agent_tools"]) == {"morning_note"}
+    for token in _REMOVED_CAPABILITY_TOKENS:
+        assert token not in config_text
 
 
 @pytest.mark.skipif(
     os.getenv("ORCHESTRATOR_RUN_INTEGRATION") != "1",
     reason="set ORCHESTRATOR_RUN_INTEGRATION=1 to build the real graph (needs model key + sibling deps)",
 )
-def test_real_orchestrator_graph_builds(monkeypatch):
-    """Integration: the real orchestrator graph builds with native subagents."""
-    monkeypatch.delenv("ORCHESTRATOR_TEST_MODE", raising=False)
+def test_real_daily_report_graph_builds(monkeypatch):
+    monkeypatch.delenv("DAILY_REPORT_TEST_MODE", raising=False)
     import importlib
 
     import deep_orchestrator.graph as orch
+
     orch = importlib.reload(orch)
     assert orch.graph is not None
-    # Compiled deep agents expose ainvoke.
     assert hasattr(orch.graph, "ainvoke")

@@ -1,24 +1,6 @@
 default_model: volcengine-glm-5.2
-default_multimodal_model: minimax-m3
+default_multimodal_model: aliyun-minimax-m3
 models:
-  minimax-m3:
-    model: MiniMax-M3
-    base_url: https://api.minimaxi.com/v1
-    api_key_env: MINIMAX_API_KEY
-    max_tokens: 16000
-    thinking: auto
-  aliyun-ds:
-    model: deepseek-v3
-    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    api_key_env: DASHSCOPE_API_KEY
-    max_tokens: 16000
-    thinking: auto
-  aliyun-qwen-max:
-    model: qwen-max
-    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    api_key_env: DASHSCOPE_API_KEY
-    max_tokens: 16000
-    thinking: auto
   aliyun-minimax-m3:
     model: MiniMax/MiniMax-M3
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
@@ -32,72 +14,12 @@ models:
     max_tokens: 16000
     thinking: auto
 agent_models:
-  deep_orchestrator:
+  daily_report:
     model: volcengine-glm-5.2
     multimodal_fallback_model: aliyun-minimax-m3
   morning_note:
     model: volcengine-glm-5.2
     multimodal_fallback_model: aliyun-minimax-m3
-  stock_screen:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  sector_research:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  thesis_tracker:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  market_researcher:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
   html_image_renderer:
-    model: minimax-m3
-    multimodal_fallback_model: aliyun-minimax-m3
-  dcf_builder:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  dcf-assumption-researcher:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  single_stock_coverage:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  task1_company_researcher:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  task2_financial_modeler:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  financial_facts_modeler:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  is_modeler:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  bs_modeler:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  cf_modeler:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  model_update_executor:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  workbook_builder:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  task3_valuation_analyst:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  assumption_generator:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  dcf_execution:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  task4_chart_pack_generator:
-    model: volcengine-glm-5.2
-    multimodal_fallback_model: aliyun-minimax-m3
-  task5_report_assembler:
-    model: volcengine-glm-5.2
+    model: aliyun-minimax-m3
     multimodal_fallback_model: aliyun-minimax-m3

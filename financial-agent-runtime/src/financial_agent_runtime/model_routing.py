@@ -19,29 +19,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 MODEL_ROUTING_FILENAME = "model-routing.yaml"
 DEFAULT_AGENT_NAMES: tuple[str, ...] = (
-    "deep_orchestrator",
+    "daily_report",
     "morning_note",
-    "stock_screen",
-    "sector_research",
-    "thesis_tracker",
-    "market_researcher",
     "html_image_renderer",
-    "dcf_builder",
-    "dcf-assumption-researcher",
-    "single_stock_coverage",
-    "task1_company_researcher",
-    "task2_financial_modeler",
-    "financial_facts_modeler",
-    "is_modeler",
-    "bs_modeler",
-    "cf_modeler",
-    "model_update_executor",
-    "workbook_builder",
-    "task3_valuation_analyst",
-    "assumption_generator",
-    "dcf_execution",
-    "task4_chart_pack_generator",
-    "task5_report_assembler",
 )
 
 

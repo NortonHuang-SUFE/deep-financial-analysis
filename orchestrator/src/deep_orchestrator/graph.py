@@ -1,10 +1,10 @@
-"""Deep Orchestrator — LangGraph Deep Agents top-level graph.
+"""Daily Report coordinator graph.
 
-The orchestrator registers the financial-analysis agents as **native Deep
-Agents subagents**. It plans a request, then delegates to them with the
-built-in `task` tool (parallel `task` calls run the subagents concurrently)
-and writes its synthesis with shell-enabled built-in tools. There are no
-custom invocation/IO tools — the Deep Agents runtime already provides them.
+The public LangGraph assistant is `daily_report`. It coordinates exactly two
+native Deep Agents subagents:
+
+* `morning_note` writes the China-market daily note artifacts.
+* `html_image_renderer` turns existing artifacts into one HTML-rendered PNG.
 """
 
 # ruff: noqa: E402
@@ -44,68 +44,25 @@ from deep_orchestrator.config import (  # noqa: E402
 )
 
 
-# ── Native subagent registry ──────────────────────────────────────────────────
-# name -> (folder, package, description). The description is what the parent
-# model reads to decide when to delegate via the `task` tool.
-
 _SUBAGENTS: dict[str, tuple[str, str, str]] = {
-    "market_researcher": (
-        "industry-ananlysis",
-        "market_researcher",
-        "Produce a sector or thematic market-research primer (markdown note, "
-        "comps xlsx, optional Swiss-style PPTX deck). Delegate here for an "
-        "industry overview, competitive landscape, or thematic idea list.",
-    ),
     "morning_note": (
         "morning-note",
         "morning_note_agent",
-        "Generate a Chinese pre-market A-share morning briefing "
-        "(morning-note.md plus JSON artifacts). Delegate here for 早会纪要 / "
-        "盘前 morning note / overnight summary / today's trade ideas.",
-    ),
-    "stock_screen": (
-        "screen",
-        "stock_screen_agent",
-        "Screen China A-share and Hong Kong equities into a ranked investment "
-        "shortlist (report.md + JSON). Delegate here for factor/style "
-        "screening, idea generation, or building a watchlist.",
-    ),
-    "sector_research": (
-        "sector",
-        "sector_research_agent",
-        "Investment-grade China sector / industry deep-dive aligned to "
-        "Shenwan/CITIC/CNI taxonomies (report.md + JSON). Delegate here for "
-        "行业研究 / 赛道分析 / value-chain mapping / policy analysis.",
-    ),
-    "thesis_tracker": (
-        "thesis",
-        "thesis_tracker_agent",
-        "Create or update a falsifiable single-stock investment thesis "
-        "(Chinese markdown scorecard + JSON). Delegate here to build, update, "
-        "or review a thesis, or to get portfolio action advice.",
-    ),
-    "single_stock_coverage": (
-        "single-stock-coverage",
-        "single_stock_coverage_agent",
-        "Complex single-stock coverage workflow under an outer research agent: "
-        "initiating coverage, event updates, three-statement model, valuation "
-        "assumption system, chart pack, and final report. Delegate here when "
-        "one target company needs full coverage or post-event re-underwriting.",
+        "Generate a Chinese pre-market A-share daily report / morning note "
+        "(morning-note.md plus JSON source artifacts). Delegate here for 日报, "
+        "早会纪要, 盘前 morning note, overnight summary, or today's trade ideas.",
     ),
     "html_image_renderer": (
         "html-image-renderer",
         "html_image_renderer_agent",
-        "Read existing artifact files and render exactly one HTML-based PNG "
-        "under the shared artifact out/ directory. Delegate here for a single visual "
-        "summary, 头图, social-style one-image artifact, or image from markdown/"
-        "csv/json/xlsx outputs. Pass artifact file paths, not pasted contents.",
+        "Read existing artifact files and render exactly one HTML-based PNG. "
+        "Delegate here for a 头图, daily-report cover image, social-style visual, "
+        "or image from markdown/csv/json source artifacts. Pass artifact file paths, "
+        "not pasted contents.",
     ),
 }
 
-AGENT_NAME = "deep_orchestrator"
-
-
-# ── Tool error middleware (identical pattern to all sibling agents) ────────────
+AGENT_NAME = "daily_report"
 
 
 def _make_runtime_context_middleware(context_factory):
@@ -177,33 +134,23 @@ def _runtime_context_prompt() -> str:
         "\n\n## Runtime Context\n"
         f"Current Beijing time: {now:%Y-%m-%d %H:%M:%S %Z}.\n"
         f"Current Beijing date: {now:%Y-%m-%d}.\n"
-        "When a user says today/tonight/this morning/now, expand it from "
-        "this Beijing date/time. Include the concrete date/time in any "
-        "subagent task description, especially for morning_note. Do not invent "
-        "or reuse stale dates from examples or prior runs.\n"
+        "When a user says today/tonight/this morning/now, expand it from this "
+        "Beijing date/time. Include the concrete date/time in every "
+        "`morning_note` task description. Do not invent or reuse stale dates "
+        "from examples or prior runs.\n"
         f"Artifact base directory: {artifact_base}.\n"
-        "Fix ONE mother folder for this whole run — "
-        f"{artifact_base}/<YYYYMMDD-HHMMSS>/ — on your first delegation and reuse the "
-        "identical path on every later turn (use the time above to name it once, not a "
-        "value to recompute). In each subagent task description, name an explicit output "
-        "directory <mother>/<subdir>/ for that subagent and tell it to write there; "
-        "subagents must not create their own new top-level out/<timestamp>/ folder. "
-        "Write your own orchestration summary into the same mother folder.\n"
+        "Fix ONE mother folder for this daily-report run: "
+        f"{artifact_base}/<YYYYMMDD-HHMMSS>/. Choose it once on your first "
+        "delegation and reuse the identical path later. Pass "
+        "<mother>/morning-note/ to `morning_note` and <mother>/visual/ to "
+        "`html_image_renderer` when rendering is requested. Subagents must not "
+        "create their own new top-level out/<timestamp>/ folder. Write your own "
+        "daily-report summary into the same mother folder.\n"
     )
 
 
-# ── Native subagent loading ───────────────────────────────────────────────────
-
-
 def _load_subagent_runnable(folder: str, package: str):
-    """Import a sibling agent package and return its compiled `graph`.
-
-    Each sibling lives in its own src-layout package and builds its compiled
-    graph either at import time or through a LangGraph-compatible factory
-    function. We make its src/ importable, then import `<package>.graph` and
-    hand back the compiled graph as a CompiledSubAgent runnable (its state
-    schema already includes the required `messages` key).
-    """
+    """Import a sibling src-layout package and return its compiled graph."""
     src_path = str(WORKSPACE_ROOT / folder / "src")
     if src_path not in sys.path:
         sys.path.insert(0, src_path)
@@ -222,23 +169,25 @@ def _load_subagent_runnable(folder: str, package: str):
 
 
 def _build_subagent_specs() -> list[dict]:
-    specs: list[dict] = []
-    for name, (folder, package, description) in _SUBAGENTS.items():
-        specs.append(
-            {
-                "name": name,
-                "description": description,
-                "runnable": _load_subagent_runnable(folder, package),
-            }
-        )
-    return specs
+    return [
+        {
+            "name": name,
+            "description": description,
+            "runnable": _load_subagent_runnable(folder, package),
+        }
+        for name, (folder, package, description) in _SUBAGENTS.items()
+    ]
 
 
-# ── Agent creation ────────────────────────────────────────────────────────────
+def _test_mode_enabled() -> bool:
+    return (
+        os.getenv("DAILY_REPORT_TEST_MODE") == "1"
+        or os.getenv("ORCHESTRATOR_TEST_MODE") == "1"
+    )
 
 
 def _create_agent():
-    if os.getenv("ORCHESTRATOR_TEST_MODE") == "1":
+    if _test_mode_enabled():
         return {
             "name": AGENT_NAME,
             "test_mode": True,
@@ -264,7 +213,7 @@ def _create_agent():
     backend = build_backend(prefer_shell=True)
 
     print(
-        f"INFO: Deep Orchestrator — {len(subagents)} native subagents "
+        f"INFO: Daily Report coordinator — {len(subagents)} native subagents "
         f"({', '.join(s['name'] for s in subagents)}); no custom tools "
         "(built-in `task` + shell-enabled tools)."
     )
@@ -285,14 +234,10 @@ def _create_agent():
     )
 
 
-# NOTE: `_create_agent` is synchronous on purpose. The orchestrator needs no
-# MCP connections of its own (each subagent owns its MCP). Building it
-# synchronously lets us import the sibling graphs — each of which calls
-# `asyncio.run(...)` at import time — without nesting event loops.
 try:
     graph = _create_agent()
 except Exception as exc:
     raise RuntimeError(
-        f"Failed to initialise deep_orchestrator agent: {exc}\n"
+        f"Failed to initialise daily_report agent: {exc}\n"
         "Check root tool-concurrency.yaml, model-routing.yaml, .env, and installed packages."
     ) from exc

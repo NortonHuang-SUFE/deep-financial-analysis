@@ -14,7 +14,7 @@ Tests use `pytest` and, for async graph behavior, `pytest-asyncio`. Test files f
 
 ```bash
 .venv/bin/python -m pytest financial-agent-runtime/tests
-.venv/bin/python -m pytest orchestrator/tests single-stock-coverage/tests
+.venv/bin/python -m pytest morning-note/tests html-image-renderer/tests orchestrator/tests
 ```
 
 Add tests beside the package you change, especially for config parsing, graph wiring, tool access, and artifact path behavior.
