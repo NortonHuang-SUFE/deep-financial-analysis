@@ -2,12 +2,12 @@
 
 [English](README.en.md)
 
-面向中国二级市场的日报 agent。项目现在只保留两条能力：
+面向中国二级市场的日报 Agent，用于生成 A 股开盘前日报，并按需渲染日报头图或视觉摘要。项目由一个公开 LangGraph graph 和两条内部能力组成：
 
 - `morning_note`：生成 A 股开盘前 Morning Note / 日报 Markdown 与 JSON 来源 artifact。
 - `html_image_renderer`：读取日报 artifact，渲染一张 HTML-based PNG 头图或视觉摘要。
 
-公开 LangGraph graph 只有 `daily_report`。旧的 DCF、个股覆盖、行业研究、股票筛选、thesis tracker 和独立 market research 能力已经移除。
+公开 LangGraph graph 只有 `daily_report`。项目范围刻意收敛，不包含估值建模、个股覆盖、行业深度研究、股票筛选或 thesis tracker。
 
 > 免责声明：本项目生成的是信息整理和投研工作底稿，不构成投资建议。所有结论都应由具备资质的专业人士复核。
 
@@ -121,6 +121,6 @@ Docker 镜像会安装 Chromium 和中文字体，并设置 `HTML_IMAGE_RENDERER
 
 ## 版本
 
-当前版本：`v0.5.0 daily-report-preview`。
+当前版本：`v0.1.0`。
 
 完整版本历史见 [CHANGELOG.md](CHANGELOG.md)（English changelog: [CHANGELOG.en.md](CHANGELOG.en.md)）。

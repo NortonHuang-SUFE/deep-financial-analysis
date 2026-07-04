@@ -2,12 +2,12 @@
 
 [中文](README.md)
 
-A focused China-market daily report agent. The project now keeps only two capabilities:
+A focused China-market daily report agent for generating A-share pre-market notes and optional report cover images or visual summaries. The project is composed of one public LangGraph graph and two internal capabilities:
 
 - `morning_note`: generates an A-share pre-market Morning Note / daily report as Markdown plus JSON source artifacts.
 - `html_image_renderer`: reads report artifacts and renders one HTML-based PNG cover or visual summary.
 
-The only public LangGraph graph is `daily_report`. Legacy DCF, single-stock coverage, sector research, stock screening, thesis tracking, and standalone market research capabilities have been removed.
+The only public LangGraph graph is `daily_report`. The project is intentionally scoped out of valuation modeling, single-stock coverage, sector deep dives, stock screening, and thesis tracking.
 
 > Disclaimer: outputs are research notes and information drafts, not investment advice. Qualified professionals should review all conclusions.
 
@@ -105,6 +105,6 @@ The Docker image installs Chromium and CJK fonts and sets `HTML_IMAGE_RENDERER_B
 
 ## Version
 
-Current version: `v0.5.0 daily-report-preview`.
+Current version: `v0.1.0`.
 
 See [CHANGELOG.md](CHANGELOG.md) and [CHANGELOG.en.md](CHANGELOG.en.md).
