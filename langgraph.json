@@ -13,6 +13,8 @@
   ],
   "dockerfile_lines": [
     "RUN apt-get update && apt-get install -y --no-install-recommends chromium fonts-noto-cjk fonts-noto-color-emoji && rm -rf /var/lib/apt/lists/*",
+    "ADD ./model-routing.yaml /deps/model-routing.yaml",
+    "ADD ./tool-concurrency.yaml /deps/tool-concurrency.yaml",
     "ENV HTML_IMAGE_RENDERER_BROWSER=/usr/bin/chromium"
   ]
 }

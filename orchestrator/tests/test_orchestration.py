@@ -329,6 +329,10 @@ def test_prompt_routes_daily_report_and_images_only():
     assert "html_image_renderer" in prompt
     assert "source_paths" in prompt
     assert "Never paste entire Markdown/CSV/JSON" in prompt
+    assert "all artifact paths" in prompt
+    assert "complete artifact index" in prompt
+    assert "every absolute path produced or received" in prompt
+    assert "所有产物地址" in prompt
     assert "must never" not in prompt.lower()
     assert "general-purpose" in prompt
 
@@ -361,6 +365,12 @@ def test_root_langgraph_exposes_only_daily_report():
         "./html-image-renderer",
     ]
     assert any("chromium" in line for line in config["dockerfile_lines"])
+    assert "ADD ./model-routing.yaml /deps/model-routing.yaml" in config[
+        "dockerfile_lines"
+    ]
+    assert "ADD ./tool-concurrency.yaml /deps/tool-concurrency.yaml" in config[
+        "dockerfile_lines"
+    ]
 
 
 def test_root_configs_remove_deleted_research_capabilities():

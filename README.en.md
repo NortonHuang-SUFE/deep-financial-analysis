@@ -105,6 +105,6 @@ The Docker image installs Chromium and CJK fonts and sets `HTML_IMAGE_RENDERER_B
 
 ## Version
 
-Current version: `v0.1.0`.
+Current version: `v0.1.1`.
 
 See [CHANGELOG.md](CHANGELOG.md) and [CHANGELOG.en.md](CHANGELOG.en.md).
