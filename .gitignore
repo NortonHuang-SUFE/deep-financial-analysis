@@ -23,6 +23,8 @@
 !/html-image-renderer/**
 !/financial-agent-runtime/
 !/financial-agent-runtime/**
+!/frontend/
+!/frontend/**
 
 # Secrets and local overrides.
 **/.env
@@ -38,6 +40,8 @@
 **/.cache/
 **/dist/
 **/build/
+**/node_modules/
+**/*.tsbuildinfo
 **/*.egg-info/
 
 # Tests are intentionally excluded from this first core-code upload.
