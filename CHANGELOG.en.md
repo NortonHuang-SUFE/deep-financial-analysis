@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.2 - 2026-07-13
+
+- Added DashScope `glm-5.2` and `glm-5.2-fast-preview` model profiles, and switched the daily-report and morning-note defaults to `aliyun-glm-5.2-fast`.
+- Simplified model routing by removing repeated `max_tokens` and `thinking` fields from individual profiles.
+- The coordinator now pre-assigns an exclusive slot directory to each visual artifact, allowing PC, mobile, and other image variants to render safely in parallel.
+- Added coordinator prompt and runtime-context coverage to prevent renderer tasks from sharing output directories or returning duplicate artifact paths.
+
 ## v0.1.1 - 2026-07-09
 
 - Added a Vite / React LangGraph Console frontend for connecting to `daily_report`, submitting runs, and inspecting main-agent, subagent, tool-call, and event streams.

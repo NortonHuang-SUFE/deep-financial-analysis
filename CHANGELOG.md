@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.2 - 2026-07-13
+
+- 新增 DashScope `glm-5.2` 和 `glm-5.2-fast-preview` 模型 profile，并将日报与早报的默认模型切换为 `aliyun-glm-5.2-fast`。
+- 简化模型路由配置，移除各 profile 中重复的 `max_tokens` 和 `thinking` 字段。
+- 调度器现在为每个视觉产物预分配独立的 slot 目录，支持安全地并行生成 PC、移动端等多个图片变体。
+- 新增调度器提示词与运行时上下文测试，防止多个渲染任务共用输出目录或返回重复产物路径。
+
 ## v0.1.1 - 2026-07-09
 
 - 新增 Vite / React LangGraph Console 前端，用于连接 `daily_report`、提交运行请求，并查看主 agent、subagent、tool call 与事件流。

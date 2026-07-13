@@ -207,7 +207,9 @@ def test_runtime_context_prompt_includes_beijing_date_and_artifact_contract(monk
     assert "morning_note" in context
     assert "html_image_renderer" in context
     assert "<mother>/morning-note/" in context
-    assert "<mother>/visual/" in context
+    assert "<mother>/visual/<slot>/" in context
+    assert "visual/pc/ and visual/mobile/" in context
+    assert "never let two renderer tasks share an output_dir" in context
     assert "must not create their own new top-level" in context
 
 
@@ -333,6 +335,11 @@ def test_prompt_routes_daily_report_and_images_only():
     assert "complete artifact index" in prompt
     assert "every absolute path produced or received" in prompt
     assert "所有产物地址" in prompt
+    assert "pre-assign one exclusive visual slot directory" in prompt
+    assert "<mother>/visual/pc/" in prompt
+    assert "<mother>/visual/mobile/" in prompt
+    assert "Never assign the same `output_dir` to two renderer task calls" in prompt
+    assert "no returned path is duplicated across image variants" in prompt
     assert "must never" not in prompt.lower()
     assert "general-purpose" in prompt
 
