@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import importlib
-import os
 import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -74,6 +74,7 @@ def test_html_anything_skills_are_mounted():
         "magazine-poster",
         "poster-hero",
         "deck-swiss-international",
+        "margin-trading-wechat-long-image",
     ]
 
     for skill_id in expected:
@@ -100,6 +101,77 @@ def test_html_anything_skills_declare_example_assets():
             missing.append(skill_dir.name)
 
     assert not missing
+
+
+def test_margin_trading_wechat_long_image_skill_contract():
+    from html_image_renderer_agent.render_html import validate_html_contract
+
+    skill_id = "margin-trading-wechat-long-image"
+    skill_dir = SKILLS_DIR / skill_id
+    skill_md = skill_dir / "SKILL.md"
+    example_html = skill_dir / "assets" / "example.html"
+    logo = skill_dir / "assets" / "gtja-logo.jpg"
+    qr_code = skill_dir / "assets" / "gtja-margin-trading-wechat-qr.png"
+
+    skill_text = skill_md.read_text(encoding="utf-8")
+    _, frontmatter, _ = skill_text.split("---", 2)
+    metadata = yaml.safe_load(frontmatter)
+
+    assert metadata["name"] == skill_id
+    description = metadata["description"]
+    for trigger in [
+        "给融资融券公众号做长图",
+        "两融聚焦长图",
+        "融资融券公众号市场概览",
+    ]:
+        assert trigger in description
+    assert "普通财报" in description
+    assert "通用数据看板" in description
+    assert "高度随内容自适应" in skill_text
+    assert "不要预设总高度、最短高度或最长高度" in skill_text
+    assert "不要求固定模块数量" in skill_text
+    assert "1440×960" not in skill_text
+
+    for asset in [example_html, logo, qr_code]:
+        assert asset.exists(), asset
+        assert asset.stat().st_size > 0, asset
+
+    html = example_html.read_text(encoding="utf-8")
+    contract = validate_html_contract(example_html)
+    assert contract["skill"] == skill_id
+    assert contract["image_root_count"] == 1
+
+    assert 'src="./gtja-logo.jpg"' in html
+    assert 'src="./gtja-margin-trading-wechat-qr.png"' in html
+    assert 'width: 1080px' in html
+    image_root_css = html.split("#image-root {", 1)[1].split("}", 1)[0]
+    assert "height:" not in image_root_css
+    content_css = html.split(".content {", 1)[1].split("}", 1)[0]
+    assert "height:" not in content_css
+    assert "flex-direction: column" in html
+    assert "<svg" in html
+    assert "<table" in html
+    assert 'class="section-tab"' in html
+    assert 'class="summary-strip"' in html
+    assert 'class="metric-panel"' in html
+    assert 'class="pill"' in html
+    assert "--up: #e53e3e" in html
+    assert "--down: #2f9e44" in html
+    assert ".up { color: var(--up); }" in html
+    assert ".down { color: var(--down); }" in html
+    assert "▲" in html
+    assert "▼" in html
+
+    required_brand_content = [
+        "***,***.**",
+        "+***.**",
+        "-***.**",
+        "关注国泰海通融资融券",
+        "免责声明：本文内容均是基于客观市场行情交易数据产生，数据均来源于证券交易所官网公开数据，文中内容不构成任何投资建议，市场有风险，投资需谨慎。",
+        "风险提示：融资融券交易有风险，投资者在参与融资融券交易前请务必阅读、了解和掌握有关法律法规和交易所、证券登记结算机构业务规则等相关规则和《风险揭示书》。",
+    ]
+    for content in required_brand_content:
+        assert content in html
 
 
 def test_old_single_image_skill_assets_are_removed():

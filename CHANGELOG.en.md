@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.3 - 2026-07-16
+
+- Added a dedicated GTJA margin-trading WeChat long-image skill with adaptive-height guidance, branded logo and QR assets, compliance notices, and a complete example.
+- Fixed HTML remote-resource validation to allow embedded `data:` resources, and added contract and asset coverage for the margin-trading skill.
+- Switched the HTML image renderer default model to `aliyun-minimax-m3`, retaining `minimax-m3` as the multimodal fallback.
+
 ## v0.1.2 - 2026-07-13
 
 - Added DashScope `glm-5.2` and `glm-5.2-fast-preview` model profiles, and switched the daily-report and morning-note defaults to `aliyun-glm-5.2-fast`.

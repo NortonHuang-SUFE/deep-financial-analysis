@@ -37,5 +37,5 @@ agent_models:
     model: aliyun-glm-5.2-fast
     multimodal_fallback_model: minimax-m3
   html_image_renderer:
-    model: minimax-m3
-    multimodal_fallback_model: aliyun-minimax-m3
+    model: aliyun-minimax-m3
+    multimodal_fallback_model: minimax-m3

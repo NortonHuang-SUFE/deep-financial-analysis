@@ -37,7 +37,7 @@ CHROMIUM_LAUNCH_ARGS = [
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SKILLS_DIR = PROJECT_ROOT / "skills"
 REMOTE_RESOURCE_ATTRS = {"src", "href", "poster", "data", "srcset"}
-REMOTE_URL_RE = re.compile(r"https?://|//[A-Za-z0-9_.-]+")
+REMOTE_URL_RE = re.compile(r"^(?!data:).*?(https?://|//[A-Za-z0-9_.-]+)", re.DOTALL)
 REMOTE_CSS_RE = re.compile(r"(@import\s+|url\()\s*['\"]?(https?:)?//", re.IGNORECASE)
 
 
