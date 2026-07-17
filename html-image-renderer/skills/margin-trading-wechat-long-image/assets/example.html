@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>国泰海通 · 两融聚焦公众号长图</title>
+  <style>
+    :root {
+      --brand-blue: #1e4d8c;
+      --brand-blue-deep: #153a72;
+      --cyan: #31b7e9;
+      --violet: #5a42f5;
+      --gold: #c9a96e;
+      --up: #e53e3e;
+      --down: #2f9e44;
+      --ink: #17345f;
+      --text: #354b6b;
+      --muted: #7185a4;
+      --soft: #91a6c0;
+      --line: #d6e3f0;
+      --header-cell: #eaf6ff;
+      --surface: #ffffff;
+      --hover: #f5fbff;
+      --cn: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      --num: "DIN Alternate", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #dceeff;
+      font-family: var(--cn);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    #image-root {
+      position: relative;
+      width: 1080px;
+      background:
+        radial-gradient(circle at 88% 4%, rgba(109, 87, 255, 0.20), transparent 13%),
+        radial-gradient(circle at 12% 18%, rgba(49, 183, 233, 0.16), transparent 16%),
+        radial-gradient(circle at 84% 86%, rgba(90, 66, 245, 0.13), transparent 18%),
+        linear-gradient(180deg, #eaf7ff 0%, #dff3ff 52%, #d8efff 78%, #e9e2ff 100%);
+    }
+
+    #image-root::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.34;
+      background-image:
+        linear-gradient(rgba(30, 77, 140, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30, 77, 140, 0.035) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(180deg, #000 0%, transparent 24%, transparent 78%, #000 100%);
+    }
+
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 560px;
+      padding: 32px 58px 48px;
+    }
+
+    .brand-logo {
+      width: 268px;
+      height: 102px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.86);
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 14px 35px rgba(31, 91, 151, 0.12);
+    }
+
+    .brand-logo img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: 50% 50%;
+    }
+
+    .hero-copy {
+      position: relative;
+      z-index: 3;
+      width: 470px;
+      margin: 44px 0 0 12px;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      color: var(--brand-blue);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+    }
+
+    .hero-eyebrow::before {
+      content: "";
+      width: 28px;
+      height: 4px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--gold), #efd39a);
+    }
+
+    .hero h1 {
+      margin: 0;
+      color: var(--brand-blue);
+      font-size: 64px;
+      font-weight: 750;
+      line-height: 1.12;
+      letter-spacing: 0.02em;
+    }
+
+    .hero h1 .lighter {
+      display: block;
+      margin-bottom: 4px;
+      color: #2d91c8;
+      font-size: 52px;
+      font-weight: 650;
+    }
+
+    .hero-subtitle {
+      margin-top: 22px;
+      color: #5e7fa8;
+      font-size: 23px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+    }
+
+    .hero-date {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 22px;
+      padding: 12px 20px;
+      color: #557497;
+      border: 1px solid rgba(89, 139, 188, 0.22);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.62);
+      font-size: 19px;
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-date::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 0 6px rgba(201, 169, 110, 0.13);
+    }
+
+    .hero-visual {
+      position: absolute;
+      z-index: 2;
+      top: 42px;
+      right: 30px;
+      width: 460px;
+      height: 442px;
+      filter: drop-shadow(0 32px 34px rgba(44, 82, 160, 0.20));
+    }
+
+    .hero-orb {
+      position: absolute;
+      right: -80px;
+      bottom: -260px;
+      width: 560px;
+      height: 560px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.72) 0%, rgba(81,185,239,0.13) 45%, transparent 72%);
+      filter: blur(3px);
+    }
+
+    .content {
+      position: relative;
+      z-index: 2;
+      padding: 40px 44px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .long-card {
+      position: relative;
+      min-height: 0;
+      padding: 108px 48px 42px;
+      overflow: hidden;
+      border: 1px solid rgba(198, 220, 239, 0.92);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow:
+        0 20px 50px rgba(49, 108, 166, 0.10),
+        0 3px 10px rgba(82, 123, 171, 0.07);
+    }
+
+    .long-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: inherit;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.95);
+    }
+
+    .section-tab {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      z-index: 2;
+      width: 560px;
+      height: 82px;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      border-radius: 0 0 30px 30px;
+      background: linear-gradient(105deg, #31b7e9 0%, #238ce4 44%, #5845f4 100%);
+      box-shadow: 0 12px 24px rgba(62, 91, 217, 0.20);
+      font-size: 35px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+    }
+
+    .section-tab::before,
+    .section-tab::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 28px;
+      height: 20px;
+      background: #fff;
+    }
+
+    .section-tab::before {
+      left: -27px;
+      border-radius: 0 18px 0 0;
+    }
+
+    .section-tab::after {
+      right: -27px;
+      border-radius: 18px 0 0 0;
+    }
+
+    .rank-title {
+      min-height: 54px;
+      padding: 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 13px;
+      color: #526f91;
+      font-size: 23px;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+    }
+
+    .rank-title::before,
+    .rank-title::after {
+      content: "";
+      width: 0;
+      height: 0;
+      border-top: 7px solid transparent;
+      border-bottom: 7px solid transparent;
+    }
+
+    .rank-title::before { border-right: 11px solid #82cce8; }
+    .rank-title::after { border-left: 11px solid #82cce8; }
+
+    .rank-title .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 0 5px rgba(201, 169, 110, 0.12);
+    }
+
+    .summary-strip {
+      min-height: 112px;
+      padding: 22px 26px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px 24px;
+      border: 1px solid #dce9f5;
+      border-radius: 18px;
+      background: linear-gradient(90deg, #f5fbff 0%, #ecf7ff 65%, #f5f1ff 100%);
+    }
+
+    .summary-strip .label {
+      color: #526f91;
+      font-size: 25px;
+      font-weight: 600;
+    }
+
+    .summary-strip .value {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      color: var(--brand-blue);
+      font-family: var(--num);
+      font-size: 42px;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .summary-strip .unit {
+      color: var(--muted);
+      font-family: var(--cn);
+      font-size: 22px;
+      font-weight: 500;
+    }
+
+    .kpi-pair {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .metric-panel {
+      padding: 25px 30px;
+      border: 1px solid #d9e7f3;
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 10px 25px rgba(42, 102, 158, 0.07);
+    }
+
+    .metric-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .metric-name {
+      color: #496889;
+      font-size: 26px;
+      font-weight: 650;
+    }
+
+    .metric-badge {
+      padding: 7px 12px;
+      color: #6d82a2;
+      border-radius: 999px;
+      background: #eef6fc;
+      font-size: 17px;
+    }
+
+    .metric-value {
+      margin-top: 22px;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      color: var(--ink);
+      font-family: var(--num);
+      font-size: 46px;
+      font-weight: 760;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-value small {
+      color: var(--muted);
+      font-family: var(--cn);
+      font-size: 20px;
+      font-weight: 500;
+    }
+
+    .metric-change {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 20px;
+    }
+
+    .metric-change strong {
+      margin-left: 8px;
+      font-family: var(--num);
+      font-size: 22px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .up { color: var(--up); }
+    .down { color: var(--down); }
+    .blue { color: var(--brand-blue); }
+
+    .chart-panel {
+      margin-top: 26px;
+      padding: 28px 28px 20px;
+      border: 1px solid #dce8f2;
+      border-radius: 22px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+    }
+
+    .chart-head {
+      min-height: 58px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px 24px;
+    }
+
+    .chart-title {
+      color: var(--ink);
+      font-size: 26px;
+      font-weight: 700;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-line {
+      width: 28px;
+      height: 4px;
+      border-radius: 4px;
+    }
+
+    .chart-svg {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 860 / 540;
+      display: block;
+    }
+
+    .chart-grid {
+      stroke: #dbe7f1;
+      stroke-width: 1.5;
+      stroke-dasharray: 6 8;
+    }
+
+    .axis-label {
+      fill: #869ab5;
+      font-family: var(--cn);
+      font-size: 18px;
+    }
+
+    .rank-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 46px;
+    }
+
+    .rank-block {
+      display: flex;
+      flex-direction: column;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+    }
+
+    th,
+    td {
+      padding: 18px 14px;
+      overflow-wrap: anywhere;
+      white-space: normal;
+      vertical-align: middle;
+    }
+
+    th {
+      color: #476684;
+      border-right: 1px solid #d4e4f1;
+      border-bottom: 1px solid #cbddea;
+      background: linear-gradient(180deg, #edf8ff 0%, #e6f4fd 100%);
+      font-size: 23px;
+      font-weight: 650;
+      line-height: 1.28;
+      text-align: left;
+    }
+
+    td {
+      padding-block: 23px;
+      color: #3a526f;
+      border-right: 1px solid #e1eaf2;
+      border-bottom: 1px solid #dce7f0;
+      font-size: 27px;
+      line-height: 1.3;
+      transition: background 0.15s ease;
+    }
+
+    th:last-child,
+    td:last-child { border-right: 0; }
+
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover td { background: var(--hover); }
+
+    .num-cell {
+      text-align: right;
+      font-family: var(--num);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .name-cell {
+      color: #2d4767;
+      font-weight: 620;
+    }
+
+    .pill {
+      display: inline-block;
+      max-width: 100%;
+      padding: 7px 14px;
+      color: #4e6e90;
+      border: 1px solid #d7e5f0;
+      border-radius: 999px;
+      background: #edf5fb;
+      font-size: 21px;
+      line-height: 1.3;
+      white-space: normal;
+    }
+
+    .footer-zone {
+      padding: 18px 34px 72px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      color: #68819e;
+    }
+
+    .legal {
+      width: 100%;
+      padding: 0 10px;
+      color: #486b8b;
+      font-size: 24px;
+      font-weight: 500;
+      line-height: 1.75;
+      text-align: left;
+    }
+
+    .legal p { margin: 0; }
+    .legal p + p { margin-top: 20px; }
+
+    .qr-card {
+      width: 330px;
+      height: 380px;
+      margin-top: 42px;
+      padding: 24px 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 3px solid rgba(30, 77, 140, 0.78);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: 0 18px 40px rgba(39, 92, 151, 0.15);
+    }
+
+    .qr-title {
+      color: var(--brand-blue);
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-align: center;
+    }
+
+    .qr-wrap {
+      width: 278px;
+      height: 278px;
+      margin-top: 15px;
+      padding: 9px;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .qr-wrap img {
+      width: 260px;
+      height: 260px;
+      display: block;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+
+    .footer-cta {
+      margin-top: 24px;
+      color: var(--brand-blue);
+      font-size: 23px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+  <!-- html-anything-skill: margin-trading-wechat-long-image; inspected: SKILL.md, assets/example.html -->
+  <main id="image-root" data-html-anything-skill="margin-trading-wechat-long-image">
+    <header class="hero">
+      <div class="brand-logo">
+        <img src="./gtja-logo.jpg" alt="国泰海通证券股份有限公司">
+      </div>
+
+      <div class="hero-copy">
+        <div class="hero-eyebrow">MARGIN FOCUS</div>
+        <h1><span class="lighter">国泰海通</span>两融聚焦</h1>
+        <div class="hero-subtitle">融资融券市场数据看板</div>
+        <div class="hero-date">截至 X月X日</div>
+      </div>
+
+      <svg class="hero-visual" viewBox="0 0 520 500" role="img" aria-label="两融数据观察抽象插画">
+        <defs>
+          <linearGradient id="ringStroke" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#52c9ed"></stop>
+            <stop offset="46%" stop-color="#3c9ae5"></stop>
+            <stop offset="100%" stop-color="#6b4df7"></stop>
+          </linearGradient>
+          <linearGradient id="glassFill" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.88"></stop>
+            <stop offset="100%" stop-color="#95dff4" stop-opacity="0.18"></stop>
+          </linearGradient>
+          <linearGradient id="cardFill" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#5abfe9"></stop>
+            <stop offset="100%" stop-color="#5545ef"></stop>
+          </linearGradient>
+          <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#4266c8" flood-opacity="0.22"></feDropShadow>
+          </filter>
+        </defs>
+        <ellipse cx="286" cy="350" rx="190" ry="70" fill="#6948f4" opacity="0.13"></ellipse>
+        <ellipse cx="286" cy="325" rx="174" ry="66" fill="none" stroke="url(#ringStroke)" stroke-width="34" opacity="0.90" filter="url(#softShadow)"></ellipse>
+        <ellipse cx="286" cy="325" rx="131" ry="42" fill="#e9f9ff" opacity="0.78"></ellipse>
+        <path d="M124 319 C144 268 184 233 235 215" fill="none" stroke="#87d8f3" stroke-width="16" stroke-linecap="round" opacity="0.70"></path>
+        <rect x="339" y="112" width="105" height="157" rx="22" fill="url(#cardFill)" transform="rotate(4 391 190)" filter="url(#softShadow)"></rect>
+        <rect x="363" y="142" width="58" height="8" rx="4" fill="#fff" opacity="0.80"></rect>
+        <rect x="363" y="163" width="39" height="8" rx="4" fill="#fff" opacity="0.48"></rect>
+        <rect x="363" y="202" width="15" height="34" rx="7" fill="#fff" opacity="0.55"></rect>
+        <rect x="386" y="187" width="15" height="49" rx="7" fill="#fff" opacity="0.70"></rect>
+        <rect x="409" y="169" width="15" height="67" rx="7" fill="#fff" opacity="0.88"></rect>
+        <circle cx="249" cy="191" r="77" fill="url(#glassFill)" stroke="#338fd9" stroke-width="14" filter="url(#softShadow)"></circle>
+        <circle cx="249" cy="191" r="56" fill="#f7fdff" opacity="0.50"></circle>
+        <path d="M298 249 L354 304" stroke="url(#ringStroke)" stroke-width="27" stroke-linecap="round"></path>
+        <path d="M212 166 C233 143 268 137 293 152" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" opacity="0.72"></path>
+        <circle cx="156" cy="248" r="16" fill="#fff" opacity="0.72"></circle>
+        <circle cx="447" cy="302" r="12" fill="#fff" opacity="0.82"></circle>
+      </svg>
+      <div class="hero-orb"></div>
+    </header>
+
+    <div class="content">
+      <section class="long-card market-card" data-section="market-overview">
+        <div class="section-tab">两融市场概览</div>
+
+        <div class="summary-strip">
+          <div class="label">融资融券余额</div>
+          <div class="value">***,***.** <span class="unit">亿元</span></div>
+        </div>
+
+        <div class="kpi-pair">
+          <article class="metric-panel">
+            <div class="metric-top">
+              <div class="metric-name">融资余额</div>
+              <div class="metric-badge">融资买入</div>
+            </div>
+            <div class="metric-value">***,***.** <small>亿元</small></div>
+            <div class="metric-change">较前一日 <strong class="up">▲ +***.**</strong></div>
+          </article>
+
+          <article class="metric-panel">
+            <div class="metric-top">
+              <div class="metric-name">融券余额</div>
+              <div class="metric-badge">融券卖出</div>
+            </div>
+            <div class="metric-value">***.** <small>亿元</small></div>
+            <div class="metric-change">较前一日 <strong class="down">▼ -***.**</strong></div>
+          </article>
+        </div>
+
+        <div class="chart-panel">
+          <div class="chart-head">
+            <div class="chart-title">市场两融余额及上证指数对比图</div>
+            <div class="legend">
+              <span class="legend-item"><span class="legend-line" style="background:#1e4d8c"></span>两融余额</span>
+              <span class="legend-item"><span class="legend-line" style="background:#f5a623"></span>上证指数</span>
+            </div>
+          </div>
+
+          <svg class="chart-svg" viewBox="0 0 860 540" role="img" aria-label="两融余额与上证指数双轴趋势占位图">
+            <defs>
+              <linearGradient id="areaBlue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#4aaee7" stop-opacity="0.38"></stop>
+                <stop offset="100%" stop-color="#4aaee7" stop-opacity="0.03"></stop>
+              </linearGradient>
+            </defs>
+            <line class="chart-grid" x1="65" y1="55" x2="808" y2="55"></line>
+            <line class="chart-grid" x1="65" y1="145" x2="808" y2="145"></line>
+            <line class="chart-grid" x1="65" y1="235" x2="808" y2="235"></line>
+            <line class="chart-grid" x1="65" y1="325" x2="808" y2="325"></line>
+            <line class="chart-grid" x1="65" y1="415" x2="808" y2="415"></line>
+
+            <text class="axis-label" x="10" y="61">——</text>
+            <text class="axis-label" x="10" y="151">——</text>
+            <text class="axis-label" x="10" y="241">——</text>
+            <text class="axis-label" x="10" y="331">——</text>
+            <text class="axis-label" x="10" y="421">——</text>
+            <text class="axis-label" x="821" y="61">——</text>
+            <text class="axis-label" x="821" y="241">——</text>
+            <text class="axis-label" x="821" y="421">——</text>
+
+            <path d="M65 391 L150 372 L235 380 L320 325 L405 336 L490 274 L575 286 L660 220 L745 236 L808 178 L808 415 L65 415 Z" fill="url(#areaBlue)"></path>
+            <polyline points="65,391 150,372 235,380 320,325 405,336 490,274 575,286 660,220 745,236 808,178" fill="none" stroke="#1e4d8c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            <polyline points="65,350 150,316 235,329 320,288 405,252 490,296 575,221 660,244 745,176 808,131" fill="none" stroke="#f5a623" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline>
+
+            <g fill="#fff" stroke="#1e4d8c" stroke-width="5">
+              <circle cx="65" cy="391" r="8"></circle><circle cx="150" cy="372" r="8"></circle><circle cx="235" cy="380" r="8"></circle>
+              <circle cx="320" cy="325" r="8"></circle><circle cx="405" cy="336" r="8"></circle><circle cx="490" cy="274" r="8"></circle>
+              <circle cx="575" cy="286" r="8"></circle><circle cx="660" cy="220" r="8"></circle><circle cx="745" cy="236" r="8"></circle>
+              <circle cx="808" cy="178" r="8"></circle>
+            </g>
+            <g fill="#fff" stroke="#f5a623" stroke-width="5">
+              <circle cx="65" cy="350" r="8"></circle><circle cx="150" cy="316" r="8"></circle><circle cx="235" cy="329" r="8"></circle>
+              <circle cx="320" cy="288" r="8"></circle><circle cx="405" cy="252" r="8"></circle><circle cx="490" cy="296" r="8"></circle>
+              <circle cx="575" cy="221" r="8"></circle><circle cx="660" cy="244" r="8"></circle><circle cx="745" cy="176" r="8"></circle>
+              <circle cx="808" cy="131" r="8"></circle>
+            </g>
+
+            <text class="axis-label" x="65" y="485">阶段 A</text>
+            <text class="axis-label" x="255" y="485">阶段 B</text>
+            <text class="axis-label" x="445" y="485">阶段 C</text>
+            <text class="axis-label" x="635" y="485">阶段 D</text>
+            <text class="axis-label" x="767" y="485">最新</text>
+          </svg>
+        </div>
+      </section>
+
+      <section class="long-card" data-section="sector-financing">
+        <div class="section-tab">板块融资解码</div>
+        <div class="rank-stack">
+          <div class="rank-block" data-ranking="net-buy">
+            <div class="rank-title"><span class="dot"></span>融资净买入金额前五的行业</div>
+            <table>
+              <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+              <thead><tr><th>行业名称</th><th class="num-cell">融资净买入额（亿元）</th></tr></thead>
+              <tbody>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例行业 A</td><td class="num-cell up">+***.**</td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例行业 B</td><td class="num-cell up">+***.**</td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例行业 C</td><td class="num-cell up">+***.**</td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例行业 D</td><td class="num-cell up">+***.**</td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例行业 E</td><td class="num-cell up">+***.**</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="rank-block" data-ranking="net-repay">
+            <div class="rank-title"><span class="dot"></span>融资净偿还金额前五的行业</div>
+            <table>
+              <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+              <thead><tr><th>行业名称</th><th class="num-cell">融资净偿还额（亿元）</th></tr></thead>
+              <tbody>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例行业 F</td><td class="num-cell down">-***.**</td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例行业 G</td><td class="num-cell down">-***.**</td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例行业 H</td><td class="num-cell down">-***.**</td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例行业 I</td><td class="num-cell down">-***.**</td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例行业 J</td><td class="num-cell down">-***.**</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="long-card" data-section="stock-tracking">
+        <div class="section-tab">个股融资追踪</div>
+        <div class="rank-stack">
+          <div class="rank-block" data-ranking="net-buy">
+            <div class="rank-title"><span class="dot"></span>融资净买入前五个股</div>
+            <table>
+              <colgroup><col style="width:25%"><col style="width:29%"><col style="width:25%"><col style="width:21%"></colgroup>
+              <thead><tr><th>名称</th><th class="num-cell">融资净买入额<br>（亿元）</th><th class="num-cell">融资余额<br>（亿元）</th><th class="num-cell">涨跌幅<br>（%）</th></tr></thead>
+              <tbody>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例证券 A</td><td class="num-cell up">+***.**</td><td class="num-cell blue">***.**</td><td class="num-cell up">▲ ***.**%</td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例证券 B</td><td class="num-cell up">+***.**</td><td class="num-cell blue">***.**</td><td class="num-cell down">▼ ***.**%</td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例证券 C</td><td class="num-cell up">+***.**</td><td class="num-cell blue">***.**</td><td class="num-cell up">▲ ***.**%</td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例证券 D</td><td class="num-cell up">+***.**</td><td class="num-cell blue">***.**</td><td class="num-cell down">▼ ***.**%</td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例证券 E</td><td class="num-cell up">+***.**</td><td class="num-cell blue">***.**</td><td class="num-cell up">▲ ***.**%</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="rank-block" data-ranking="net-repay">
+            <div class="rank-title"><span class="dot"></span>融资净偿还前五个股</div>
+            <table>
+              <colgroup><col style="width:25%"><col style="width:29%"><col style="width:25%"><col style="width:21%"></colgroup>
+              <thead><tr><th>名称</th><th class="num-cell">融资净偿还额<br>（亿元）</th><th class="num-cell">融资余额<br>（亿元）</th><th class="num-cell">涨跌幅<br>（%）</th></tr></thead>
+              <tbody>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例证券 F</td><td class="num-cell down">-***.**</td><td class="num-cell blue">***.**</td><td class="num-cell down">▼ ***.**%</td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例证券 G</td><td class="num-cell down">-***.**</td><td class="num-cell blue">***.**</td><td class="num-cell up">▲ ***.**%</td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例证券 H</td><td class="num-cell down">-***.**</td><td class="num-cell blue">***.**</td><td class="num-cell down">▼ ***.**%</td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例证券 I</td><td class="num-cell down">-***.**</td><td class="num-cell blue">***.**</td><td class="num-cell up">▲ ***.**%</td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例证券 J</td><td class="num-cell down">-***.**</td><td class="num-cell blue">***.**</td><td class="num-cell down">▼ ***.**%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="long-card" data-section="etf-tracking">
+        <div class="section-tab">ETF融资追踪</div>
+        <div class="rank-stack">
+          <div class="rank-block" data-ranking="net-buy">
+            <div class="rank-title"><span class="dot"></span>融资净买入前五ETF</div>
+            <table>
+              <colgroup><col style="width:37%"><col style="width:35%"><col style="width:28%"></colgroup>
+              <thead><tr><th>名称</th><th class="num-cell">融资净买入额（亿元）</th><th>分类</th></tr></thead>
+              <tbody>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例ETF A</td><td class="num-cell up">+***.**</td><td><span class="pill">规模指数ETF</span></td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例ETF B</td><td class="num-cell up">+***.**</td><td><span class="pill">跨境ETF</span></td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例ETF C</td><td class="num-cell up">+***.**</td><td><span class="pill">行业主题ETF</span></td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例ETF D</td><td class="num-cell up">+***.**</td><td><span class="pill">策略指数ETF</span></td></tr>
+                <tr data-rank-row="net-buy"><td class="name-cell">示例ETF E</td><td class="num-cell up">+***.**</td><td><span class="pill">债券ETF</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="rank-block" data-ranking="net-repay">
+            <div class="rank-title"><span class="dot"></span>融资净偿还前五ETF</div>
+            <table>
+              <colgroup><col style="width:37%"><col style="width:35%"><col style="width:28%"></colgroup>
+              <thead><tr><th>名称</th><th class="num-cell">融资净偿还额（亿元）</th><th>分类</th></tr></thead>
+              <tbody>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例ETF F</td><td class="num-cell down">-***.**</td><td><span class="pill">规模指数ETF</span></td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例ETF G</td><td class="num-cell down">-***.**</td><td><span class="pill">跨境ETF</span></td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例ETF H</td><td class="num-cell down">-***.**</td><td><span class="pill">行业主题ETF</span></td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例ETF I</td><td class="num-cell down">-***.**</td><td><span class="pill">策略指数ETF</span></td></tr>
+                <tr data-rank-row="net-repay"><td class="name-cell">示例ETF J</td><td class="num-cell down">-***.**</td><td><span class="pill">债券ETF</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer-zone" data-section="disclaimer-and-follow">
+        <div class="legal">
+          <p>免责声明：本文内容均是基于客观市场行情交易数据产生，数据均来源于证券交易所官网公开数据，文中内容不构成任何投资建议，市场有风险，投资需谨慎。</p>
+          <p>风险提示：融资融券交易有风险，投资者在参与融资融券交易前请务必阅读、了解和掌握有关法律法规和交易所、证券登记结算机构业务规则等相关规则和《风险揭示书》。</p>
+        </div>
+
+        <div class="qr-card">
+          <div class="qr-title">关注国泰海通融资融券<br>获取更多两融信息</div>
+          <div class="qr-wrap">
+            <img src="./gtja-margin-trading-wechat-qr.png" alt="国泰海通融资融券公众号二维码">
+          </div>
+        </div>
+        <div class="footer-cta">关注国泰海通融资融券 →</div>
+      </footer>
+    </div>
+  </main>
+</body>
+</html>

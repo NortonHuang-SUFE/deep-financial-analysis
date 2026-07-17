@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.3 - 2026-07-16
+
+- 新增国泰海通融资融券公众号专用长图 Skill，包含自适应高度规范、品牌 Logo、二维码、合规声明和完整示例资产。
+- 修正 HTML 远程资源校验，允许内嵌 `data:` 资源，并新增两融长图 Skill 合约与资产覆盖测试。
+- 将 HTML 图片渲染器的默认模型切换为 `aliyun-minimax-m3`，同时保留 `minimax-m3` 作为多模态回退模型。
+
 ## v0.1.2 - 2026-07-13
 
 - 新增 DashScope `glm-5.2` 和 `glm-5.2-fast-preview` 模型 profile，并将日报与早报的默认模型切换为 `aliyun-glm-5.2-fast`。
