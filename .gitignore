@@ -23,8 +23,6 @@
 !/html-image-renderer/**
 !/financial-agent-runtime/
 !/financial-agent-runtime/**
-!/frontend/
-!/frontend/**
 
 # Secrets and local overrides.
 **/.env
