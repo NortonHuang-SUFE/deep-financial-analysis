@@ -110,8 +110,8 @@ def test_margin_trading_wechat_long_image_skill_contract():
     skill_dir = SKILLS_DIR / skill_id
     skill_md = skill_dir / "SKILL.md"
     example_html = skill_dir / "assets" / "example.html"
-    logo = skill_dir / "assets" / "gtja-logo.jpg"
-    qr_code = skill_dir / "assets" / "gtja-margin-trading-wechat-qr.png"
+    logo = skill_dir / "assets" / "gtja-logo.png"
+    brand_lockup = skill_dir / "assets" / "gtja-brand-lockup.png"
 
     skill_text = skill_md.read_text(encoding="utf-8")
     _, frontmatter, _ = skill_text.split("---", 2)
@@ -132,7 +132,7 @@ def test_margin_trading_wechat_long_image_skill_contract():
     assert "不要求固定模块数量" in skill_text
     assert "1440×960" not in skill_text
 
-    for asset in [example_html, logo, qr_code]:
+    for asset in [example_html, logo, brand_lockup]:
         assert asset.exists(), asset
         assert asset.stat().st_size > 0, asset
 
@@ -141,8 +141,8 @@ def test_margin_trading_wechat_long_image_skill_contract():
     assert contract["skill"] == skill_id
     assert contract["image_root_count"] == 1
 
-    assert 'src="./gtja-logo.jpg"' in html
-    assert 'src="./gtja-margin-trading-wechat-qr.png"' in html
+    assert 'src="./gtja-logo.png"' in html
+    assert 'src="./gtja-brand-lockup.png"' in html
     assert 'width: 1080px' in html
     image_root_css = html.split("#image-root {", 1)[1].split("}", 1)[0]
     assert "height:" not in image_root_css
@@ -166,7 +166,7 @@ def test_margin_trading_wechat_long_image_skill_contract():
         "***,***.**",
         "+***.**",
         "-***.**",
-        "关注国泰海通融资融券",
+        "国泰海通 · 融资融券",
         "免责声明：本文内容均是基于客观市场行情交易数据产生，数据均来源于证券交易所官网公开数据，文中内容不构成任何投资建议，市场有风险，投资需谨慎。",
         "风险提示：融资融券交易有风险，投资者在参与融资融券交易前请务必阅读、了解和掌握有关法律法规和交易所、证券登记结算机构业务规则等相关规则和《风险揭示书》。",
     ]
