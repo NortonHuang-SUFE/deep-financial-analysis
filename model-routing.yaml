@@ -17,6 +17,13 @@ models:
     model: MiniMax/MiniMax-M3
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key_env: DASHSCOPE_API_KEY
+  aliyun-kimi-k3:
+    model: kimi/kimi-k3
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key_env: DASHSCOPE_API_KEY
+    max_tokens: 131072
+    thinking: enabled
+    reasoning_effort: max
   aliyun-glm-5.2-fast:
     model: glm-5.2-fast-preview
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1

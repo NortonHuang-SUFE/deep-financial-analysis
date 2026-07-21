@@ -232,7 +232,13 @@ INDEX_HTML = """<!doctype html>
         input.oninput = () => {
           const profile = state.config.models[input.dataset.profile];
           const field = input.dataset.profileField;
-          profile[field] = field === 'max_tokens' ? Number(input.value || 0) : input.value;
+          if (field === 'max_tokens') {
+            profile[field] = Number(input.value || 0);
+          } else if (field === 'reasoning_effort') {
+            profile[field] = input.value || null;
+          } else {
+            profile[field] = input.value;
+          }
         };
       });
       profiles.querySelectorAll('button[data-delete-profile]').forEach(button => {
@@ -281,6 +287,7 @@ INDEX_HTML = """<!doctype html>
         <div><label>API key env</label><input data-profile="${escapeHtml(name)}" data-profile-field="api_key_env" value="${escapeHtml(profile.api_key_env || '')}"></div>
         <div><label>Max tokens</label><input type="number" data-profile="${escapeHtml(name)}" data-profile-field="max_tokens" value="${profile.max_tokens}"></div>
         <div><label>Thinking</label><select data-profile="${escapeHtml(name)}" data-profile-field="thinking">${['auto','enabled','disabled'].map(v => option(v, profile.thinking)).join('')}</select></div>
+        <div><label>Reasoning effort</label><select data-profile="${escapeHtml(name)}" data-profile-field="reasoning_effort">${emptyOption('Provider default')}${['low','medium','high','max','xhigh'].map(v => option(v, profile.reasoning_effort || '')).join('')}</select></div>
         <button class="danger" data-delete-profile="${escapeHtml(name)}">Delete</button>
       </div>`;
     }
@@ -301,7 +308,8 @@ INDEX_HTML = """<!doctype html>
         base_url: '',
         api_key_env: '',
         max_tokens: 16000,
-        thinking: 'auto'
+        thinking: 'auto',
+        reasoning_effort: null
       };
       render();
     };

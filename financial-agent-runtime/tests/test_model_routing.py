@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from deepagents._models import resolve_model as resolve_deepagents_model
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage
 
 from financial_agent_runtime.model_routing import (
     ChatModelWithFallbacks,
@@ -148,6 +149,33 @@ def test_build_chat_model_for_agent_adds_multimodal_fallback(monkeypatch, tmp_pa
     assert model.fallbacks[0].model_name == "qwen-vl-max"
 
 
+def test_build_chat_model_for_agent_passes_reasoning_effort(monkeypatch, tmp_path):
+    payload = _routing_payload()
+    payload["models"]["kimi-k3"] = {
+        "model": "kimi/kimi-k3",
+        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "api_key_env": "TEST_KIMI_API_KEY",
+        "max_tokens": 131072,
+        "thinking": "enabled",
+        "reasoning_effort": "max",
+    }
+    payload["agent_models"]["kimi_agent"] = {
+        "model": "kimi-k3",
+        "multimodal_fallback_model": "kimi-k3",
+    }
+    monkeypatch.setenv("TEST_KIMI_API_KEY", "secret")
+    save_model_routing(tmp_path, payload)
+
+    model = build_chat_model_for_agent(tmp_path, "kimi_agent")
+
+    assert model.model_name == "kimi/kimi-k3"
+    assert model.max_tokens == 131072
+    assert model.extra_body == {"reasoning_effort": "max"}
+    request_payload = model._get_request_payload([HumanMessage(content="hello")])
+    assert request_payload["max_completion_tokens"] == 131072
+    assert request_payload["extra_body"] == {"reasoning_effort": "max"}
+
+
 def test_legacy_string_agent_model_binding_still_supported(tmp_path):
     payload = _routing_payload()
     payload["agent_models"]["legacy_agent"] = "deepseek"
@@ -176,6 +204,7 @@ def test_explain_model_routes_does_not_expose_secret(monkeypatch, tmp_path):
             "api_key_present": True,
             "max_tokens": 16000,
             "thinking": "auto",
+            "reasoning_effort": None,
             "multimodal_fallback_profile_name": "qwen-vl",
             "multimodal_fallback_model": "qwen-vl-max",
             "multimodal_fallback_base_url": (
@@ -185,5 +214,6 @@ def test_explain_model_routes_does_not_expose_secret(monkeypatch, tmp_path):
             "multimodal_fallback_api_key_present": True,
             "multimodal_fallback_max_tokens": 12000,
             "multimodal_fallback_thinking": "auto",
+            "multimodal_fallback_reasoning_effort": None,
         }
     ]
