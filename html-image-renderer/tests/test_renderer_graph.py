@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -103,20 +105,23 @@ def test_html_anything_skills_declare_example_assets():
     assert not missing
 
 
-def test_margin_trading_wechat_long_image_skill_contract():
+def test_margin_trading_wechat_long_image_skill_contract(tmp_path):
     from html_image_renderer_agent.render_html import validate_html_contract
 
     skill_id = "margin-trading-wechat-long-image"
     skill_dir = SKILLS_DIR / skill_id
     skill_md = skill_dir / "SKILL.md"
     example_html = skill_dir / "assets" / "example.html"
+    richtext_example = skill_dir / "assets" / "example-richtext.html"
     logo = skill_dir / "assets" / "gtja-logo.png"
-    brand_lockup = skill_dir / "assets" / "gtja-brand-lockup.png"
+    qrcode = skill_dir / "assets" / "gtja-qrcode.jpg"
+    richtext_validator = skill_dir / "scripts" / "validate_wechat_richtext.py"
 
     skill_text = skill_md.read_text(encoding="utf-8")
     _, frontmatter, _ = skill_text.split("---", 2)
     metadata = yaml.safe_load(frontmatter)
 
+    assert set(metadata) == {"name", "description"}
     assert metadata["name"] == skill_id
     description = metadata["description"]
     for trigger in [
@@ -127,14 +132,188 @@ def test_margin_trading_wechat_long_image_skill_contract():
         assert trigger in description
     assert "普通财报" in description
     assert "通用数据看板" in description
-    assert "高度随内容自适应" in skill_text
+    assert "高度由内容和普通文档流自然撑开" in skill_text
     assert "不要预设总高度、最短高度或最长高度" in skill_text
-    assert "不要求固定模块数量" in skill_text
+    assert "以任务提示词和来源文件作为内容结构的唯一依据" in skill_text
+    assert "标题、板块数量、板块名称、顺序、每部分内容" in skill_text
+    assert "提示词没有要求表格或图表时，不要自行添加" in skill_text
+    assert "数据表不是必需内容" in skill_text
+    forbidden_example_sections = [
+        "今日概要",
+        "两融市场概览",
+        "板块融资解码",
+        "个股融资追踪",
+        "ETF融资追踪",
+    ]
+    for example_section in forbidden_example_sections:
+        assert example_section not in skill_text
+    assert "richtext/<seq>.html" in skill_text
+    assert "assets/example-richtext.html" in skill_text
+    assert "validate_wechat_richtext.py" in skill_text
+    assert "text/html" in skill_text
+    assert "table-layout:auto" in skill_text
+    assert "长图和富文本都必须同时使用" in skill_text
+    assert 'data-brand-asset="logo"' in skill_text
+    assert 'data-brand-asset="qrcode"' in skill_text
     assert "1440×960" not in skill_text
 
-    for asset in [example_html, logo, brand_lockup]:
+    palette = [
+        "#003377",
+        "#103480",
+        "#33a0e8",
+        "#e6212a",
+        "#239947",
+        "#eeeeee",
+        "#f3efff",
+        "#f0f7ff",
+    ]
+    for color in palette:
+        assert color in skill_text.lower()
+
+    disclaimer = (
+        "免责声明：本文内容均基于客观市场行情交易数据产生，"
+        "数据来源于证券交易所官网公开数据，文中内容不构成任何投资建议，"
+        "市场有风险，投资需谨慎。"
+    )
+    risk_warning = (
+        "风险提示：融资融券交易有风险，投资者在参与融资融券交易前请务必阅读、"
+        "了解和掌握有关法律法规和交易所、证券登记结算机构业务规则等相关规则和"
+        "《风险揭示书》。"
+    )
+    qr_guide = "扫码关注国泰海通融资融券公众号 获取更多两融信息资讯"
+    for required_text in [disclaimer, risk_warning, qr_guide]:
+        assert required_text in skill_text
+
+    required_assets = [
+        example_html,
+        richtext_example,
+        logo,
+        qrcode,
+        richtext_validator,
+    ]
+    for asset in required_assets:
         assert asset.exists(), asset
         assert asset.stat().st_size > 0, asset
+
+    validation = subprocess.run(
+        [sys.executable, str(richtext_validator), str(richtext_example)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert validation.returncode == 0, validation.stdout + validation.stderr
+    example_validation = json.loads(validation.stdout)
+    assert example_validation["valid"] is True
+    assert example_validation["data_table_count"] == 0
+    assert all(example_validation["required_compliance_texts"].values())
+
+    no_table_html = """<!doctype html>
+<html><head><style>#wechat-richtext { max-width: 677px; }</style></head><body>
+<button id="copy-richtext">复制</button>
+<div id="wechat-richtext"><section style="display:block;width:100%;">
+<img src="data:image/png;base64,AA==" data-brand-asset="logo" width="300" style="width:300px;height:auto!important;">
+<section style="font-size:20px;text-align:center;">提示词指定板块一</section>
+<section style="font-size:15px;line-height:1.65;">提示词指定板块二</section>
+<p>DISCLAIMER_PLACEHOLDER</p><p>RISK_WARNING_PLACEHOLDER</p>
+<img src="data:image/jpeg;base64,AA==" data-brand-asset="qrcode" width="190" style="width:190px;height:auto!important;">
+</section></div>
+<script>
+const content = document.getElementById('wechat-richtext');
+const item = new ClipboardItem({
+  'text/html': new Blob([content.innerHTML]),
+  'text/plain': new Blob([content.innerText]),
+});
+</script></body></html>
+"""
+    no_table_html = no_table_html.replace(
+        "DISCLAIMER_PLACEHOLDER", disclaimer
+    ).replace("RISK_WARNING_PLACEHOLDER", risk_warning)
+    no_table_path = tmp_path / "no-table.html"
+    no_table_path.write_text(no_table_html, encoding="utf-8")
+    no_table_validation = subprocess.run(
+        [sys.executable, str(richtext_validator), str(no_table_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert no_table_validation.returncode == 0, no_table_validation.stdout
+    no_table_result = json.loads(no_table_validation.stdout)
+    assert no_table_result["valid"] is True
+    assert no_table_result["data_table_count"] == 0
+    assert all(no_table_result["required_compliance_texts"].values())
+
+    invalid_table_path = tmp_path / "invalid-table.html"
+    invalid_table_path.write_text(
+        no_table_html.replace(
+            '<section style="font-size:15px;line-height:1.65;">提示词指定板块二</section>',
+            '<table style="width:100%;"><tr><th>字段</th></tr><tr><td>值</td></tr></table>',
+        ),
+        encoding="utf-8",
+    )
+    invalid_table_validation = subprocess.run(
+        [sys.executable, str(richtext_validator), str(invalid_table_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert invalid_table_validation.returncode == 1
+    invalid_table_result = json.loads(invalid_table_validation.stdout)
+    assert invalid_table_result["valid"] is False
+    assert invalid_table_result["data_table_count"] == 1
+    assert any("data table 1 must set inline" in error for error in invalid_table_result["errors"])
+
+    richtext_html = richtext_example.read_text(encoding="utf-8")
+    assert 'id="copy-richtext"' in richtext_html
+    assert 'id="wechat-richtext"' in richtext_html
+    assert "ClipboardItem" in richtext_html
+    assert "'text/html'" in richtext_html
+    assert "'text/plain'" in richtext_html
+    assert 'data-brand-asset="logo"' in richtext_html
+    assert 'data-brand-asset="qrcode"' in richtext_html
+    assert "data:image/png;base64," in richtext_html
+    assert "data:image/jpeg;base64," in richtext_html
+
+    for role in ["logo", "qrcode"]:
+        missing_role_path = tmp_path / f"missing-{role}-role.html"
+        missing_role_path.write_text(
+            richtext_html.replace(
+                f'data-brand-asset="{role}"',
+                'data-brand-asset="decorative"',
+                1,
+            ),
+            encoding="utf-8",
+        )
+        missing_role_validation = subprocess.run(
+            [sys.executable, str(richtext_validator), str(missing_role_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert missing_role_validation.returncode == 1
+        assert f'data-brand-asset=\\"{role}\\"' in missing_role_validation.stdout
+
+    for label, required_text in [
+        ("disclaimer", disclaimer),
+        ("risk_warning", risk_warning),
+    ]:
+        missing_compliance_path = tmp_path / f"missing-{label}.html"
+        missing_compliance_path.write_text(
+            richtext_html.replace(required_text, required_text[:-1], 1),
+            encoding="utf-8",
+        )
+        missing_compliance_validation = subprocess.run(
+            [
+                sys.executable,
+                str(richtext_validator),
+                str(missing_compliance_path),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert missing_compliance_validation.returncode == 1
+        missing_compliance_result = json.loads(missing_compliance_validation.stdout)
+        assert missing_compliance_result["required_compliance_texts"][label] is False
 
     html = example_html.read_text(encoding="utf-8")
     contract = validate_html_contract(example_html)
@@ -142,36 +321,57 @@ def test_margin_trading_wechat_long_image_skill_contract():
     assert contract["image_root_count"] == 1
 
     assert 'src="./gtja-logo.png"' in html
-    assert 'src="./gtja-brand-lockup.png"' in html
+    assert 'src="./gtja-qrcode.jpg"' in html
+    assert 'data-brand-asset="logo"' in html
+    assert 'data-brand-asset="qrcode"' in html
+    assert "gtja-brand-lockup.png" not in html
     assert 'width: 1080px' in html
     image_root_css = html.split("#image-root {", 1)[1].split("}", 1)[0]
     assert "height:" not in image_root_css
     content_css = html.split(".content {", 1)[1].split("}", 1)[0]
     assert "height:" not in content_css
     assert "flex-direction: column" in html
-    assert "<svg" in html
-    assert "<table" in html
-    assert 'class="section-tab"' in html
-    assert 'class="summary-strip"' in html
-    assert 'class="metric-panel"' in html
-    assert 'class="pill"' in html
-    assert "--up: #e53e3e" in html
-    assert "--down: #2f9e44" in html
-    assert ".up { color: var(--up); }" in html
-    assert ".down { color: var(--down); }" in html
+    assert "<svg" not in html
+    assert "<table" not in html
+    assert "<canvas" not in html
+    assert "<table" not in richtext_html
+    assert "<svg" not in richtext_html
+    assert "<canvas" not in richtext_html
+    for example_section in forbidden_example_sections:
+        assert example_section not in html
+        assert example_section not in richtext_html
+    for color in palette:
+        assert color in html.lower()
+    for color in [
+        "#003377",
+        "#103480",
+        "#33a0e8",
+        "#e6212a",
+        "#239947",
+        "#f3efff",
+        "#f0f7ff",
+    ]:
+        assert color in richtext_html.lower()
+    assert "--up: #e6212a" in html
+    assert "--down: #239947" in html
+    assert ".positive { color: var(--up); }" in html
+    assert ".negative { color: var(--down); }" in html
     assert "▲" in html
     assert "▼" in html
 
     required_brand_content = [
-        "***,***.**",
-        "+***.**",
-        "-***.**",
-        "国泰海通 · 融资融券",
-        "免责声明：本文内容均是基于客观市场行情交易数据产生，数据均来源于证券交易所官网公开数据，文中内容不构成任何投资建议，市场有风险，投资需谨慎。",
-        "风险提示：融资融券交易有风险，投资者在参与融资融券交易前请务必阅读、了解和掌握有关法律法规和交易所、证券登记结算机构业务规则等相关规则和《风险揭示书》。",
+        "任务提示词指定的主标题",
+        "任务提示词指定的板块标题",
+        disclaimer,
+        risk_warning,
+        qr_guide,
     ]
     for content in required_brand_content:
         assert content in html
+        assert content in richtext_html
+
+    assert "<h1>国泰海通</h1>" not in html
+    assert ">国泰海通</p>" not in richtext_html
 
 
 def test_old_single_image_skill_assets_are_removed():
@@ -241,7 +441,9 @@ def test_renderer_prompt_contains_skill_selection_rules():
     assert "do not create a new top-level" in prompt
     assert "Visually inspect the actual rendered PNG before finishing" in prompt
     assert "PNG itself, not only its file metadata" in prompt
-    assert "Only report the final accepted HTML/PNG pair" in prompt
+    assert "Only report the final accepted artifact set" in prompt
+    assert "same-sequence companion files" in prompt
+    assert "richtext_path" in prompt
 
 
 def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
@@ -271,6 +473,8 @@ def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
     assert "Never overwrite an existing sequence" in context
     assert "treat it as your artifact root" in context
     assert "do not create a new top-level out/<timestamp>/ folder" in context
+    assert "same-sequence companion artifact" in context
+    assert "companion-validation status" in context
     assert "seed template" not in context
     assert "routing reference" not in context
 

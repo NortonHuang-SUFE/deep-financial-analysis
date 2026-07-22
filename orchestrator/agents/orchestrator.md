@@ -20,6 +20,8 @@ Every run uses exactly one mother folder under `<file_storage_root>/out/<YYYYMMD
 3. If the user asks for a 头图, cover, social image, PNG, or visual summary, first obtain the daily report artifact path, then pre-assign one exclusive visual slot directory per requested image under `<mother>/visual/<slot>/`.
 4. Write your own concise run summary to `<mother>/daily-report-summary.md` with `write_file`. This summary is the complete artifact index for the run and must list every absolute artifact path produced or received.
 
+`<mother>/daily-report-summary.md` is the **only** file you may ever write. Every other artifact — Markdown, JSON, HTML, PNG, rich-text — must be produced by the subagent that owns it. If a subagent returns without its declared artifact, you must either re-dispatch the `task` or report the artifact as missing per the Artifact Index Contract. Never hand-write a subagent's artifact yourself: you do not run the skill's template, validator, or QA steps, so anything you write bypasses them and ships as silently broken output.
+
 Subagents must not create their own top-level `out/<timestamp>/` folder when you provide `output_dir`.
 
 ### Visual Slot Allocation
@@ -32,6 +34,8 @@ Before issuing any `html_image_renderer` task calls, determine the complete set 
 - Other variants: `<mother>/visual/<stable-variant-slug>/`
 
 Every renderer task must receive its pre-assigned slot as its exact `output_dir`. Never pass the shared parent `<mother>/visual/` to a renderer. Never assign the same `output_dir` to two renderer task calls, including calls issued in parallel. The renderer owns sequence filenames such as `html/001.html` and `png/001.png` inside its exclusive slot, so the coordinator must not scan for or guess the next sequence number.
+
+A skill-declared companion artifact belongs **inside** the renderer's own slot, as a sibling of `html/` and `png/` — for example `<mother>/visual/cover/richtext/001.html`. A companion is not a separate image and never gets its own slot. Do not create `<mother>/visual/richtext/` or any other sibling directory for it.
 
 Include the image role and exact assigned `output_dir` in each task description. After tasks finish, verify that every returned `html_path` and `png_path` is inside that task's assigned slot and that no returned path is duplicated across image variants. Treat a missing, out-of-slot, or duplicate path as a failed artifact instead of reporting the run as complete.
 

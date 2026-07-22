@@ -1,77 +1,89 @@
 ---
 name: margin-trading-wechat-long-image
-zh_name: "两融公众号长图"
-en_name: "Margin Trading WeChat Long Image"
-emoji: "📊"
-description: "为国泰海通融资融券公众号生成‘两融聚焦’长图和融资融券市场数据看板；当用户提到‘给融资融券公众号做长图’‘两融聚焦长图’或‘融资融券公众号市场概览’时使用。仅限该品牌与渠道场景，普通财报、通用数据看板或其他公众号内容不要使用。"
-category: finance
-scenario: finance
-aspect_hint: "1080px 宽竖版公众号长图，高度随内容自适应"
-tags: ["融资融券", "两融", "公众号", "长图", "国泰海通"]
+description: "为国泰海通融资融券公众号生成自适应长图 PNG 和可一键复制到微信公众号正文编辑器的兼容富文本 HTML；当用户提到‘给融资融券公众号做长图’‘两融聚焦长图’或‘融资融券公众号市场概览’时使用。内容结构由任务提示词和来源文件决定，每份正式产物必须使用 Skill 自带的官方完整横版 Logo、融资融券公众号二维码、固定色板和合规文案。仅限该品牌与渠道场景，普通财报、通用数据看板或其他公众号内容不要使用。"
 ---
 
-# 两融公众号长图
+# 国泰海通微信公众号长图
 
-生成国泰海通融资融券公众号专用的“两融聚焦”券商数据长图。保持品牌视觉、合规内容和中国市场颜色语义一致，同时根据来源内容自由组织信息结构。
+从同一份来源生成一组同序号产物：1080px 宽的自适应公众号长图 HTML/PNG，以及可复制到微信公众号正文编辑器的兼容富文本 HTML。两种呈现使用相同事实、品牌素材和合规文字。
+
+## 内容决策边界
+
+- 以任务提示词和来源文件作为内容结构的唯一依据。由提示词决定标题、板块数量、板块名称、顺序、每部分内容，以及是否使用表格、图表、榜单、KPI、摘要或结论。
+- 不在本 Skill 中预设、补充或推断任何内容板块。提示词没有要求表格或图表时，不要自行添加；来源不支持的事实不要编造。
+- 只把 `assets/example.html` 和 `assets/example-richtext.html` 当作中性品牌骨架、排版和微信兼容参考。示例中的占位标题、占位内容容器和布局不得覆盖任务提示词；任务提示词给出的精确结构和呈现要求优先。
+- 不得照搬示例中的占位文字，也不得从示例推断日期、数据、标题、板块名称、板块数量、图表类型、表格结构或阅读顺序。
+- 本 Skill 只约束国泰海通品牌、微信公众号渠道、基础视觉系统、输出格式和兼容性。
 
 ## 工作流
 
-1. 读取用户提供的来源文件和全部品牌素材；不得仅根据任务摘要编造数据。
-2. 先检查 `assets/example.html`，把它作为品牌视觉、排版节奏和可复用组件的参考，而不是必须逐项复刻的固定模板。
-3. 分析来源内容的数量、层级和阅读密度，先选择合适的组件，再由实际排版自然决定长图高度。默认宽度为 1080px；除非用户明确指定，否则不要预设总高度、最短高度或最长高度，也不要为凑尺寸添加空白、压缩内容或裁切模块。
-4. 根据内容自由添加、合并、拆分、排序或省略模块。表格、折线图、柱状图、面积图、迷你图、KPI 卡、色块、重点结论、标签、分隔带和说明文字都可以在本视觉框架内使用；不要求固定模块数量、固定图表类型、固定表格列数或固定榜单行数。
-5. 来源缺少已核验数值或用户要求模板时，使用 `——`、`***.**`、`+***.**`、`-***.**` 等占位符，不得补造行情。
-   未核验榜单名称、排序或涨跌方向时，使用中性示例名称与 `——`，不得根据示例折线或颜色推断真实方向。
-6. 生成单个自包含 HTML，并按 `#image-root` 的实际内容高度渲染、查看 PNG；修复裁切、重叠、过小文字、Logo 变形、宽版品牌标识模糊、信息断层和表格拥挤后再交付。
+1. 读取任务提示词和全部来源文件，先按提示词确定内容结构。
+2. 有界检查两个示例和两张品牌图片；不要把示例内容当作输出要求或事实来源。
+3. 选择下一个未占用的三位序号 `<seq>`，生成 `html/<seq>.html`，按 `#image-root` 的实际内容高度渲染为 `png/<seq>.png`。
+4. 使用相同事实和 `<seq>` 生成 `richtext/<seq>.html`，将长图内容重新映射为微信兼容的移动端单栏富文本，不要机械缩放长图 HTML。
+5. 运行 `python <skill_dir>/scripts/validate_wechat_richtext.py richtext/<seq>.html` 并修复全部错误。
+6. 查看实际 PNG 和约 390px 宽的富文本预览，点击一次复制按钮；确认文字清晰、无裁切或横向溢出、Logo 不变形、二维码完整可扫。
 
-## 画布与视觉系统
+## 国泰海通品牌与合规
 
-- 默认使用 1080px 宽的公众号竖版信息流；总高度必须由内容自然撑开，不设置固定像素高度。内容较少时保持简洁，内容较多时继续向下延展。
-- 用户明确指定其他宽度或媒介尺寸时可以调整，但仍应保留竖向阅读逻辑，避免直接套用横版、16:9 或桌面仪表板布局。
-- 使用冰蓝到浅薰衣草渐变背景、白色大卡片、深蓝 `#1E4D8C`、亮青 `#31B7E9`、克制紫色 `#5A42F5` 和品牌金 `#C9A96E`。
-- 卡片可参考 24px 左右圆角、40–50px 内边距和柔和蓝灰阴影；允许根据内容密度调整卡片尺寸、留白和模块间距。
-- 主卡可使用青蓝到紫色渐变标题签、金色小标、色块标题或其他同体系的分区方式，形成清晰的连续竖向阅读节奏，不要求所有模块使用完全相同的标题结构。
-- 承载标题、正文、表格或图表说明的容器优先使用 `auto`、`min-height`、内边距和自然换行。除 Logo、宽版品牌标识、装饰图形等尺寸明确的素材外，不要为匹配示例而对内容容器写死高度，也不要用 `overflow: hidden` 或省略号隐藏重要信息。
-- 中文使用 PingFang SC 等系统字体；数字使用 Roboto、DIN Alternate 或等宽数字特性，不加载远程字体。
-- 中国市场统一红涨 `#E53E3E`、绿跌 `#2F9E44`；上涨使用 `▲`，下跌使用 `▼`。
-- `assets/example.html` 同时展示红涨和绿跌仅用于说明视觉语义，不代表真实市场方向。
+- 长图和富文本都必须同时使用 `assets/gtja-logo.png` 与 `assets/gtja-qrcode.jpg`。不得使用文字代替、重绘、替换、裁切、拆分、拉伸或遗漏任一素材。
+- 将完整横版 Logo 作为一个整体居中展示并保持原始宽高比。该图片已经包含“国泰海通”和“GUOTAI HAITONG”，不得在品牌头部再次单独排印这两行文字。
+- 二维码居中展示，保留完整白色静区，不加蒙层、不与其他元素重叠，并保持可扫码。二维码附近逐字使用引导语“扫码关注国泰海通融资融券公众号 获取更多两融信息资讯”。
+- 在两份产物中逐字放入以下两段文字，不得删改：
 
-## 品牌锚点与可选组件
-
-以下内容是每个正式输出必须保留的品牌与合规锚点：
-
-- 使用真实紧凑版 Logo `gtja-logo.png`，不得重绘、拉伸、裁切、替换或省略。
-- 使用真实宽版品牌标识 `gtja-brand-lockup.png`，保持原始宽高比并完整展示，不得重绘、拉伸、裁切、替换或省略。
-- 逐字放入以下两段免责声明，不得删改：
-
-  “免责声明：本文内容均是基于客观市场行情交易数据产生，数据均来源于证券交易所官网公开数据，文中内容不构成任何投资建议，市场有风险，投资需谨慎。”
+  “免责声明：本文内容均基于客观市场行情交易数据产生，数据来源于证券交易所官网公开数据，文中内容不构成任何投资建议，市场有风险，投资需谨慎。”
 
   “风险提示：融资融券交易有风险，投资者在参与融资融券交易前请务必阅读、了解和掌握有关法律法规和交易所、证券登记结算机构业务规则等相关规则和《风险揭示书》。”
 
-- 红涨绿跌、占位符、数据来源和事实准确性遵守本 Skill 的统一规则。
+## 长图视觉基线
 
-除上述锚点外，内容结构按来源自由设计。可选组件包括但不限于：
+- 默认使用 1080px 宽的公众号竖版信息流；高度由内容和普通文档流自然撑开。不要预设总高度、最短高度或最长高度，不要为凑尺寸添加空白、压缩内容或裁切板块。
+- 固定使用以下业务色板：页面背景 `#f0f7ff`、主标题深蓝 `#003377`、主级标题栏 `#103480`、次级标题栏 `#33a0e8`、表头底色 `#eeeeee`、合规区底色 `#f3efff`、正向/流入/上涨 `#e6212a`、负向/流出/下跌 `#239947`。白色作为主要内容容器底色；不得用近似色替换这些语义色。
+- 中国市场方向必须按实际数值动态映射：正值使用红色和 `▲`，负值使用绿色和 `▼`；零值或方向不明时使用中性色且不添加误导性箭头。不得把示例数据的方向当作固定方向。
+- 中文使用 PingFang SC、Microsoft YaHei 等系统字体；数字可使用 Roboto、DIN Alternate 或等宽数字特性。禁止远程字体。
+- 使用清晰字号层级、圆角、留白和克制阴影。品牌区、主标题、板块标题、关键数字和二维码居中；叙述正文与合规文案左对齐；表格表头和数据单元格居中。按提示词给出的内容密度调整间距，不得用固定高度、`overflow:hidden` 或省略号隐藏重要内容。
+- 长图 HTML 必须自包含，使用内联 CSS，不依赖 CDN、远程图片、远程字体或远程脚本。
 
-- Hero、主标题、副标题、日期、摘要条和栏目导航；
-- 融资融券余额、融资余额、融券余额等 KPI 卡片；
-- 行业、个股、ETF 或其他维度的表格与排行榜；
-- 折线图、柱状图、面积图、组合图、迷你趋势图和图例；
-- 洞察结论、数字强调、色块、标签、药丸、提示卡、分隔带、方法说明和数据来源。
+## 微信公众号兼容富文本
 
-可按来源增减榜单组、行列和图表，或将多个主题合并为一张卡片；不要为了匹配示例而展示没有来源支撑的模块。宽版品牌标识和免责声明通常放在信息流底部，其他模块的顺序由阅读逻辑决定。
+### 复制边界
+
+- 页面必须包含 `#copy-richtext` 按钮和 `#wechat-richtext` 容器。按钮只复制容器的 `innerHTML` 与 `innerText`，分别写入剪贴板的 `text/html` 和 `text/plain`，并保留 `document.execCommand('copy')` 回退逻辑。
+- 工具栏、状态提示、页面级 `<style>` 和复制脚本必须位于 `#wechat-richtext` 外；复制片段中不得出现这些内容。
+- `#wechat-richtext` 预览宽度不得超过 677px；内部根节点使用 `display:block;width:100%` 和单栏普通文档流。
+
+### 兼容性与排版
+
+- 复制片段内部只使用语义 HTML、HTML 宽高/对齐属性和逐元素 `style`。禁止 `<style>`、`class`、内部 `id`、CSS 变量、伪元素、媒体查询、外部样式表和依赖选择器的样式。
+- 禁止 `flex`、`grid`、绝对/固定/粘性定位、transform 布局、渐变背景、背景图、canvas、iframe 和交互组件。SVG 或复杂 CSS 图表如经提示词要求使用，先栅格化为 PNG 再嵌入。
+- 所有图片使用 `data:image/...` URI；同时写正整数 `width` 属性、内联像素宽度和 `height:auto!important`。Logo 使用 `data-brand-asset="logo"`，二维码使用 `data-brand-asset="qrcode"`。
+- 正文基准使用 15px 字号和约 1.65 行高；板块标题使用约 20px、加粗、居中。关键颜色和对齐直接写在对应元素上，不依赖父级继承。
+- 数据表不是必需内容。仅当提示词要求并实际使用数据表时，设置 `width:100%`、`border-collapse:collapse`、`border-spacing:0` 和 `table-layout:auto`；`th` 使用 12px、`td` 使用 13px，并同时写 `align="center"`、`valign="middle"`、`text-align:center` 和 `vertical-align:middle`。约 390px 视口不得横向溢出。
+
+## 大文件与素材处理
+
+- 不要直接读取含大段 base64 的 `assets/example-richtext.html`。先折叠 data URI 并限制超长行：
+
+```bash
+sed -E 's#data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+#DATA_URI_ELIDED#g' \
+  <skill_dir>/assets/example-richtext.html | cut -c1-300
+```
+
+- 生成长 HTML 时先按提示词定义的板块分段写入骨架，以 `LOGO_URI_PLACEHOLDER` 和 `QRCODE_URI_PLACEHOLDER` 占位，再用本地脚本读取品牌文件并替换为 data URI。不要让 base64 经过模型输出，也不要一次性重写整份大文件。
+- 注入后确认两种占位符均已消失，再运行富文本 validator。
 
 ## 输出约束
 
-- 输出完整 HTML 文档，内联 CSS，禁止 CDN、远程图片、远程字体和远程脚本。
-- 只保留一个交付根元素：`<main id="image-root" data-html-anything-skill="margin-trading-wechat-long-image">`。
-- 示例允许相对引用同目录素材；将最终 HTML 写到其他目录时，把紧凑版 Logo 和宽版品牌标识编码为 data URI，使 HTML 可独立渲染。
-- `#image-root` 默认设置 `width: 1080px`，高度使用 `auto` 或由普通文档流自然计算；不要为根元素写死总高度。
-- 可保留表格 hover 样式，但以静态截图完整可读、微信缩放后仍有清晰层级为首要目标。
+- 每次正式运行输出 `html/<seq>.html`、`png/<seq>.png` 和 `richtext/<seq>.html`，三者使用同一未占用序号且不得覆盖已有文件。
+- 长图 HTML 只保留一个交付根元素：`<main id="image-root" data-html-anything-skill="margin-trading-wechat-long-image">`；`#image-root` 默认宽 1080px，高度由内容自然计算。Logo 和二维码都编码为 data URI。
+- 富文本 HTML 是独立自包含文档，不包含 `#image-root`，必须包含复制外壳和通过校验的 `#wechat-richtext` 片段。
+- 最终报告 `html_path`、`png_path`、`richtext_path`、PNG 尺寸、视觉 QA 和富文本校验状态。只有三个文件非空、validator 返回 `"valid": true`、两份产物都能看到 Logo 和二维码、二维码可扫码且没有遗留占位符时，才能报告成功。
 
 ## Assets
 
-- Example HTML: `assets/example.html`
-- Required compact logo: `assets/gtja-logo.png`
-- Required wide brand lockup: `assets/gtja-brand-lockup.png`
-- After reading this `SKILL.md`, inspect `assets/example.html` in bounded slices before writing HTML. Treat it as a component library, visual quality bar, and implementation reference for layout rhythm, typography scale, spacing, palette, and export-ready patterns. Its section count, row count, chart choice, composition, and rendered height are examples rather than output requirements.
-- Inspect both required images before generating. Include both in every output, preserve their full frames and original aspect ratios, and do not replace, redraw, omit, or substitute either asset.
+- Long-image visual reference: `assets/example.html`
+- WeChat rich-text compatibility reference: `assets/example-richtext.html`
+- Required official wide Logo: `assets/gtja-logo.png`
+- Required official QR code: `assets/gtja-qrcode.jpg`
+- WeChat rich-text validator: `scripts/validate_wechat_richtext.py`
+- 保持两张品牌图片原样；把两个 HTML 示例当作不含业务结构约束的中性视觉与兼容性基线，而不是内容模板。
