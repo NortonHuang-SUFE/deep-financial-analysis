@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.4 - 2026-07-22
+
+- Improved the margin-trading WeChat rich-text rendering workflow with a standalone rich-text example, an automated validator, and stricter renderer test coverage.
+- Refreshed the GTJA logo and QR-code assets, and simplified the example long-image structure for WeChat publishing.
+- Added a DashScope Kimi K3 model profile and `reasoning_effort` routing support, and switched the daily-report and HTML image renderer defaults to Kimi K3.
+- Removed the unused Vite / React frontend and its related ignore rules to reduce the repository maintenance surface.
+
 ## v0.1.3 - 2026-07-16
 
 - Added a dedicated GTJA margin-trading WeChat long-image skill with adaptive-height guidance, branded logo and QR assets, compliance notices, and a complete example.
