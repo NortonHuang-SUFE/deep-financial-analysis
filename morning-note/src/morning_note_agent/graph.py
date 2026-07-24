@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain_core.messages import SystemMessage, ToolMessage
+from langchain_core.messages import ToolMessage
 
 from financial_agent_runtime import (
     build_chat_model_for_agent,
@@ -24,6 +24,7 @@ from financial_agent_runtime import (
     load_and_register_mcp_tools,
     load_tool_access_config,
     make_concurrency_limit_middleware,
+    make_runtime_context_middleware,
     mcp_server_names_for_tool_group,
     mcp_tool_group_names_for_agent,
     resolve_agent_tools,
@@ -51,31 +52,6 @@ from morning_note_agent.tools import (  # noqa: E402
 
 
 AGENT_NAME = "morning_note"
-
-
-def _make_runtime_context_middleware(context_factory):
-    """Append fresh runtime context to every model call."""
-    from deepagents.middleware.skills import SkillsMiddleware
-
-    AgentMiddleware = SkillsMiddleware.__mro__[1]
-
-    class RuntimeContextMiddleware(AgentMiddleware):
-        tools = []
-
-        def wrap_model_call(self, request, handler):
-            return handler(_request_with_runtime_context(request, context_factory()))
-
-        async def awrap_model_call(self, request, handler):
-            return await handler(_request_with_runtime_context(request, context_factory()))
-
-    return RuntimeContextMiddleware()
-
-
-def _request_with_runtime_context(request, runtime_context: str):
-    base_prompt = request.system_prompt or ""
-    return request.override(
-        system_message=SystemMessage(content=base_prompt + runtime_context)
-    )
 
 
 def _make_tool_error_middleware():
@@ -216,7 +192,7 @@ async def _create_agent():
         skills=[mirror_skills_into_backend(backend, PROJECT_ROOT / "skills")],
         middleware=[
             make_concurrency_limit_middleware(WORKSPACE_ROOT),
-            _make_runtime_context_middleware(lambda: _runtime_context_prompt(cfg)),
+            make_runtime_context_middleware(lambda: _runtime_context_prompt(cfg)),
             _make_tool_error_middleware(),
         ],
         backend=backend,

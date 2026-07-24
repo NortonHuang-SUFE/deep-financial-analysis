@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.5 - 2026-07-24
+
+- Made margin-trading WeChat rich text mobile-first and added automated checks at 375px and 320px for clipping, wrapped headers, font size, image scaling, and container padding.
+- Required every HTML rendering run to deliver same-sequence long-image HTML, PNG, and WeChat rich text; the orchestrator now reconciles companion artifacts and retries or reports missing output explicitly.
+- Centralized runtime context in a shared once-per-graph-invocation middleware to preserve model prefix caches while keeping concurrent runs isolated.
+- Added provider-specific thinking mappings for DashScope and Volcengine GLM models, and moved morning-note and HTML rendering to `aliyun-glm-5.2` with thinking disabled.
+
 ## v0.1.4 - 2026-07-22
 
 - Improved the margin-trading WeChat rich-text rendering workflow with a standalone rich-text example, an automated validator, and stricter renderer test coverage.

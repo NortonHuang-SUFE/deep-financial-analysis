@@ -14,11 +14,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain_core.messages import SystemMessage, ToolMessage
+from langchain_core.messages import ToolMessage
 
 from financial_agent_runtime import (
     backend_is_daytona,
     build_chat_model_for_agent,
+    make_runtime_context_middleware,
     upload_file_artifact,
 )
 
@@ -53,31 +54,6 @@ def _render_helper_path() -> Path:
         upload_file_artifact(script_path, helper_path)
         _RENDER_HELPER_BACKEND_PATH = helper_path
     return helper_path
-
-
-def _make_runtime_context_middleware(context_factory):
-    """Append fresh renderer runtime context to every model call."""
-    from deepagents.middleware.skills import SkillsMiddleware
-
-    AgentMiddleware = SkillsMiddleware.__mro__[1]
-
-    class RuntimeContextMiddleware(AgentMiddleware):
-        tools = []
-
-        def wrap_model_call(self, request, handler):
-            return handler(_request_with_runtime_context(request, context_factory()))
-
-        async def awrap_model_call(self, request, handler):
-            return await handler(_request_with_runtime_context(request, context_factory()))
-
-    return RuntimeContextMiddleware()
-
-
-def _request_with_runtime_context(request, runtime_context: str):
-    base_prompt = request.system_prompt or ""
-    return request.override(
-        system_message=SystemMessage(content=base_prompt + runtime_context)
-    )
 
 
 def _make_tool_error_middleware():
@@ -139,10 +115,10 @@ def _runtime_context_prompt(cfg) -> str:
         "Inside output_dir, create html/ and png/ subdirectories, scan existing "
         "three-digit sequence numbers, and write the next paired files as "
         "html/<seq>.html and png/<seq>.png, for example html/001.html and "
-        "png/001.png. If and only if the selected skill explicitly declares a "
-        "same-sequence companion artifact, also create its requested sibling "
-        "directory and file, follow that skill's validator and QA instructions, "
-        "and report its absolute path. Never overwrite an existing sequence. Always read "
+        "png/001.png. When the selected skill declares a same-sequence companion "
+        "artifact, also create its requested sibling directory and file, follow "
+        "that skill's validator and QA instructions, and report its absolute "
+        "path. Never overwrite an existing sequence. Always read "
         "source_paths yourself from the filesystem; do not "
         "ask the orchestrator to paste file contents. Use the mounted HTML "
         "Anything skills as design and layout guidance. Before writing HTML, "
@@ -162,6 +138,40 @@ def _runtime_context_prompt(cfg) -> str:
         "until the accepted PNG passes visual QA. Keep the final response terse with paths, "
         "dimensions, selected skill, visual-QA status, and any skill-declared "
         "companion-validation status only.\n"
+        "\n## Render Helper Interface\n"
+        f"Run `{render_script}` with --html and --png (absolute paths), "
+        "--selector (default #image-root), --width and --height (viewport, "
+        "default 1080x1440; the screenshot is of the element, so a tall "
+        "#image-root is captured in full), and --device-scale-factor (default "
+        "1). It prints one JSON line with html_path, png_path, width, height "
+        "and html_anything_skill, or `ERROR: ...` on stderr with exit code 1. "
+        "That is the complete interface; do not read the helper's source to "
+        "discover flags.\n"
+        "\n## QA Image Protocol\n"
+        "Reading an image returns an image content block, and image blocks are "
+        "exempt from the large-tool-result eviction that trims text, so every "
+        "image you read stays in the conversation and is resent on every later "
+        "model call. Produce one downscaled QA image per accepted sequence in a "
+        "single execute call (longest side at most 1600px, JPEG quality 75) and "
+        "read_file that one file exactly once. Do not read_file the "
+        "full-resolution deliverable PNG, do not read the same image twice, do "
+        "not slice a tall image into sections and read each one, and do not "
+        "probe pixels with PIL loops. Verify text, numbers, dates and color "
+        "semantics with grep against html/<seq>.html instead of re-reading "
+        "images.\n"
+        "\n## Deliverable Checklist\n"
+        "Your todo list must carry one item per artifact the selected skill "
+        "declares; derive it from that skill's output-constraints section, not "
+        "from the generic workflow. Before writing your final message, confirm: "
+        "(1) output_dir/html/<seq>.html exists and is non-empty; "
+        "(2) output_dir/png/<seq>.png exists, is non-empty, and you have looked "
+        "at it; (3) every companion artifact the selected skill declares exists "
+        "at the declared path with the same <seq>, is non-empty, and every "
+        "validator script that skill names returned \"valid\": true. Run "
+        "`ls -lR <output_dir>` and check all three. Returning only html/ and "
+        "png/ while the selected skill declares a companion is a failed run: "
+        "create the missing file first, and if you truly cannot, say which file "
+        "is missing instead of reporting success.\n"
     )
 
 
@@ -202,7 +212,7 @@ def _create_agent():
         tools=[],
         skills=[mirror_skills_into_backend(backend, SKILLS_DIR)],
         middleware=[
-            _make_runtime_context_middleware(lambda: _runtime_context_prompt(cfg)),
+            make_runtime_context_middleware(lambda: _runtime_context_prompt(cfg)),
             _make_tool_error_middleware(),
         ],
         backend=backend,

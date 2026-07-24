@@ -345,12 +345,22 @@ def _build_chat_model_for_profile(
     extra_body: dict[str, Any] = {}
     if profile.reasoning_effort is not None:
         extra_body["reasoning_effort"] = profile.reasoning_effort
-    if parsed_base_url.netloc.lower() == "api.deepseek.com":
+    gateway_host = parsed_base_url.netloc.lower()
+    if gateway_host == "api.deepseek.com":
         thinking = profile.thinking
         if thinking == "auto" and profile.model.startswith("deepseek-v4"):
             thinking = "disabled"
         if thinking in {"enabled", "disabled"}:
             extra_body["thinking"] = {"type": thinking}
+    elif (
+        gateway_host == "dashscope.aliyuncs.com"
+        and profile.model.lower().startswith(("glm-", "zhipu/glm-"))
+    ):
+        if profile.thinking in {"enabled", "disabled"}:
+            extra_body["enable_thinking"] = profile.thinking == "enabled"
+    elif gateway_host.endswith(".volces.com"):
+        if profile.thinking in {"enabled", "disabled"}:
+            extra_body["thinking"] = {"type": profile.thinking}
     if extra_body:
         model_kwargs["extra_body"] = extra_body
 

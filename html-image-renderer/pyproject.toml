@@ -1,6 +1,6 @@
 [project]
 name = "html-image-renderer"
-version = "0.1.4"
+version = "0.1.5"
 description = "LangGraph Deep Agents HTML-to-single-PNG renderer subagent for existing artifact files."
 requires-python = ">=3.11"
 dependencies = [

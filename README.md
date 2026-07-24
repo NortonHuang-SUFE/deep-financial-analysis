@@ -121,6 +121,6 @@ Docker 镜像会安装 Chromium 和中文字体，并设置 `HTML_IMAGE_RENDERER
 
 ## 版本
 
-当前版本：`v0.1.4`。
+当前版本：`v0.1.5`。
 
 完整版本历史见 [CHANGELOG.md](CHANGELOG.md)（English changelog: [CHANGELOG.en.md](CHANGELOG.en.md)）。

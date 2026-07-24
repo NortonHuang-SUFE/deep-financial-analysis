@@ -7,6 +7,16 @@ description: "为国泰海通融资融券公众号生成自适应长图 PNG 和�
 
 从同一份来源生成一组同序号产物：1080px 宽的自适应公众号长图 HTML/PNG，以及可复制到微信公众号正文编辑器的兼容富文本 HTML。两种呈现使用相同事实、品牌素材和合规文字。
 
+## 交付物（三件套，缺一即为失败运行）
+
+| 产物 | 路径 |
+|---|---|
+| 长图 HTML | `<output_dir>/html/<seq>.html` |
+| 长图 PNG | `<output_dir>/png/<seq>.png` |
+| 微信富文本 | `<output_dir>/richtext/<seq>.html` |
+
+富文本不是可选项，也不是"有余力再做"的附加件。读完本文件后立刻把这三件各写成一条待办，再开始动手。只交付 `html/` 和 `png/` 的运行是失败运行：必须补齐富文本，并让 `scripts/validate_wechat_richtext.py` 与 `scripts/check_wechat_mobile.py` 都返回 `"valid": true`，才能报告完成；最终回复用 `richtext_path` 字段给出富文本的绝对路径。
+
 ## 内容决策边界
 
 - 以任务提示词和来源文件作为内容结构的唯一依据。由提示词决定标题、板块数量、板块名称、顺序、每部分内容，以及是否使用表格、图表、榜单、KPI、摘要或结论。
@@ -20,9 +30,10 @@ description: "为国泰海通融资融券公众号生成自适应长图 PNG 和�
 1. 读取任务提示词和全部来源文件，先按提示词确定内容结构。
 2. 有界检查两个示例和两张品牌图片；不要把示例内容当作输出要求或事实来源。
 3. 选择下一个未占用的三位序号 `<seq>`，生成 `html/<seq>.html`，按 `#image-root` 的实际内容高度渲染为 `png/<seq>.png`。
-4. 使用相同事实和 `<seq>` 生成 `richtext/<seq>.html`，将长图内容重新映射为微信兼容的移动端单栏富文本，不要机械缩放长图 HTML。
+4. 使用相同事实和 `<seq>` 生成 `richtext/<seq>.html`，将长图内容重新映射为微信兼容的移动端单栏富文本，不要机械缩放长图 HTML。**这一步不可跳过**：没有它这次运行就是失败的。
 5. 运行 `python <skill_dir>/scripts/validate_wechat_richtext.py richtext/<seq>.html` 并修复全部错误。
-6. 查看实际 PNG 和约 390px 宽的富文本预览，点击一次复制按钮；确认文字清晰、无裁切或横向溢出、Logo 不变形、二维码完整可扫。
+6. 运行 `python <skill_dir>/scripts/check_wechat_mobile.py richtext/<seq>.html` 并修复全部 errors；warnings 逐条判断是否需要处理。
+7. 查看实际 PNG，并在 375px 和 320px 两档宽度下查看富文本预览，点击一次复制按钮；确认表头单行不折、文字清晰、无裁切或横向溢出、Logo 不变形、二维码完整可扫。
 
 ## 国泰海通品牌与合规
 
@@ -50,15 +61,27 @@ description: "为国泰海通融资融券公众号生成自适应长图 PNG 和�
 
 - 页面必须包含 `#copy-richtext` 按钮和 `#wechat-richtext` 容器。按钮只复制容器的 `innerHTML` 与 `innerText`，分别写入剪贴板的 `text/html` 和 `text/plain`，并保留 `document.execCommand('copy')` 回退逻辑。
 - 工具栏、状态提示、页面级 `<style>` 和复制脚本必须位于 `#wechat-richtext` 外；复制片段中不得出现这些内容。
-- `#wechat-richtext` 预览宽度不得超过 677px；内部根节点使用 `display:block;width:100%` 和单栏普通文档流。
+- `#wechat-richtext` 预览宽度不得超过 375px，即手机端正文宽度；内部根节点使用 `display:block;width:100%` 和单栏普通文档流。677px 是微信 PC 编辑器的正文宽度，用它做预览会让所有排版按 PC 验收、到手机端才暴露问题。需要对照 PC 观感时，在复制边界之外加一个 375/677 宽度切换按钮，默认 375。
 
 ### 兼容性与排版
 
 - 复制片段内部只使用语义 HTML、HTML 宽高/对齐属性和逐元素 `style`。禁止 `<style>`、`class`、内部 `id`、CSS 变量、伪元素、媒体查询、外部样式表和依赖选择器的样式。
 - 禁止 `flex`、`grid`、绝对/固定/粘性定位、transform 布局、渐变背景、背景图、canvas、iframe 和交互组件。SVG 或复杂 CSS 图表如经提示词要求使用，先栅格化为 PNG 再嵌入。
-- 所有图片使用 `data:image/...` URI；同时写正整数 `width` 属性、内联像素宽度和 `height:auto!important`。Logo 使用 `data-brand-asset="logo"`，二维码使用 `data-brand-asset="qrcode"`。
+- 所有图片使用 `data:image/...` URI；同时写正整数 `width` 属性和 `height:auto!important`。Logo 使用 `data-brand-asset="logo"`，二维码使用 `data-brand-asset="qrcode"`。
 - 正文基准使用 15px 字号和约 1.65 行高；板块标题使用约 20px、加粗、居中。关键颜色和对齐直接写在对应元素上，不依赖父级继承。
-- 数据表不是必需内容。仅当提示词要求并实际使用数据表时，设置 `width:100%`、`border-collapse:collapse`、`border-spacing:0` 和 `table-layout:auto`；`th` 使用 12px、`td` 使用 13px，并同时写 `align="center"`、`valign="middle"`、`text-align:center` 和 `vertical-align:middle`。约 390px 视口不得横向溢出。
+- 数据表不是必需内容。仅当提示词要求并实际使用数据表时，设置 `width:100%`、`max-width:100%`、`border-collapse:collapse`、`border-spacing:0` 和 `table-layout:auto`；`th` 使用 11px、`td` 使用 12px，并同时写 `align="center"`、`valign="middle"`、`text-align:center` 和 `vertical-align:middle`。
+
+### 移动端优先
+
+微信手机端正文只有约 `视口宽 - 32px`（iPhone 375 屏是 343px，320 屏只有 288px），并且对正文内每个元素强制 `max-width:100%`、`box-sizing:border-box`、`word-wrap:break-word`，超宽内容被 `overflow:hidden` 直接裁掉而不是横向滚动。所有排版按 320px 仍可读来设计。
+
+- 图片内联像素宽不得超过 300px。更宽的图片写 `width:100%!important` 加 `max-width:<原设计像素>!important`，不要写固定像素宽——固定像素宽在微信改写样式后会溢出并被裁切。禁止使用 100% 以外的百分比 `max-width`，它挡不住溢出。
+- 图片实际显示宽度不应小于其 `width` 属性的 1/1.8。图内含文字的图表要按手机宽度（约 343px 逻辑宽）栅格化，靠提高 `device_scale_factor` 保清晰度，不要拿按 PC 宽度绘制的图表缩到手机上。
+- 容器每侧 padding 不超过 8px。嵌套 section 的 padding 会叠加，按 677px 挑的 14–16px 到手机端会吃掉 17% 的正文宽。
+- 表头文案不超过 4 个汉字且必须单行不折：把 `融资净买入额(亿元)` 写成 `净买入`，单位放到表格上方的说明行（如「单位：亿元」）。序号列表头用 `#`，并写 `width:1%;white-space:nowrap`，否则会竖排成一列单字。
+- 数值列写 `white-space:nowrap`；名称等文字列写 `word-break:break-all`。单元格内文字最多折 2 行。
+- 标签类取值控制在 5 个字以内（`行业ETF（半导体设备）` 写成 `半导体设备`），否则窄屏下该列会把行高撑到数倍。
+- 单元格 padding 用 `6px 3px` 量级，不要用为 677px 挑的 `10px 6px`。
 
 ## 大文件与素材处理
 
@@ -70,14 +93,14 @@ sed -E 's#data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+#DATA_URI_ELIDED#g' \
 ```
 
 - 生成长 HTML 时先按提示词定义的板块分段写入骨架，以 `LOGO_URI_PLACEHOLDER` 和 `QRCODE_URI_PLACEHOLDER` 占位，再用本地脚本读取品牌文件并替换为 data URI。不要让 base64 经过模型输出，也不要一次性重写整份大文件。
-- 注入后确认两种占位符均已消失，再运行富文本 validator。
+- 注入后确认两种占位符均已消失，再依次运行富文本 validator 和移动端检查脚本。
 
 ## 输出约束
 
 - 每次正式运行输出 `html/<seq>.html`、`png/<seq>.png` 和 `richtext/<seq>.html`，三者使用同一未占用序号且不得覆盖已有文件。
 - 长图 HTML 只保留一个交付根元素：`<main id="image-root" data-html-anything-skill="margin-trading-wechat-long-image">`；`#image-root` 默认宽 1080px，高度由内容自然计算。Logo 和二维码都编码为 data URI。
 - 富文本 HTML 是独立自包含文档，不包含 `#image-root`，必须包含复制外壳和通过校验的 `#wechat-richtext` 片段。
-- 最终报告 `html_path`、`png_path`、`richtext_path`、PNG 尺寸、视觉 QA 和富文本校验状态。只有三个文件非空、validator 返回 `"valid": true`、两份产物都能看到 Logo 和二维码、二维码可扫码且没有遗留占位符时，才能报告成功。
+- 最终报告 `html_path`、`png_path`、`richtext_path`、PNG 尺寸、视觉 QA、富文本校验和移动端检查状态。只有三个文件非空、两个脚本都返回 `"valid": true`、两份产物都能看到 Logo 和二维码、二维码可扫码且没有遗留占位符时，才能报告成功。
 
 ## Assets
 
@@ -86,4 +109,5 @@ sed -E 's#data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+#DATA_URI_ELIDED#g' \
 - Required official wide Logo: `assets/gtja-logo.png`
 - Required official QR code: `assets/gtja-qrcode.jpg`
 - WeChat rich-text validator: `scripts/validate_wechat_richtext.py`
+- WeChat mobile layout check (375px / 320px): `scripts/check_wechat_mobile.py`
 - 保持两张品牌图片原样；把两个 HTML 示例当作不含业务结构约束的中性视觉与兼容性基线，而不是内容模板。

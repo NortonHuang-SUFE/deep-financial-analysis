@@ -148,8 +148,17 @@ def test_margin_trading_wechat_long_image_skill_contract(tmp_path):
     for example_section in forbidden_example_sections:
         assert example_section not in skill_text
     assert "richtext/<seq>.html" in skill_text
+    # The three-artifact contract has to be visible before the workflow, so a
+    # renderer that plans right after reading this file cannot miss it.
+    assert "## 交付物（三件套，缺一即为失败运行）" in skill_text
+    assert "richtext_path" in skill_text
+    assert "这一步不可跳过" in skill_text
+    assert skill_text.index("交付物（三件套") < skill_text.index("## 内容决策边界")
     assert "assets/example-richtext.html" in skill_text
     assert "validate_wechat_richtext.py" in skill_text
+    assert "check_wechat_mobile.py" in skill_text
+    assert "预览宽度不得超过 375px" in skill_text
+    assert "移动端优先" in skill_text
     assert "text/html" in skill_text
     assert "table-layout:auto" in skill_text
     assert "长图和富文本都必须同时使用" in skill_text
@@ -184,12 +193,14 @@ def test_margin_trading_wechat_long_image_skill_contract(tmp_path):
     for required_text in [disclaimer, risk_warning, qr_guide]:
         assert required_text in skill_text
 
+    mobile_checker = skill_dir / "scripts" / "check_wechat_mobile.py"
     required_assets = [
         example_html,
         richtext_example,
         logo,
         qrcode,
         richtext_validator,
+        mobile_checker,
     ]
     for asset in required_assets:
         assert asset.exists(), asset
@@ -208,7 +219,7 @@ def test_margin_trading_wechat_long_image_skill_contract(tmp_path):
     assert all(example_validation["required_compliance_texts"].values())
 
     no_table_html = """<!doctype html>
-<html><head><style>#wechat-richtext { max-width: 677px; }</style></head><body>
+<html><head><style>#wechat-richtext { max-width: 375px; }</style></head><body>
 <button id="copy-richtext">复制</button>
 <div id="wechat-richtext"><section style="display:block;width:100%;">
 <img src="data:image/png;base64,AA==" data-brand-asset="logo" width="300" style="width:300px;height:auto!important;">
@@ -261,6 +272,48 @@ const item = new ClipboardItem({
     assert invalid_table_result["valid"] is False
     assert invalid_table_result["data_table_count"] == 1
     assert any("data table 1 must set inline" in error for error in invalid_table_result["errors"])
+
+    # A fragment laid out for the 677px PC editor is what breaks on a phone, so
+    # each way of smuggling a PC-width assumption in has to be rejected.
+    mobile_regressions = {
+        "pc-preview-width": (
+            "#wechat-richtext { max-width: 375px; }",
+            "#wechat-richtext { max-width: 677px; }",
+            "preview max-width must be 375px or less",
+        ),
+        "fixed-wide-image": (
+            'width="300" style="width:300px;height:auto!important;"',
+            'width="620" style="width:620px;height:auto!important;"',
+            "wider than the 300px a phone can show",
+        ),
+        "percentage-image-cap": (
+            'width="300" style="width:300px;height:auto!important;"',
+            'width="300" style="width:100%;max-width:88%;height:auto!important;"',
+            "fractional percentage max-width",
+        ),
+        "uncapped-full-width-image": (
+            'width="300" style="width:300px;height:auto!important;"',
+            'width="300" style="width:100%;height:auto!important;"',
+            "must also set an inline max-width in px",
+        ),
+    }
+    for name, (original, replacement, expected_error) in mobile_regressions.items():
+        broken_path = tmp_path / f"{name}.html"
+        assert original in no_table_html, name
+        broken_path.write_text(no_table_html.replace(original, replacement), encoding="utf-8")
+        broken = subprocess.run(
+            [sys.executable, str(richtext_validator), str(broken_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert broken.returncode == 1, (name, broken.stdout)
+        broken_result = json.loads(broken.stdout)
+        assert broken_result["valid"] is False, name
+        assert any(expected_error in error for error in broken_result["errors"]), (
+            name,
+            broken_result["errors"],
+        )
 
     richtext_html = richtext_example.read_text(encoding="utf-8")
     assert 'id="copy-richtext"' in richtext_html
@@ -445,6 +498,23 @@ def test_renderer_prompt_contains_skill_selection_rules():
     assert "same-sequence companion files" in prompt
     assert "richtext_path" in prompt
 
+    # The companion artifact was dropped from a real run because the agent
+    # planned from this generic workflow instead of the selected skill's
+    # artifact list, so the prompt has to force it into the todo list and
+    # block a "success" report that omits it.
+    assert "one item per declared" in prompt
+    assert "output-constraints section" in prompt
+    assert "## Completion Gate" in prompt
+    assert "is a failed run" in prompt or "has failed" in prompt
+    assert "ls -lR <output_dir>" in prompt
+    # Image blocks survive tool-result eviction and are resent every turn, so
+    # the QA loop is the renderer's dominant cost.
+    assert "## QA Image Protocol" in prompt
+    assert "do not slice a tall image into sections" in prompt
+    assert "quality 75" in prompt
+    assert "--device-scale-factor" in prompt
+    assert "do not read the helper's source to discover flags" in prompt
+
 
 def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
     monkeypatch.setenv("HTML_IMAGE_RENDERER_TEST_MODE", "1")
@@ -477,6 +547,17 @@ def test_runtime_context_exposes_html_anything_skills(monkeypatch, tmp_path):
     assert "companion-validation status" in context
     assert "seed template" not in context
     assert "routing reference" not in context
+
+    # Re-injected on every model call, so this is the strongest place to keep
+    # the companion contract and the image-read budget in view.
+    assert "## Deliverable Checklist" in context
+    assert "one item per artifact the selected skill declares" in context
+    assert "ls -lR <output_dir>" in context
+    assert "is a failed run" in context
+    assert "## QA Image Protocol" in context
+    assert "do not read the same image twice" in context
+    assert "## Render Helper Interface" in context
+    assert "--device-scale-factor" in context
 
 
 def test_runtime_context_uses_backend_render_helper_in_daytona(monkeypatch):
