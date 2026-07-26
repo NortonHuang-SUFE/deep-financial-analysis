@@ -30,6 +30,7 @@ from financial_agent_runtime import (  # noqa: E402
 )
 from financial_agent_runtime.runtime_context import (  # noqa: E402
     _request_with_runtime_context,
+    keep_first_runtime_context,
 )
 
 from langchain_core.callbacks import CallbackManagerForLLMRun  # noqa: E402
@@ -221,6 +222,39 @@ def test_before_agent_keeps_a_snapshot_across_a_resumed_run():
     )
     assert resumed is None
     assert len(factory_calls) == 1
+
+
+def test_keep_first_runtime_context_folds_to_the_existing_snapshot():
+    assert keep_first_runtime_context("first", "second") == "first"
+    assert keep_first_runtime_context(None, "second") == "second"
+    assert keep_first_runtime_context("", "second") == "second"
+
+
+def test_parallel_branches_may_write_runtime_context_in_one_step():
+    """Two subagents returning in the same superstep must not kill the run.
+
+    The coordinator fans out to several native subagents in a single turn, and
+    every subagent graph carries this middleware, so their snapshots land on
+    the same channel in the same step. A plain state key made that an
+    ``InvalidUpdateError`` that failed the whole daily report 14 minutes in.
+    """
+    from langgraph.graph import END, START, StateGraph
+
+    factory, _factory_calls = _counting_factory()
+    middleware = make_runtime_context_middleware(factory)
+
+    builder = StateGraph(middleware.state_schema)
+    builder.add_node("a", lambda state: {RUNTIME_CONTEXT_STATE_KEY: "ctx-a"})
+    builder.add_node("b", lambda state: {RUNTIME_CONTEXT_STATE_KEY: "ctx-b"})
+    for node in ("a", "b"):
+        builder.add_edge(START, node)
+        builder.add_edge(node, END)
+
+    result = builder.compile().invoke({"messages": []})
+
+    # First write wins, matching the "never replace an existing snapshot" rule
+    # that `before_agent` enforces for resumed runs.
+    assert result[RUNTIME_CONTEXT_STATE_KEY] == "ctx-a"
 
 
 @pytest.mark.parametrize(

@@ -12,12 +12,26 @@ still giving each new run a fresh clock.
 
 from __future__ import annotations
 
-from typing import Any, Callable, NotRequired
+from typing import Annotated, Any, Callable, NotRequired
 
 from .concurrency import _agent_middleware_base
 
 
 RUNTIME_CONTEXT_STATE_KEY = "runtime_context"
+
+
+def keep_first_runtime_context(existing: str | None, incoming: str | None) -> str | None:
+    """Fold concurrent writes to the snapshot instead of rejecting them.
+
+    A plain state key is a ``LastValue`` channel, which raises
+    ``InvalidUpdateError`` as soon as two branches write it in one superstep.
+    That happens whenever the coordinator fans out to more than one subagent in
+    a single turn: each subagent graph carries this middleware, so each one
+    writes its own snapshot back in the same step. Folding with "first value
+    wins" keeps the semantics ``before_agent`` already implements — an existing
+    snapshot is never replaced — while making the concurrent case legal.
+    """
+    return existing or incoming
 
 
 def make_runtime_context_middleware(context_factory: Callable[[], str]):
@@ -33,7 +47,7 @@ def make_runtime_context_middleware(context_factory: Callable[[], str]):
     base = _agent_middleware_base()
 
     class RunScopedRuntimeContextState(base.state_schema):  # type: ignore[misc, name-defined]
-        runtime_context: NotRequired[str]
+        runtime_context: NotRequired[Annotated[str, keep_first_runtime_context]]
 
     class RuntimeContextMiddleware(base):  # type: ignore[misc, valid-type]
         state_schema = RunScopedRuntimeContextState
