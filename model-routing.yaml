@@ -1,4 +1,4 @@
-default_model: volcengine-glm-5.2
+default_model: volcengine-glm-5.2-plan
 default_multimodal_model: aliyun-minimax-m3
 models:
   minimax-m3:
@@ -7,7 +7,7 @@ models:
     api_key_env: MINIMAX_API_KEY
     max_tokens: 524288
   aliyun-ds:
-    model: deepseek-v3
+    model: deepseek-v4-pro
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key_env: DASHSCOPE_API_KEY
     max_tokens: 65536
@@ -20,7 +20,7 @@ models:
     model: MiniMax/MiniMax-M3
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key_env: DASHSCOPE_API_KEY
-    max_tokens: 524288
+    max_tokens: 128000
   aliyun-kimi-k3:
     model: kimi/kimi-k3
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
@@ -41,18 +41,24 @@ models:
     max_tokens: 131072
     thinking: disabled
   volcengine-glm-5.2:
-    model: glm-5-2-260617
+    model: glm-5.2
     base_url: https://ark.cn-beijing.volces.com/api/v3
+    api_key_env: ARK_STANDARD_API_KEY
+    max_tokens: 128000
+    thinking: disabled
+  volcengine-glm-5.2-plan:
+    model: glm-5.2
+    base_url: https://ark.cn-beijing.volces.com/api/plan/v3
     api_key_env: ARK_API_KEY
-    max_tokens: 131072
+    max_tokens: 128000
     thinking: disabled
 agent_models:
   daily_report:
-    model: aliyun-kimi-k3
-    multimodal_fallback_model: aliyun-glm-5.2-fast
+    model: volcengine-glm-5.2-plan
+    multimodal_fallback_model: minimax-m3
   morning_note:
-    model: aliyun-glm-5.2
+    model: volcengine-glm-5.2-plan
     multimodal_fallback_model: minimax-m3
   html_image_renderer:
-    model: aliyun-glm-5.2
+    model: aliyun-minimax-m3
     multimodal_fallback_model: minimax-m3
