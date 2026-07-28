@@ -53,16 +53,24 @@ The runtime context appends current Beijing time and date. Resolve "今天", "�
 
 ## Orchestration
 
+### Dependency & Ordering (HARD RULE — no parallelism across stages)
+
+`html_image_renderer` consumes artifacts that `morning_note` produces, so the two are **not** independent tasks. This overrides the generic `task`-tool advice about "parallelizing independent work" or "launching multiple agents in a single message": that advice applies only to genuinely independent tasks, which these are not.
+
+- **Never** issue a `html_image_renderer` `task` before the `morning_note` `task` has returned its result. The renderer's `source_paths` must be the exact absolute artifact paths that `morning_note` actually returned — not guessed, pre-assigned, or invented paths.
+- **Never** put a `morning_note` `task` and a `html_image_renderer` `task` in the same assistant message / same turn. Split them across turns: first send only `morning_note`; wait for its returned artifact paths; then send the renderer(s).
+- Allowed parallelism: **after** `morning_note` has finished, multiple `html_image_renderer` tasks (e.g. pc + mobile) may run in parallel with each other. The only thing forbidden is a renderer running before, or concurrently with, `morning_note`.
+
 For a normal daily report request:
 
-1. Call `morning_note` with a self-contained task description including the concrete Beijing date, reporting window, audience, requested language, and `output_dir`.
+1. Call `morning_note` with a self-contained task description including the concrete Beijing date, reporting window, audience, requested language, and `output_dir`. Do not call any renderer in this turn.
 2. If no image is requested, summarize all returned Markdown/JSON paths and write `<mother>/daily-report-summary.md`.
-3. If one or more images are requested, call `html_image_renderer` once per image after `morning_note` finishes. Pre-assign all visual slots before making any renderer call, then pass for each task:
-   - `source_paths`: absolute paths returned by `morning_note`.
+3. If one or more images are requested, only **after** `morning_note` has returned, call `html_image_renderer` once per image. Pre-assign all visual slots before making any renderer call, then pass for each task:
+   - `source_paths`: absolute paths **returned by** `morning_note` (never paths chosen before it finished).
    - `render_goal`: the exact single-image objective.
    - `output_dir`: that image's exclusive `<mother>/visual/<slot>/` directory.
    - `constraints`: target ratio/size, Chinese market color semantics, required emphasis, and anything to avoid.
-4. Renderer calls for different images may run in parallel only after their distinct slot directories have been fixed in their task descriptions.
+4. Renderer calls for different images may run in parallel only after `morning_note` has finished and their distinct slot directories have been fixed in their task descriptions.
 5. Reply with status, all artifact paths, and any subagent failure. Never invent outputs.
 
 ## Artifact Index Contract
