@@ -24,11 +24,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain_core.messages import SystemMessage, ToolMessage
+from langchain_core.messages import ToolMessage
 
 from financial_agent_runtime import (
     build_chat_model_for_agent,
     ensure_general_purpose_subagent_disabled,
+    make_runtime_context_middleware,
 )
 
 
@@ -63,31 +64,6 @@ _SUBAGENTS: dict[str, tuple[str, str, str]] = {
 }
 
 AGENT_NAME = "daily_report"
-
-
-def _make_runtime_context_middleware(context_factory):
-    """Append fresh runtime context to every model call."""
-    from deepagents.middleware.skills import SkillsMiddleware
-
-    AgentMiddleware = SkillsMiddleware.__mro__[1]
-
-    class RuntimeContextMiddleware(AgentMiddleware):
-        tools = []
-
-        def wrap_model_call(self, request, handler):
-            return handler(_request_with_runtime_context(request, context_factory()))
-
-        async def awrap_model_call(self, request, handler):
-            return await handler(_request_with_runtime_context(request, context_factory()))
-
-    return RuntimeContextMiddleware()
-
-
-def _request_with_runtime_context(request, runtime_context: str):
-    base_prompt = request.system_prompt or ""
-    return request.override(
-        system_message=SystemMessage(content=base_prompt + runtime_context)
-    )
 
 
 def _make_tool_error_middleware():
@@ -142,15 +118,33 @@ def _runtime_context_prompt() -> str:
         "Fix ONE mother folder for this daily-report run: "
         f"{artifact_base}/<YYYYMMDD-HHMMSS>/. Choose it once on your first "
         "delegation and reuse the identical path later. Pass "
-        "<mother>/morning-note/ to `morning_note`. Before calling "
+        "<mother>/morning-note/ to `morning_note`. Ordering rule: "
+        "`html_image_renderer` depends on the artifacts `morning_note` "
+        "produces, so the two are NOT independent — never dispatch a renderer "
+        "in the same turn as `morning_note`, and never before `morning_note` "
+        "has returned. Issue `morning_note` first; only after it returns may you "
+        "call renderer(s), passing the exact artifact paths it returned as "
+        "`source_paths` (never guessed or pre-assigned source paths). Multiple "
+        "renderers may run in parallel only after `morning_note` finishes. "
+        "Before calling "
         "`html_image_renderer`, pre-assign one exclusive "
         "<mother>/visual/<slot>/ output directory per requested image (for "
         "example, visual/pc/ and visual/mobile/). Put the exact assigned "
         "output_dir in each task description. Never pass the shared "
         "<mother>/visual/ parent to a renderer, and never let two renderer "
-        "tasks share an output_dir, including parallel tasks. Subagents must not "
-        "create their own new top-level out/<timestamp>/ folder. Write your own "
-        "daily-report summary into the same mother folder.\n"
+        "tasks share an output_dir, including parallel tasks. A slot slug names "
+        "the image role (cover, pc, mobile), never a file format or a companion "
+        "artifact name such as richtext; skill-declared companions live inside "
+        "the slot, as siblings of html/ and png/. Subagents must not "
+        "create their own new top-level out/<timestamp>/ folder. Before writing "
+        "your summary, run ls -R on every assigned slot and reconcile it with "
+        "what each renderer reported: a slot holding only html/ and png/ when "
+        "its skill declares a companion, or a renderer reply missing that "
+        "companion path, is a missing artifact — re-dispatch that renderer once, "
+        "and if it is still missing list it as failed instead of reporting none. "
+        "Write your own daily-report summary into the same mother folder, "
+        "listing every artifact path including companion paths such as "
+        "richtext_path.\n"
     )
 
 
@@ -231,7 +225,7 @@ def _create_agent():
         subagents=subagents,
         skills=None,
         middleware=[
-            _make_runtime_context_middleware(_runtime_context_prompt),
+            make_runtime_context_middleware(_runtime_context_prompt),
             _make_tool_error_middleware(),
         ],
         backend=backend,

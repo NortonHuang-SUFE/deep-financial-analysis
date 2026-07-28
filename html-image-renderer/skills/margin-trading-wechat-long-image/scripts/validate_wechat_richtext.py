@@ -35,7 +35,21 @@ FORBIDDEN_STYLE_PATTERNS = {
     "background image": re.compile(r"background(?:-image)?\s*:[^;]*url\s*\(", re.I),
     "CSS variable": re.compile(r"(?:var\s*\(|--[\w-]+\s*:)", re.I),
     "layout transform": re.compile(r"(?:^|;)\s*transform\s*:", re.I),
+    # A percentage cap other than 100% does not survive WeChat's paste rewrite,
+    # so it cannot be relied on to hold a fixed px width in check.
+    "fractional percentage max-width": re.compile(
+        r"(?:^|;)\s*max-width\s*:\s*(?!100(?:\.0+)?\s*%)\d+(?:\.\d+)?\s*%", re.I
+    ),
 }
+# Widest inline px width an image may carry: it must still fit a 320px phone
+# (288px of body width) without being clipped.
+MAX_INLINE_IMAGE_PX = 300
+INLINE_PX_WIDTH_RE = re.compile(
+    r"(?:^|;)\s*width\s*:\s*([\d.]+)px(?:\s*!important)?\s*(?:;|$)", re.I
+)
+INLINE_PX_MAX_WIDTH_RE = re.compile(
+    r"(?:^|;)\s*max-width\s*:\s*([\d.]+)px(?:\s*!important)?\s*(?:;|$)", re.I
+)
 REQUIRED_COMPLIANCE_TEXTS = {
     "disclaimer": (
         "免责声明：本文内容均基于客观市场行情交易数据产生，"
@@ -134,8 +148,11 @@ def validate(path: Path) -> dict[str, object]:
     for token in ("ClipboardItem", "'text/html'", "'text/plain'", "content.innerHTML"):
         if token not in html:
             errors.append(f"copy script is missing {token}")
-    if not re.search(r"#wechat-richtext\s*\{[^}]*max-width\s*:\s*(?:[1-5]?\d\d|6[0-6]\d|67[0-7])px", html, re.I | re.S):
-        errors.append("#wechat-richtext preview max-width must be 677px or less")
+    if not re.search(r"#wechat-richtext\s*\{[^}]*max-width\s*:\s*(?:[1-2]?\d\d|3[0-6]\d|37[0-5])px", html, re.I | re.S):
+        errors.append(
+            "#wechat-richtext preview max-width must be 375px or less: the preview "
+            "width has to be the phone width, not the 677px PC editor width"
+        )
 
     images: list[dict[str, str]] = []
     required_brand_assets = {"logo": False, "qrcode": False}
@@ -168,6 +185,19 @@ def validate(path: Path) -> dict[str, object]:
             if not _has_css(style, "height", "auto"):
                 errors.append("every copied image must have inline height:auto")
 
+            px_width = INLINE_PX_WIDTH_RE.search(style)
+            if px_width and float(px_width.group(1)) > MAX_INLINE_IMAGE_PX:
+                errors.append(
+                    f"image with a fixed {px_width.group(1)}px width is wider than the "
+                    f"{MAX_INLINE_IMAGE_PX}px a phone can show; use "
+                    "width:100%!important with a max-width:<px>!important cap instead"
+                )
+            if _has_css(style, "width", "100%") and not INLINE_PX_MAX_WIDTH_RE.search(style):
+                errors.append(
+                    "image with width:100% must also set an inline max-width in px so it "
+                    "never renders larger than the size it was designed for"
+                )
+
     data_tables = [table for table in parser.tables if table["headers"]]
     for index, table in enumerate(data_tables, start=1):
         table_attrs = table["attrs"]
@@ -186,23 +216,29 @@ def validate(path: Path) -> dict[str, object]:
         cells = table["cells"]
         assert isinstance(headers, list) and isinstance(cells, list)
         for kind, expected_size, items in (
-            ("th", "12px", headers),
-            ("td", "13px", cells),
+            ("th", "11px", headers),
+            ("td", "12px", cells),
         ):
+            # One message per broken rule rather than one per cell: a five-row
+            # table would otherwise bury every other error under 25 repeats.
+            failures: dict[str, list[int]] = {}
             for cell_index, attrs in enumerate(items, start=1):
                 style = attrs.get("style", "")
                 if attrs.get("align", "").lower() != "center":
-                    errors.append(f"data table {index} {kind} {cell_index} needs align=center")
+                    failures.setdefault("needs align=center", []).append(cell_index)
                 if attrs.get("valign", "").lower() != "middle":
-                    errors.append(f"data table {index} {kind} {cell_index} needs valign=middle")
+                    failures.setdefault("needs valign=middle", []).append(cell_index)
                 if not _has_css(style, "text-align", "center"):
-                    errors.append(f"data table {index} {kind} {cell_index} needs text-align:center")
+                    failures.setdefault("needs text-align:center", []).append(cell_index)
                 if not _has_css(style, "vertical-align", "middle"):
-                    errors.append(f"data table {index} {kind} {cell_index} needs vertical-align:middle")
+                    failures.setdefault("needs vertical-align:middle", []).append(cell_index)
                 if not _has_css(style, "font-size", re.escape(expected_size)):
-                    errors.append(
-                        f"data table {index} {kind} {cell_index} must use font-size:{expected_size}"
-                    )
+                    failures.setdefault(f"must use font-size:{expected_size}", []).append(cell_index)
+            for rule, cell_indexes in failures.items():
+                errors.append(
+                    f"data table {index} {kind} {rule} "
+                    f"({len(cell_indexes)} cell(s), first at {kind} {cell_indexes[0]})"
+                )
 
     for brand_role, present in required_brand_assets.items():
         if not present:

@@ -176,6 +176,54 @@ def test_build_chat_model_for_agent_passes_reasoning_effort(monkeypatch, tmp_pat
     assert request_payload["extra_body"] == {"reasoning_effort": "max"}
 
 
+@pytest.mark.parametrize(
+    ("profile_name", "model_name", "base_url", "expected_extra_body"),
+    [
+        (
+            "aliyun-glm",
+            "glm-5.2-fast-preview",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            {"enable_thinking": False},
+        ),
+        (
+            "volcengine-glm",
+            "glm-5-2-260617",
+            "https://ark.cn-beijing.volces.com/api/v3",
+            {"thinking": {"type": "disabled"}},
+        ),
+    ],
+)
+def test_build_chat_model_for_agent_disables_glm_thinking(
+    monkeypatch,
+    tmp_path,
+    profile_name,
+    model_name,
+    base_url,
+    expected_extra_body,
+):
+    payload = _routing_payload()
+    payload["models"][profile_name] = {
+        "model": model_name,
+        "base_url": base_url,
+        "api_key_env": "TEST_GLM_API_KEY",
+        "max_tokens": 131072,
+        "thinking": "disabled",
+    }
+    payload["agent_models"]["glm_agent"] = {
+        "model": profile_name,
+        "multimodal_fallback_model": profile_name,
+    }
+    monkeypatch.setenv("TEST_GLM_API_KEY", "secret")
+    save_model_routing(tmp_path, payload)
+
+    model = build_chat_model_for_agent(tmp_path, "glm_agent")
+
+    assert model.model_name == model_name
+    assert model.extra_body == expected_extra_body
+    request_payload = model._get_request_payload([HumanMessage(content="hello")])
+    assert request_payload["extra_body"] == expected_extra_body
+
+
 def test_legacy_string_agent_model_binding_still_supported(tmp_path):
     payload = _routing_payload()
     payload["agent_models"]["legacy_agent"] = "deepseek"

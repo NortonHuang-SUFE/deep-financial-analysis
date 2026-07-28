@@ -211,6 +211,14 @@ def test_runtime_context_prompt_includes_beijing_date_and_artifact_contract(monk
     assert "visual/pc/ and visual/mobile/" in context
     assert "never let two renderer tasks share an output_dir" in context
     assert "must not create their own new top-level" in context
+    assert "never dispatch a renderer in the same turn as `morning_note`" in context
+    assert "Multiple renderers may run in parallel only after `morning_note` finishes" in context
+    # A run named its slot `richtext` and then shipped no richtext at all, so
+    # the always-injected context has to carry both the naming rule and the
+    # reconciliation step that would have caught the missing artifact.
+    assert "never a file format or a companion" in context
+    assert "richtext_path" in context
+    assert "run ls -R on every assigned slot" in context
 
 
 def test_parallel_subagents_run_concurrently():
@@ -340,6 +348,15 @@ def test_prompt_routes_daily_report_and_images_only():
     assert "<mother>/visual/mobile/" in prompt
     assert "Never assign the same `output_dir` to two renderer task calls" in prompt
     assert "no returned path is duplicated across image variants" in prompt
+    assert "A slot slug names the **image role**" in prompt
+    assert "`richtext`, `html`, and `png` are not" in prompt
+    assert "such as `richtext_path`" in prompt
+    assert "ls -R <mother>/visual/<slot>/" in prompt
+    assert "companion-validation status" in prompt
+    assert "Dependency & Ordering" in prompt
+    assert "Never" in prompt and "before the `morning_note` `task` has returned" in prompt
+    assert "Never" in prompt and "same assistant message / same turn" in prompt
+    assert "Allowed parallelism" in prompt
     assert "must never" not in prompt.lower()
     assert "general-purpose" in prompt
 

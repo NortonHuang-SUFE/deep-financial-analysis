@@ -33,11 +33,19 @@ Before issuing any `html_image_renderer` task calls, determine the complete set 
 - A single unspecified cover: `<mother>/visual/cover/`
 - Other variants: `<mother>/visual/<stable-variant-slug>/`
 
+A slot slug names the **image role**, never a file format or a companion
+artifact name. `cover`, `pc`, `mobile`, and `margin-focus` are valid slugs;
+`richtext`, `html`, and `png` are not. Naming a slot `richtext` produces the
+confusing `<mother>/visual/richtext/richtext/001.html` and blurs the difference
+between the slot and the companion that lives inside it.
+
 Every renderer task must receive its pre-assigned slot as its exact `output_dir`. Never pass the shared parent `<mother>/visual/` to a renderer. Never assign the same `output_dir` to two renderer task calls, including calls issued in parallel. The renderer owns sequence filenames such as `html/001.html` and `png/001.png` inside its exclusive slot, so the coordinator must not scan for or guess the next sequence number.
 
 A skill-declared companion artifact belongs **inside** the renderer's own slot, as a sibling of `html/` and `png/` — for example `<mother>/visual/cover/richtext/001.html`. A companion is not a separate image and never gets its own slot. Do not create `<mother>/visual/richtext/` or any other sibling directory for it.
 
-Include the image role and exact assigned `output_dir` in each task description. After tasks finish, verify that every returned `html_path` and `png_path` is inside that task's assigned slot and that no returned path is duplicated across image variants. Treat a missing, out-of-slot, or duplicate path as a failed artifact instead of reporting the run as complete.
+Include the image role and exact assigned `output_dir` in each task description. After tasks finish, verify that every returned `html_path`, `png_path`, and skill-declared companion path is inside that task's assigned slot and that no returned path is duplicated across image variants. Treat a missing, out-of-slot, or duplicate path as a failed artifact instead of reporting the run as complete.
+
+Before writing the run summary, run `ls -R <mother>/visual/<slot>/` for every assigned slot and compare it against what that renderer reported. A slot holding only `html/` and `png/` when the renderer named a companion, or a renderer reply that omits a companion path its selected skill declares, is a missing artifact. Re-dispatch that renderer task once with the exact missing path; if it is still missing, list it under the failed/missing artifacts section and do not write 无.
 
 ## Time Rules
 
@@ -45,16 +53,24 @@ The runtime context appends current Beijing time and date. Resolve "今天", "�
 
 ## Orchestration
 
+### Dependency & Ordering (HARD RULE — no parallelism across stages)
+
+`html_image_renderer` consumes artifacts that `morning_note` produces, so the two are **not** independent tasks. This overrides the generic `task`-tool advice about "parallelizing independent work" or "launching multiple agents in a single message": that advice applies only to genuinely independent tasks, which these are not.
+
+- **Never** issue a `html_image_renderer` `task` before the `morning_note` `task` has returned its result. The renderer's `source_paths` must be the exact absolute artifact paths that `morning_note` actually returned — not guessed, pre-assigned, or invented paths.
+- **Never** put a `morning_note` `task` and a `html_image_renderer` `task` in the same assistant message / same turn. Split them across turns: first send only `morning_note`; wait for its returned artifact paths; then send the renderer(s).
+- Allowed parallelism: **after** `morning_note` has finished, multiple `html_image_renderer` tasks (e.g. pc + mobile) may run in parallel with each other. The only thing forbidden is a renderer running before, or concurrently with, `morning_note`.
+
 For a normal daily report request:
 
-1. Call `morning_note` with a self-contained task description including the concrete Beijing date, reporting window, audience, requested language, and `output_dir`.
+1. Call `morning_note` with a self-contained task description including the concrete Beijing date, reporting window, audience, requested language, and `output_dir`. Do not call any renderer in this turn.
 2. If no image is requested, summarize all returned Markdown/JSON paths and write `<mother>/daily-report-summary.md`.
-3. If one or more images are requested, call `html_image_renderer` once per image after `morning_note` finishes. Pre-assign all visual slots before making any renderer call, then pass for each task:
-   - `source_paths`: absolute paths returned by `morning_note`.
+3. If one or more images are requested, only **after** `morning_note` has returned, call `html_image_renderer` once per image. Pre-assign all visual slots before making any renderer call, then pass for each task:
+   - `source_paths`: absolute paths **returned by** `morning_note` (never paths chosen before it finished).
    - `render_goal`: the exact single-image objective.
    - `output_dir`: that image's exclusive `<mother>/visual/<slot>/` directory.
    - `constraints`: target ratio/size, Chinese market color semantics, required emphasis, and anything to avoid.
-4. Renderer calls for different images may run in parallel only after their distinct slot directories have been fixed in their task descriptions.
+4. Renderer calls for different images may run in parallel only after `morning_note` has finished and their distinct slot directories have been fixed in their task descriptions.
 5. Reply with status, all artifact paths, and any subagent failure. Never invent outputs.
 
 ## Artifact Index Contract
@@ -62,7 +78,7 @@ For a normal daily report request:
 The final answer and `<mother>/daily-report-summary.md` must include a complete artifact index, not only key paths. Include every absolute path produced or received in this run; in Chinese, this means returning 所有产物地址:
 
 - All Markdown and JSON artifact paths returned by `morning_note`.
-- All artifact paths returned by `html_image_renderer`, including `html_path` and `png_path` when rendering is requested.
+- All artifact paths returned by `html_image_renderer`, including `html_path` and `png_path` when rendering is requested, plus every skill-declared companion path such as `richtext_path`.
 - The coordinator summary path: `<mother>/daily-report-summary.md`.
 - If a subagent fails, list every successfully produced path and clearly state the failed or missing artifact group.
 
@@ -70,7 +86,7 @@ When the user only provides existing artifact paths and asks for an image, call 
 
 ## Image Discipline
 
-Never paste entire Markdown/CSV/JSON contents into the renderer task. Pass file paths and let `html_image_renderer` read them itself. The renderer should return final `html_path`, `png_path`, dimensions, selected skill, and visual-QA status.
+Never paste entire Markdown/CSV/JSON contents into the renderer task. Pass file paths and let `html_image_renderer` read them itself. The renderer should return final `html_path`, `png_path`, every companion path its selected skill declares (such as `richtext_path`), dimensions, selected skill, visual-QA status, and companion-validation status.
 
 ## Style
 

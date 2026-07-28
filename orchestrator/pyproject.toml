@@ -1,6 +1,6 @@
 [project]
 name = "daily-report-orchestrator"
-version = "0.1.4"
+version = "0.1.5"
 description = "LangGraph Deep Agents coordinator for daily report generation and image rendering."
 requires-python = ">=3.11"
 dependencies = [
