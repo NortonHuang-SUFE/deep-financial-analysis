@@ -1,70 +1,38 @@
 # Changelog
 
-Version history for `Deep Financial Analysis`. 中文版本：[CHANGELOG.md](CHANGELOG.md)。Project overview: [README.en.md](README.en.md).
+## v0.1.4 - 2026-07-22
 
-## v0.4.2 - 2026-07-03
+- Improved the margin-trading WeChat rich-text rendering workflow with a standalone rich-text example, an automated validator, and stricter renderer test coverage.
+- Refreshed the GTJA logo and QR-code assets, and simplified the example long-image structure for WeChat publishing.
+- Added a DashScope Kimi K3 model profile and `reasoning_effort` routing support, and switched the daily-report and HTML image renderer defaults to Kimi K3.
+- Removed the unused Vite / React frontend and its related ignore rules to reduce the repository maintenance surface.
 
-- Improved the HTML Image Renderer skill asset contract: example HTML now lives under each skill's `assets/example.html`, with the asset location declared in `SKILL.md`.
-- Strengthened renderer guidance so the agent resolves the selected skill directory from `SKILL.md`, reads `assets/example.html` first, and keeps a compatibility fallback for legacy root-level `example.html`.
-- Added rendered-image visual QA guidance for blank output, clipped or overlapping text, wrong aspect ratio, footer collisions, and market color semantics.
-- Updated HTML renderer regression coverage so all HTML Anything skills must declare and include `assets/example.html`.
+## v0.1.3 - 2026-07-16
 
-## v0.4.1 - 2026-07-02
+- Added a dedicated GTJA margin-trading WeChat long-image skill with adaptive-height guidance, branded logo and QR assets, compliance notices, and a complete example.
+- Fixed HTML remote-resource validation to allow embedded `data:` resources, and added contract and asset coverage for the margin-trading skill.
+- Switched the HTML image renderer default model to `aliyun-minimax-m3`, retaining `minimax-m3` as the multimodal fallback.
 
-- Added multimodal fallback routing: `model-routing.yaml` now supports a root-level `default_multimodal_model` and per-agent/subagent overrides via `agent_models.<name>.multimodal_fallback_model`.
-- Updated `financial_agent_runtime.build_chat_model_for_agent` so configured fallback profiles return a ChatModel wrapper with fallback behavior, including after tool binding.
-- Updated the local model configuration UI to edit the default multimodal fallback model and each agent/subagent fallback binding.
-- Expanded the default `model-routing.yaml` and model-routing regression coverage for legacy string routes, structured agent routes, default fallbacks, agent-level overrides, unknown-profile errors, and omitting empty fields on save.
+## v0.1.2 - 2026-07-13
 
-## v0.4.0 - 2026-07-02
+- Added DashScope `glm-5.2` and `glm-5.2-fast-preview` model profiles, and switched the daily-report and morning-note defaults to `aliyun-glm-5.2-fast`.
+- Simplified model routing by removing repeated `max_tokens` and `thinking` fields from individual profiles.
+- The coordinator now pre-assigns an exclusive slot directory to each visual artifact, allowing PC, mobile, and other image variants to render safely in parallel.
+- Added coordinator prompt and runtime-context coverage to prevent renderer tasks from sharing output directories or returning duplicate artifact paths.
 
-- Added root-level model routing: `model-routing.yaml` now centralizes model profiles, `api_key_env` names, the default model, and every agent/subagent model binding; live keys remain only in `.env` or process environment variables.
-- Added a local model configuration UI: run `.venv/bin/python -m financial_agent_runtime.model_admin`, open `http://127.0.0.1:8765`, edit model profiles, key env-var names, and agent/subagent bindings, then save back to the root `model-routing.yaml`.
-- Added root-level tool access configuration: `tool-concurrency.yaml` now owns MCP endpoints, agent runtime defaults, tool groups, agent/subagent tool grants, and external-tool concurrency limits, replacing scattered per-subproject `config.yaml` entry points.
-- Added shared `financial_agent_runtime.model_routing` and `financial_agent_runtime.tool_access` modules for ChatOpenAI construction, OpenAI-compatible gateway validation, tool catalog building, tool-group resolution, and agent/subagent tool visibility.
-- Updated all top-level agents, the DCF child agent, and the nested single-stock coverage subagents to resolve models, MCP tools, local tools, search tools, and output directories from the root routing/access config.
-- Added regression tests for model routing, tool access, and graph configuration, covering migration compatibility, agent/subagent model resolution, tool grants, MCP access, and test-mode config exposure.
+## v0.1.1 - 2026-07-09
 
-## v0.3.2 - 2026-07-01
+- Added a Vite / React LangGraph Console frontend for connecting to `daily_report`, submitting runs, and inspecting main-agent, subagent, tool-call, and event streams.
+- Docker deployment config now copies `model-routing.yaml` and `tool-concurrency.yaml` into `/deps` so model routing and tool concurrency settings are available in the container.
+- Added MiniMax, DashScope DeepSeek, and Qwen model profiles, and fixed the `minimax-m3` profile references.
+- Python subpackages now depend on the released `financial-agent-runtime>=0.1.1` while keeping local `uv` editable sources for development.
+- The coordinator prompt now requires the final reply and `daily-report-summary.md` to return a complete artifact index with all artifact paths, not only key paths.
 
-- Tightened the `single-stock-coverage` root orchestrator permissions: added `coverage_orchestration_tools`, leaving the root agent with only coverage-run creation, manifest updates, and coverage-state writes instead of direct business-artifact writers.
-- Disabled the root agent's generic `write_file`, `edit_file`, and `execute` built-ins, and updated the root prompt so Task 1-5 business artifacts must be written by their owning task subagents; missing or weak artifacts should trigger the matching child rerun or a blocker rather than root-authored placeholders.
-- Hardened `run_manifest.json` completion validation: a top-level task can be marked `completed` only when its matching subagent is recorded in `subagents_called` and all required task artifacts exist under the run directory; otherwise `update_run_manifest` returns a structured failure.
-- Added regression coverage for invalid completion rejection, simplified Task 2 artifact rejection, root-agent tool group / built-in exclusion wiring, and registry exposure in graph test mode.
+## v0.1.0 - 2026-07-04
 
-## v0.3.1 - 2026-06-30
-
-- Fixed model-gateway `base_url` handling: added a shared `financial_agent_runtime.normalize_openai_compatible_base_url` helper that appends `/v1` only when the URL has no explicit API version segment. Gateways that already carry a version (e.g. Volcengine Ark `…/api/v3`) are left untouched instead of being mangled into `/api/v3/v1`, while bare hosts like DashScope `compatible-mode` still get `/v1`.
-- Updated all 9 agent `graph.py` files to use the shared helper, replacing the per-agent inline `base_url.rstrip("/")` and removing the duplicated logic.
-- Added Volcengine Ark credential resolution: when the gateway points to `volces.com` / `volcengineapi.com`, fall back through `ARK_API_KEY`, `VOLCENGINE_API_KEY`, and `VOLCENGINE_ARK_API_KEY`; the missing-key error now also points to provider-specific keys such as `DASHSCOPE_API_KEY` and `ARK_API_KEY`.
-- `.env.example` documents `ARK_API_KEY` and a Volcengine Ark gateway example.
-- Added regression tests for `normalize_openai_compatible_base_url` covering `/v1` insertion, explicit `/v1` preservation, `/api/v3` preservation, and local endpoints.
-
-## v0.3.0 - 2026-06-30
-
-- Added external-tool concurrency limits: define `groups` in `tool-concurrency.yaml` at the workspace root. Each group is one shared, process-wide budget; when in-flight calls in a group reach `max_concurrency`, further calls (across all tools in that group, across all agents/subagents) queue and run serially until a slot frees.
-- Configuration: a tool joins a group by matching either a `mcp_servers` glob (against the MCP server name, e.g. `ifind-*`) or a `tools` glob (against the tool `.name`, e.g. `web_search`); if a tool matches more than one group, the most restrictive (smallest `max_concurrency`) wins. Edit thresholds, add groups, or pull multiple named tools/servers into one shared budget.
-- Default config: the `ifind` group treats every `ifind-*` server as one budget (`max_concurrency: 2`), so an orchestrator fanning out to many subagents will not overwhelm Tonghuashun iFind.
-- Path and toggle: override the config path with the `TOOL_CONCURRENCY_CONFIG` env var; if the file is absent, nothing is limited (the feature is a no-op). Changes take effect on the next graph load (restart `langgraph dev`).
-- Extracted a shared runtime module `financial_agent_runtime.concurrency` exporting `load_and_register_mcp_tools`, `make_concurrency_limit_middleware`, `load_tool_concurrency_config`, `register_limited_tools`, and `resolve_tool_group`; unified MCP tool loading across agents and wired the concurrency-limit middleware into all 7 top-level agent graphs.
-- Added `financial-agent-runtime/tests/test_concurrency.py` regression coverage: config parsing, env-var override, glob matching and multi-group tie-breaking, and sync/async middleware throttling.
-
-## v0.2.0 - 2026-06-28
-
-- Added a cloud run mode: with `AGENT_BACKEND=daytona`, all agents execute and persist artifacts inside an ephemeral Daytona cloud sandbox; the default stays `local`, and both modes share one agent codebase.
-- Extracted a shared `financial-agent-runtime` package that centralizes backend selection, artifact storage root, skills mirroring, artifact writes, and general-purpose subagent disabling, removing the duplicated per-agent implementations.
-- `.env.example` documents `AGENT_BACKEND`, `DAYTONA_*` credentials, and `DAYTONA_FILE_STORAGE_ROOT` (bilingual comments).
-- Install instructions now include the shared `financial-agent-runtime` package; `langgraph.json` registers it as the first dependency.
-- Added regression tests for the cloud/local backends and artifact paths.
-
-## v0.1.1 - 2026-06-25
-
-- Unified the artifact directory contract between the orchestrator and subagents: each composite run now uses one mother folder, with all subagent outputs nested recursively underneath it.
-- Made upstream `output_dir` values exact task directories for `morning_note`, `stock_screen`, `sector_research`, `thesis_tracker`, and `market_researcher`, avoiding accidental second-level timestamp folders.
-- Updated `html_image_renderer` orchestration rules so it writes `html/` and `png/` directly under the assigned renderer subdirectory.
-- Synchronized mounted skill documentation so skills no longer instruct agents to create a separate top-level `out/<timestamp>` directory during orchestrated runs.
-- Added regression coverage for artifact root / output directory behavior.
-
-## v0.1.0 - 2026-06-21
-
-- Initial research-preview with core research agents, Tonghuashun iFind MCP access, local artifact output, three-statement modeling, DCF, chart packs, and HTML image rendering.
+- Initial release: a focused China-market daily report agent.
+- Public LangGraph graph is `daily_report`, coordinating report generation and visual rendering.
+- Internal capabilities are `morning_note` and `html_image_renderer`.
+- Root configuration includes `langgraph.json`, `model-routing.yaml`, `tool-concurrency.yaml`, and `.env.example`.
+- Local / intranet Docker deployment support: the LangGraph Dockerfile installs Chromium and CJK fonts, and the renderer defaults to `/usr/bin/chromium`.
+- Tests cover retained packages, graph exposure, orchestrator subagent registration, cleaned configuration, and container browser fallback.

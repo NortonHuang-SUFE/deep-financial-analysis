@@ -19,29 +19,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 MODEL_ROUTING_FILENAME = "model-routing.yaml"
 DEFAULT_AGENT_NAMES: tuple[str, ...] = (
-    "deep_orchestrator",
+    "daily_report",
     "morning_note",
-    "stock_screen",
-    "sector_research",
-    "thesis_tracker",
-    "market_researcher",
     "html_image_renderer",
-    "dcf_builder",
-    "dcf-assumption-researcher",
-    "single_stock_coverage",
-    "task1_company_researcher",
-    "task2_financial_modeler",
-    "financial_facts_modeler",
-    "is_modeler",
-    "bs_modeler",
-    "cf_modeler",
-    "model_update_executor",
-    "workbook_builder",
-    "task3_valuation_analyst",
-    "assumption_generator",
-    "dcf_execution",
-    "task4_chart_pack_generator",
-    "task5_report_assembler",
 )
 
 
@@ -53,6 +33,7 @@ class ModelProfile(BaseModel):
     api_key_env: str = ""
     max_tokens: int = 16000
     thinking: Literal["auto", "enabled", "disabled"] = "auto"
+    reasoning_effort: Literal["low", "medium", "high", "max", "xhigh"] | None = None
 
 
 class AgentModelRoute(BaseModel):
@@ -78,6 +59,7 @@ class ResolvedModelRoute(BaseModel):
     api_key_present: bool
     max_tokens: int
     thinking: Literal["auto", "enabled", "disabled"]
+    reasoning_effort: Literal["low", "medium", "high", "max", "xhigh"] | None
     multimodal_fallback_profile_name: str | None = None
     multimodal_fallback_model: str | None = None
     multimodal_fallback_base_url: str | None = None
@@ -85,6 +67,9 @@ class ResolvedModelRoute(BaseModel):
     multimodal_fallback_api_key_present: bool = False
     multimodal_fallback_max_tokens: int | None = None
     multimodal_fallback_thinking: Literal["auto", "enabled", "disabled"] | None = None
+    multimodal_fallback_reasoning_effort: (
+        Literal["low", "medium", "high", "max", "xhigh"] | None
+    ) = None
 
 
 class ChatModelWithFallbacks(BaseChatModel):
@@ -241,6 +226,7 @@ def resolve_model_route(
         api_key_present=bool(_api_key_from_env(profile).strip()),
         max_tokens=profile.max_tokens,
         thinking=profile.thinking,
+        reasoning_effort=profile.reasoning_effort,
         multimodal_fallback_profile_name=fallback_profile_name,
         multimodal_fallback_model=(
             fallback_profile.model if fallback_profile is not None else None
@@ -261,6 +247,9 @@ def resolve_model_route(
         ),
         multimodal_fallback_thinking=(
             fallback_profile.thinking if fallback_profile is not None else None
+        ),
+        multimodal_fallback_reasoning_effort=(
+            fallback_profile.reasoning_effort if fallback_profile is not None else None
         ),
     )
 
@@ -353,12 +342,17 @@ def _build_chat_model_for_profile(
         "max_retries": 3,
         "timeout": timeout,
     }
+    extra_body: dict[str, Any] = {}
+    if profile.reasoning_effort is not None:
+        extra_body["reasoning_effort"] = profile.reasoning_effort
     if parsed_base_url.netloc.lower() == "api.deepseek.com":
         thinking = profile.thinking
         if thinking == "auto" and profile.model.startswith("deepseek-v4"):
             thinking = "disabled"
         if thinking in {"enabled", "disabled"}:
-            model_kwargs["extra_body"] = {"thinking": {"type": thinking}}
+            extra_body["thinking"] = {"type": thinking}
+    if extra_body:
+        model_kwargs["extra_body"] = extra_body
 
     proxy_url = (
         os.environ.get("https_proxy")

@@ -1,40 +1,20 @@
 {
+  "$schema": "https://langgra.ph/schema.json",
   "graphs": {
-    "dcf_builder": "./DCF-builder/src/dcf_builder/graph.py:graph",
-    "market_researcher": "./industry-ananlysis/src/market_researcher/graph.py:graph",
-    "morning_note": "./morning-note/src/morning_note_agent/graph.py:graph",
-    "stock_screen": "./screen/src/stock_screen_agent/graph.py:graph",
-    "sector_research": "./sector/src/sector_research_agent/graph.py:graph",
-    "thesis_tracker": "./thesis/src/thesis_tracker_agent/graph.py:graph",
-    "deep_orchestrator": "./orchestrator/src/deep_orchestrator/graph.py:graph",
-    "html_image_renderer": "./html-image-renderer/src/html_image_renderer_agent/graph.py:graph",
-    "single_stock_coverage": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:graph",
-    "single_stock_coverage_task1_company_researcher": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task1_company_researcher_graph",
-    "single_stock_coverage_task2_financial_modeler": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_financial_modeler_graph",
-    "single_stock_coverage_task2_financial_facts_modeler": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_financial_facts_modeler_graph",
-    "single_stock_coverage_task2_is_modeler": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_is_modeler_graph",
-    "single_stock_coverage_task2_bs_modeler": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_bs_modeler_graph",
-    "single_stock_coverage_task2_cf_modeler": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_cf_modeler_graph",
-    "single_stock_coverage_task2_model_update_executor": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_model_update_executor_graph",
-    "single_stock_coverage_task2_workbook_builder": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task2_workbook_builder_graph",
-    "single_stock_coverage_task3_valuation_analyst": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task3_valuation_analyst_graph",
-    "single_stock_coverage_task3_assumption_generator": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task3_assumption_generator_graph",
-    "single_stock_coverage_task3_dcf_execution": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task3_dcf_execution_graph",
-    "single_stock_coverage_task4_chart_pack_generator": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task4_chart_pack_generator_graph",
-    "single_stock_coverage_task5_report_assembler": "./single-stock-coverage/src/single_stock_coverage_agent/graph.py:task5_report_assembler_graph"
+    "daily_report": "./orchestrator/src/deep_orchestrator/graph.py:graph"
   },
   "python_version": "3.11",
   "env": "./.env",
   "dependencies": [
     "./financial-agent-runtime",
-    "./DCF-builder",
-    "./industry-ananlysis",
     "./morning-note",
-    "./screen",
-    "./sector",
-    "./thesis",
     "./orchestrator",
-    "./html-image-renderer",
-    "./single-stock-coverage"
+    "./html-image-renderer"
+  ],
+  "dockerfile_lines": [
+    "RUN apt-get update && apt-get install -y --no-install-recommends chromium fonts-noto-cjk fonts-noto-color-emoji && rm -rf /var/lib/apt/lists/*",
+    "ADD ./model-routing.yaml /deps/model-routing.yaml",
+    "ADD ./tool-concurrency.yaml /deps/tool-concurrency.yaml",
+    "ENV HTML_IMAGE_RENDERER_BROWSER=/usr/bin/chromium"
   ]
 }

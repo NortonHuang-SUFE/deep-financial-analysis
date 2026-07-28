@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>国泰海通微信公众号长图 · 中性品牌骨架</title>
+  <style>
+    :root {
+      --page: #f0f7ff;
+      --title: #003377;
+      --primary: #103480;
+      --secondary: #33a0e8;
+      --up: #e6212a;
+      --down: #239947;
+      --table-head: #eeeeee;
+      --compliance: #f3efff;
+      --surface: #ffffff;
+      --text: #202938;
+      --muted: #6b7688;
+      --line: #dce7f2;
+      --cn: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      --num: "DIN Alternate", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #dce8f4;
+      color: var(--text);
+      font-family: var(--cn);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    #image-root {
+      width: 1080px;
+      background: var(--page);
+    }
+
+    .brand-header {
+      padding: 64px 70px 56px;
+      text-align: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand-logo {
+      display: block;
+      width: 640px;
+      height: auto;
+      margin: 0 auto 38px;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--secondary);
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--title);
+      font-size: 58px;
+      font-weight: 800;
+      line-height: 1.18;
+      letter-spacing: 0.03em;
+    }
+
+    .subtitle {
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 23px;
+      line-height: 1.65;
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      gap: 34px;
+      padding: 44px 52px 52px;
+    }
+
+    .content-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--surface);
+      box-shadow: 0 14px 34px rgba(16, 52, 128, 0.08);
+    }
+
+    .section-title {
+      margin: 0;
+      padding: 22px 30px;
+      color: #ffffff;
+      background: var(--primary);
+      font-size: 31px;
+      font-weight: 750;
+      line-height: 1.35;
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+
+    .section-body {
+      padding: 34px 40px 38px;
+      font-size: 24px;
+      line-height: 1.8;
+      text-align: left;
+    }
+
+    .section-body p { margin: 0; }
+
+    .direction-sample {
+      margin-top: 24px;
+      padding: 22px 26px;
+      border: 1px solid var(--line);
+      border-left: 8px solid var(--secondary);
+      border-radius: 14px;
+      background: var(--page);
+      text-align: center;
+    }
+
+    .direction-sample strong {
+      margin: 0 14px;
+      font-family: var(--num);
+      font-size: 25px;
+    }
+
+    .positive { color: var(--up); }
+    .negative { color: var(--down); }
+
+    .compliance {
+      padding: 30px 34px;
+      border-radius: 20px;
+      background: var(--compliance);
+      color: #202938;
+      font-size: 20px;
+      line-height: 1.75;
+      text-align: left;
+    }
+
+    .compliance p { margin: 0; }
+    .compliance p + p { margin-top: 14px; }
+
+    .qr-footer {
+      padding: 40px 34px 44px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--surface);
+      text-align: center;
+    }
+
+    .qr-guide {
+      margin: 0 0 24px;
+      color: var(--title);
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+
+    .qr-code {
+      display: block;
+      width: 260px;
+      height: auto;
+      margin: 0 auto;
+      padding: 8px;
+      background: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <!-- html-anything-skill: margin-trading-wechat-long-image; inspected: SKILL.md, assets/example.html -->
+  <main id="image-root" data-html-anything-skill="margin-trading-wechat-long-image">
+    <header class="brand-header">
+      <img
+        class="brand-logo"
+        src="./gtja-logo.png"
+        data-brand-asset="logo"
+        alt="国泰海通 GUOTAI HAITONG 完整横版 Logo"
+      >
+      <p class="eyebrow">MARGIN FOCUS</p>
+      <h1>任务提示词指定的主标题</h1>
+      <p class="subtitle">副标题、日期和说明由任务提示词与来源文件提供</p>
+    </header>
+
+    <section class="content">
+      <article class="content-card">
+        <h2 class="section-title">任务提示词指定的板块标题</h2>
+        <div class="section-body">
+          <p>板块数量、名称、顺序、字段和内容均由任务提示词与来源文件决定；此处仅展示品牌排版和通用内容容器。</p>
+          <div class="direction-sample">
+            <strong class="positive">▲ 正向数值</strong>
+            <strong class="negative">▼ 负向数值</strong>
+          </div>
+        </div>
+      </article>
+
+      <section class="compliance">
+        <p>免责声明：本文内容均基于客观市场行情交易数据产生，数据来源于证券交易所官网公开数据，文中内容不构成任何投资建议，市场有风险，投资需谨慎。</p>
+        <p>风险提示：融资融券交易有风险，投资者在参与融资融券交易前请务必阅读、了解和掌握有关法律法规和交易所、证券登记结算机构业务规则等相关规则和《风险揭示书》。</p>
+      </section>
+
+      <footer class="qr-footer">
+        <p class="qr-guide">扫码关注国泰海通融资融券公众号 获取更多两融信息资讯</p>
+        <img
+          class="qr-code"
+          src="./gtja-qrcode.jpg"
+          data-brand-asset="qrcode"
+          alt="国泰海通融资融券公众号二维码"
+        >
+      </footer>
+    </section>
+  </main>
+</body>
+</html>

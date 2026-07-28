@@ -1,4 +1,4 @@
-"""Configuration loader for the Deep Orchestrator agent.
+"""Configuration loader for the Daily Report coordinator.
 
 Merge order:
   root tool-concurrency.yaml < workspace-root .env < process environment
@@ -25,7 +25,7 @@ from financial_agent_runtime import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
 WORKSPACE_ENV_PATH = WORKSPACE_ROOT / ".env"
-AGENT_NAME = "deep_orchestrator"
+AGENT_NAME = "daily_report"
 
 
 def file_storage_root() -> Path:

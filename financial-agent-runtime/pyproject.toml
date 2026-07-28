@@ -1,7 +1,7 @@
 [project]
 name = "financial-agent-runtime"
-version = "0.1.0"
-description = "Shared runtime helpers for the financial services LangGraph agents."
+version = "0.1.4"
+description = "Shared runtime helpers for the Daily Report LangGraph agent."
 requires-python = ">=3.11"
 dependencies = [
     "deepagents>=0.6.1",
