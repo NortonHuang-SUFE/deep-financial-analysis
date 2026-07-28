@@ -1,11 +1,12 @@
 # Changelog
 
-## v0.1.5 - 2026-07-24
+## v0.1.5 - 2026-07-28
 
 - Made margin-trading WeChat rich text mobile-first and added automated checks at 375px and 320px for clipping, wrapped headers, font size, image scaling, and container padding.
 - Required every HTML rendering run to deliver same-sequence long-image HTML, PNG, and WeChat rich text; the orchestrator now reconciles companion artifacts and retries or reports missing output explicitly.
-- Centralized runtime context in a shared once-per-graph-invocation middleware to preserve model prefix caches while keeping concurrent runs isolated.
-- Added provider-specific thinking mappings for DashScope and Volcengine GLM models, and moved morning-note and HTML rendering to `aliyun-glm-5.2` with thinking disabled.
+- Centralized runtime context in a shared once-per-graph-invocation middleware and added a first-value-wins reducer for concurrent writes in one superstep, preventing prefix-cache churn and `InvalidUpdateError` failures.
+- Required morning-note to finish and return its actual artifact paths before HTML rendering starts, while still allowing multiple renderers to run in parallel afterward.
+- Added provider-specific thinking mappings for DashScope and Volcengine GLM models, moved daily-report and morning-note to `volcengine-glm-5.2-plan`, and selected `aliyun-minimax-m3` for HTML rendering with a MiniMax fallback.
 
 ## v0.1.4 - 2026-07-22
 

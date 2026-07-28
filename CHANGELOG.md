@@ -1,11 +1,12 @@
 # Changelog
 
-## v0.1.5 - 2026-07-24
+## v0.1.5 - 2026-07-28
 
 - 将融资融券微信富文本改为移动端优先布局，并新增 375px、320px 两档自动检查，覆盖横向裁切、表头换行、字号、图片缩放和容器留白。
 - 强制 HTML 渲染任务交付同序号长图 HTML、PNG 和微信富文本三件套；调度器会核对 companion artifact，并在缺失时重试或明确报告失败。
-- 将运行时上下文统一为每次 graph 调用只生成一次的共享中间件，避免时间戳变化破坏模型前缀缓存，同时保持并发运行相互隔离。
-- 补充 DashScope 与火山方舟 GLM 的 thinking 参数映射，并将早报和 HTML 渲染器切换到关闭 thinking 的 `aliyun-glm-5.2`。
+- 将运行时上下文统一为每次 graph 调用只生成一次的共享中间件，并为同一 superstep 的并发写入增加 first-value-wins reducer，避免前缀缓存失效和 `InvalidUpdateError`。
+- 强制早报先完成并返回真实产物路径，调度器随后才能启动 HTML 渲染；多个渲染任务仍可在早报完成后并行执行。
+- 补充 DashScope 与火山方舟 GLM 的 thinking 参数映射，将日报和早报切换到 `volcengine-glm-5.2-plan`，HTML 渲染器使用 `aliyun-minimax-m3` 并保留 MiniMax 回退。
 
 ## v0.1.4 - 2026-07-22
 
